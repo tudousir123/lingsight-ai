@@ -17,6 +17,24 @@ Message = dict[str, str]
 """Chat message: ``{"role": "system" | "user" | "assistant", "content": str}``."""
 
 
+def _error_detail(response: httpx.Response) -> str:
+    """Extract the endpoint's own error text, e.g. "(1113: 余额不足…)".
+
+    Vendors put the actionable reason (quota, balance, bad model) in the
+    body; the status code alone (429/400) hides it from the user.
+    """
+    try:
+        error = response.json().get("error", {})
+        code = error.get("code")
+        message = error.get("message")
+    except ValueError:
+        return ""
+    if message is None:
+        return ""
+    code_part = f"{code}: " if code is not None else ""
+    return f" ({code_part}{str(message)[:200]})"
+
+
 class ProviderError(Exception):
     """The LLM endpoint failed (transport, HTTP, or malformed payload)."""
 
@@ -81,7 +99,10 @@ class OpenAICompatProvider:
             msg = f"LLM endpoint unreachable: {error.__class__.__name__}"
             raise ProviderError(msg) from error
         if response.status_code != 200:
-            raise ProviderError(f"LLM endpoint returned HTTP {response.status_code}")
+            raise ProviderError(
+                f"LLM endpoint returned HTTP {response.status_code}"
+                f"{_error_detail(response)}"
+            )
         try:
             body = response.json()
             content = body["choices"][0]["message"]["content"]

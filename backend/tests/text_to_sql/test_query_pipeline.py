@@ -10,11 +10,13 @@ the pipeline, not the model.
 from collections.abc import Iterator
 from typing import Any
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from app.api.routes.research import get_query_provider, get_research_settings
 from app.main import app
+from app.text_to_sql.gateway import OpenAICompatProvider, ProviderError
 from app.text_to_sql.settings import ResearchQuerySettings
 
 DEMO_QUESTION = "一共有多少只动物"
@@ -247,3 +249,29 @@ def _env_password() -> str:
         password = get_research_settings().LINGSIGHT_RO_PASSWORD
     assert password, "LINGSIGHT_RO_PASSWORD must be configured via env/.env"
     return password
+
+
+def test_provider_error_surfaces_vendor_reason(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failing endpoint must show its own error text, not just the code.
+
+    Found live: Zhipu returns HTTP 429 with body
+    ``{"error": {"code": "1113", "message": "余额不足…"}}`` — the balance
+    reason was invisible until the gateway learned to quote the body.
+    """
+
+    def fake_post(_url: str, /, **_kwargs: Any) -> httpx.Response:
+        return httpx.Response(
+            429,
+            json={"error": {"code": "1113", "message": "余额不足或无可用资源包"}},
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    provider = OpenAICompatProvider(
+        base_url="https://example.invalid/v4",
+        api_key="k",
+        model="m",
+    )
+    with pytest.raises(ProviderError, match=r"HTTP 429.*1113: 余额不足"):
+        provider.chat([{"role": "user", "content": "hi"}])
