@@ -2,10 +2,18 @@
 
 本文件约束在本仓库工作的 AI 编码 Agent 与开发者。**当前项目是 LingSight AI（灵视科技）动物行为分析与科研智能体平台**，不是 Lab Agent、SalesPilot 或其他历史学习项目。
 
+## 0. 导航指针
+
+- **工单与流程**：[docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)（GitHub issues + `gh` 用法、阻塞边查询）；并行开发两张工单时用 [docs/agents/parallel-tickets.md](docs/agents/parallel-tickets.md) 的 worktree 配方。
+- **领域词汇**：[GLOSSARY.md](GLOSSARY.md)。评审、口径与命名以此为准（如：语义层不说 MDL；动物 = (group_name, mouse_id)）。
+- **语义层唯一事实来源**：`backend/app/text_to_sql/semantic_layer.yaml`。改 water_maze 表结构、暴露面或口径，先改这份 YAML，再同步库与测试——提示词上下文与 AST 白名单都从它渲染，禁止手写第二份。
+- **真实科研库**：本机容器 `healthad-mysql` 的 `water_maze` 库；root 凭据只存在于容器 env（`docker exec healthad-mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" …'`，不回显不入库）；应用侧只读账户 `lingsight_ro`（密码在根 `.env`，不入库）。
+- **进度事实**：[docs/progress.md](docs/progress.md)；决策依据在 [docs/adr/](docs/adr/)。
+
 ## 1. 当前目标与边界
 
-- 优先完成 **M0 脚手架接入与启动验收 → M1 Text-to-SQL 最小闭环**；之后才推进科研 RAG、Agent 集成、视觉推理链路。
-- 技术方向：**青戈 Vue + FastAPI**（脚手架实际源码和许可证核实后接入）、Python、MySQL、云端 LLM API；Text-to-SQL 参考 LangGraph SQL Agent，使用 SQLAlchemy、SQLGlot 及科研语义层；科研 RAG 优先评估 RAGFlow。
+- M0 脚手架已验收（2026-10-12）；当前推进 **M1 Text-to-SQL 最小闭环**，之后才推进科研 RAG、Agent 集成、视觉推理链路。
+- 技术栈：React+TS+Vite 前端 + FastAPI 官方 full-stack 模板（ADR-0002，PostgreSQL→MySQL 适配 ADR-0005）；Text-to-SQL 借鉴 WrenAI 语义层与 LangGraph SQL Agent 思想但**自建轻量管线**（ADR-0001，不引入其运行时）。
 - 第一阶段不做本地 LLM、多 Agent、SFT/RL、大规模重构或不必要的基础设施。
 - 目标架构不代表代码已实现。查阅 [README](README.md)、[产品规格](docs/01-product-spec.md)、[开发路线](docs/03-learning-roadmap.md) 和 [进度](docs/progress.md)，以实际源码和测试结果为准。
 
