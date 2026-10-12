@@ -19,6 +19,7 @@ dependencies = [
     "pwdlib[argon2,bcrypt]>=0.3.1",
     "pymysql>=1.1.1,<2.0.0",
     "cryptography>=44.0.0",
+    "pyyaml>=6.0.3",
 ]
 
 [dependency-groups]
@@ -28,6 +29,7 @@ dev = [
     "ty>=0.0.25",
     "ruff<1.0.0,>=0.2.2",
     "coverage<8.0.0,>=7.4.3",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 
 [build-system]

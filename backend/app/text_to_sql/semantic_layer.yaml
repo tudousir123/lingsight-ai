@@ -1,0 +1,192 @@
+# LingSight AI 语义层——生成上下文与校验白名单的唯一事实来源（ADR-0004）
+# 口径依据：docs/08（Schema 审查与口径验证，2026-10-12）、docs/09（黄金评测集 v1）、ADR-0003。
+# 变更规则：列级白名单只改本文件；提示词上下文与 AST 白名单都从加载器渲染，禁止手写第二份。
+version: 1
+
+# 陷阱纠正口径（docs/08 风险清单；三大陷阱的验收锁定见 tests/text_to_sql/test_semantic.py）
+corrections:
+  animal_code:
+    trap: "组-鼠-试次尾号三段编码，不是动物标识：按它过滤/分组把 1 只鼠拆成 4–5 个假动物（COUNT(DISTINCT animal_code)=26，实际 6 只）"
+    canonical: "动物 = (group_name, mouse_id)"
+    canonical_sql: "COUNT(DISTINCT CONCAT(group_name, '|', mouse_id))"
+  session_label:
+    trap: "一列两义：训练期 =「第N次」（区块），探测期 =「第N象限」（放鼠象限）"
+    canonical: "先声明 phase：训练期问「第N次/第N象限」→ session_no = N（区块序号，第N次=第N放鼠象限）；探测期才读 session_label（探测区块以放鼠象限命名）"
+    canonical_sql: "训练期: session_no = N；探测期: session_label = '第N象限'"
+  trial_no:
+    trap: "varchar 试次尾号：字符串排序 '10' < '2'，直接 ORDER BY/比较会乱序"
+    canonical: "排序/数值比较用 CAST(trial_no AS UNSIGNED)；整序也可按 (date_dir, session_no, video_id)"
+    canonical_sql: "ORDER BY CAST(trial_no AS UNSIGNED)"
+
+# 同义词：科研词汇 → 列/表达（GLOSSARY.md 术语）
+synonyms:
+  动物: "(group_name, mouse_id)"
+  实验组: group_name
+  鼠号: mouse_id
+  训练日: date_dir
+  第N天: date_dir
+  区块: session_no
+  第N次: session_no
+  试次尾号: trial_no
+  放鼠象限(训练期): session_no
+  放鼠象限(探测期): session_label
+
+# 表关系：全库无外键，join 只能依据此声明（docs/08 风险 4）
+relations:
+  - {from: videos.dataset_id, to: datasets.dataset_id, cardinality: many_to_one}
+  - {from: qc_summary.video_id, to: videos.video_id, cardinality: one_to_one}
+  - {from: frame_predictions.video_id, to: videos.video_id, cardinality: many_to_one}
+  - {from: trial_metrics.video_id, to: videos.video_id, cardinality: one_to_one, note: 指标表 planned（M1-T3），建表后生效}
+  - {from: videos.date_dir, to: platform_positions.day_label, cardinality: label_match, note: 软对应——仅训练日 0804–0808 匹配；platform_positions 另含 Probe 靶区行与 all 汇总行，join 前须按 day_label 过滤}
+
+# 聚合口径（docs/09 公共口径 + ADR-0003）
+aggregation_rules:
+  - 组间统计的推荐聚合口径是逐鼠-逐日：先按 (group_name, mouse_id, date_dir) 聚合再组间比较；试次直均有伪重复风险（统计单位=动物，docs/09 Q17）
+  - 帧级统计默认只使用 status='ok' 帧；头尾关键点统计须再 AND head_x IS NOT NULL（ok 帧中 head 缺 2137、tail 缺 4179）
+  - 聚合统计优先查 trial_metrics 指标表（确定性 Python 预计算，ADR-0003）；建表前的帧级折线长聚合由管线内置临时表完成，不由 LLM 现场推导
+  - 统计与对比必须先声明 phase（训练期/探测期），两阶段不可混算
+
+tables:
+  datasets:
+    description: 数据集（当前 1 行）：一批同源实验视频及其推理结果的集合，"实验"的载体
+    exposed: true
+    primary_key: [dataset_id]
+    columns:
+      dataset_id: {type: varchar(64), meaning: 数据集唯一标识}
+      dataset_name: {type: varchar(512), meaning: 数据集名称}
+      video_count: {type: int, meaning: 视频数}
+    excluded_columns:
+      source_video_root: {reason: 文件系统路径，非结构化口径}
+      notes: {reason: 自由文本，不作结构化口径来源（docs/08 风险 9）}
+
+  videos:
+    description: 视频 = 试次（1:1，2026-10-12 认可）：一次完整的放入水池测试；训练期 499 + 探测期(有台子) 50
+    exposed: true
+    primary_key: [video_id]
+    columns:
+      video_id: {type: varchar(128), meaning: 视频唯一标识，即试次标识（视频与试次一一对应）}
+      dataset_id: {type: varchar(64), meaning: 所属数据集，关联 datasets.dataset_id}
+      group_name: {type: varchar(32), meaning: 实验组（A+L1/A+L3/A2/A3/c1/c2 共 6 组），组间统计的基本单位}
+      mouse_id: {type: varchar(8), meaning: 鼠号（组内编号；跨组不唯一，"2 号"存在于 A+L1/A2/A3/c2 四组，须与 group_name 联用）}
+      trial_no: {type: varchar(8), meaning: "试次尾号（文件名 {MMDD}{第N次}-{组}-{鼠号}-{试次尾号} 的第 4 段）", caution: varchar 字符串排序 '10'<'2'，排序/比较须 CAST(trial_no AS UNSIGNED)}
+      date_dir: {type: varchar(16), meaning: 实验日期目录名，0804–0808 = 训练第 1–5 日，0809 = 有台子探测日, domain: "0804–0808（训练日 1–5）| 0809（探测日）"}
+      phase: {type: varchar(32), meaning: 实验阶段，统计与对比必须先声明阶段, domain: "training_day=训练期 | probe_platform_present=探测期(有台子)"}
+      session_label: {type: varchar(16), meaning: 一列两义——训练期=「第N次」（区块）；探测期=「第N象限」（放鼠象限）, caution: 训练期问"第N象限"应用 session_no；探测期才读本列}
+      session_no: {type: tinyint, meaning: 当日区块序号（第 1–4 区块；第N次=第N放鼠象限）, domain: "1|2|3|4", caution: 是日内区块，不是训练日}
+      batch_id: {type: varchar(64), meaning: 批次（数据集内分组维度）}
+      fps: {type: double, meaning: 帧率，全库 30.0；time_s = frame_idx/30}
+      width: {type: int, meaning: 视频宽（px）}
+      height: {type: int, meaning: 视频高（px）}
+      source_frame_count: {type: int, meaning: 源视频帧数}
+      processed_frame_count: {type: int, meaning: 实际处理帧数（时长 = processed_frame_count/fps）}
+      start_frame: {type: int, meaning: 有效区间起始帧}
+      end_frame: {type: int, meaning: 有效区间结束帧}
+      artifact_mode: {type: varchar(64), meaning: 产出方式标记（如 run_r4_eval_v2）}
+      pool_cx: {type: double, meaning: 池心 x（px）}
+      pool_cy: {type: double, meaning: 池心 y（px）}
+      pool_r: {type: double, meaning: 池半径（px）；px→cm 物理标定为语义层后续工作}
+    excluded_columns:
+      animal_code: {reason: 组-鼠-试次尾号三段编码，按它过滤/分组会把 1 只鼠拆成 4–5 个假动物（26≠6）, use_instead: 动物 = (group_name, mouse_id) 联合标识}
+      source_video_path: {reason: 文件路径，溯源用；结构化信息已拆入各列}
+      seed_frame: {reason: 跟踪管线内部种子，科研查询不用}
+      seed_x: {reason: 跟踪管线内部种子，科研查询不用}
+      seed_y: {reason: 跟踪管线内部种子，科研查询不用}
+      seed_source: {reason: 跟踪管线内部种子，科研查询不用}
+      model: {reason: 推理模型名，管线元数据}
+      weights: {reason: 推理权重路径，管线元数据}
+      notes: {reason: 自由文本（含文件名笔误修正等），不作结构化口径来源（docs/08 风险 9）}
+      fps_source: {reason: fps 来源标记，管线元数据}
+      pool_source: {reason: 池参数来源标记，管线元数据}
+
+  qc_summary:
+    description: 视频级质检汇总（每视频一行）：帧/mask/关键点质量比率与 qc_status 标记
+    exposed: true
+    primary_key: [video_id]
+    columns:
+      video_id: {type: varchar(128), meaning: 视频标识，关联 videos.video_id（一一对应）}
+      dataset_id: {type: varchar(64), meaning: 所属数据集}
+      fps: {type: double, meaning: 帧率（30.0）}
+      source_frame_count: {type: int, meaning: 源帧数}
+      processed_frame_count: {type: int, meaning: 处理帧数}
+      mask_frame_count: {type: int, meaning: 有 mask 的帧数}
+      missing_mask_ratio: {type: double, meaning: mask 缺失率}
+      valid_mask_ratio: {type: double, meaning: mask 有效率}
+      median_mask_area_px: {type: double, meaning: mask 面积中位数（px）}
+      mask_area_outlier_ratio: {type: double, meaning: mask 面积离群率}
+      mean_prev_mask_iou: {type: double, meaning: 相邻帧 mask IoU 均值}
+      high_iou_frame_ratio: {type: double, meaning: 高 IoU 帧占比（疑似静止）}
+      floating_candidate_ratio: {type: double, meaning: 漂移候选帧占比}
+      valid_keypoint_frame_ratio: {type: double, meaning: 有效关键点帧占比}
+      mean_confidence: {type: double, meaning: 平均置信度}
+      missing_head_tail_ratio: {type: double, meaning: 头/尾关键点缺失率}
+      qc_status: {type: varchar(16), meaning: 质检状态（离散标记，非分数）, domain: "ok | review=需人工复核", caution: 当前 517/549 为 review，语义待确认（docs/09 疑点 1），作过滤条件时须声明}
+    excluded_columns:
+      qc_notes: {reason: 自由文本备注，不作结构化口径来源}
+
+  rescue_code_definitions_20261011:
+    description: 修复管线字典：kind+code → 语义说明（source_code/risk_bits 等编码的含义）
+    exposed: true
+    primary_key: [kind, code]
+    columns:
+      kind: {type: varchar(16), meaning: 编码类别（如 source_code/risk_bits）}
+      code: {type: int, meaning: 编码值}
+      description: {type: varchar(255), meaning: 该编码的语义说明}
+
+  platform_positions:
+    description: 隐藏平台逐日位置（E1 报告 CSV，8 行）：共识坐标、成像/行为双法交叉、Probe 靶区与 'all' 汇总行
+    exposed: true
+    primary_key: [day_label]
+    columns:
+      day_label: {type: varchar(32), meaning: 逐日标签, domain: "0804–0808（与 videos.date_dir 对应）| Probe 靶区行 | all=全期汇总"}
+      plat_cx_consensus: {type: double, meaning: 平台中心 x 共识值（px，成像/行为双法交叉）}
+      plat_cy_consensus: {type: double, meaning: 平台中心 y 共识值（px）}
+      imaging_cx: {type: double, meaning: 成像法平台 x（px）}
+      imaging_cy: {type: double, meaning: 成像法平台 y（px）}
+      behavior_cx: {type: double, meaning: 行为法平台 x（px）}
+      behavior_cy: {type: double, meaning: 行为法平台 y（px）}
+      source_file: {type: varchar(512), meaning: 来源 CSV 路径（溯源）}
+      loaded_at: {type: timestamp, meaning: 入库时间（溯源）}
+    excluded_columns:
+      note: {reason: 自由文本备注，不作结构化口径来源}
+
+  frame_predictions:
+    description: 帧级轨迹与姿态预测（~78.8 万行）：中心/头/尾坐标、状态与修复方式
+    # lingsight_ro 未直授本表；待 M1-T8（工单 #7）建 v_query_frame_predictions 只读视图后切换暴露
+    exposed: false
+    expose_via: v_query_frame_predictions
+    primary_key: [video_id, frame_idx]
+    columns:
+      video_id: {type: varchar(128), meaning: 关联 videos.video_id（视频=试次）}
+      frame_idx: {type: int, meaning: 帧序号（time_s = frame_idx / 30）}
+      time_s: {type: double, meaning: 时间（秒，E1 修复后口径）}
+      center_x: {type: double, meaning: 身体中心 x（px）}
+      center_y: {type: double, meaning: 身体中心 y（px）}
+      head_x: {type: double, meaning: 头部关键点 x（px）}
+      head_y: {type: double, meaning: 头部关键点 y（px）}
+      tail_x: {type: double, meaning: 尾部关键点 x（px）}
+      tail_y: {type: double, meaning: 尾部关键点 y（px）}
+      status: {type: varchar(8), meaning: 帧状态, domain: "ok=可用 | miss=全坐标空 | coord=有中心、无头尾无 mask（6 帧，A100 端溯源中）"}
+      head_tail_mode: {type: varchar(32), meaning: 关键点来源/修复方式, domain: "heatmap_peak | viterbi_rescue | partial_rescue"}
+      head_tail_corrected: {type: tinyint, meaning: 头尾修正标记（1=经修复）}
+    excluded_columns:
+      mask_rle_counts: {reason: 全帧 COCO RLE 长文本（docs/08 风险 8），语义层不暴露}
+      rle_format: {reason: RLE 编码格式标记，随 RLE 一并排除}
+      mask_width: {reason: RLE 编码元数据，随 RLE 一并排除}
+      mask_height: {reason: RLE 编码元数据，随 RLE 一并排除}
+      mask_valid: {reason: mask 有效性标记，一期不暴露；聚合口径走 qc_summary}
+      mask_centroid_x: {reason: mask 派生量，一期不暴露；聚合口径走 qc_summary/trial_metrics}
+      mask_centroid_y: {reason: mask 派生量，一期不暴露；聚合口径走 qc_summary/trial_metrics}
+      mask_area_px: {reason: mask 派生量，一期不暴露；聚合口径走 qc_summary/trial_metrics}
+      mask_bbox_x1: {reason: mask 派生量，一期不暴露}
+      mask_bbox_y1: {reason: mask 派生量，一期不暴露}
+      mask_bbox_x2: {reason: mask 派生量，一期不暴露}
+      mask_bbox_y2: {reason: mask 派生量，一期不暴露}
+      prev_mask_iou: {reason: 管线内部质量量（相邻帧 IoU），聚合已入 qc_summary}
+      instant_static_by_iou: {reason: 管线内部质量量（疑似静止标记），聚合已入 qc_summary}
+
+  trial_metrics:
+    description: 试次级行为指标表（ADR-0003）：确定性 Python 计算的游泳距离/平均速度/关键点占比/在池时间占比，含算法版本、单位、计算状态
+    # M1-T3（工单 #4）建表后翻转为 exposed: true；列设计由该票定稿（候选：metric/value_px/algo_version/unit/calc_status）
+    status: planned
+    exposed: false
+    primary_key: [video_id, metric, algo_version]
