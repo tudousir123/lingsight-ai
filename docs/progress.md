@@ -9,7 +9,7 @@
 | 脚手架选型 | **FastAPI 官方 full-stack-fastapi-template（已落地）** | ADR-0002；MIT、React+TS+Vite、SQLModel+Alembic、JWT、Docker/CI/Playwright |
 | M0 脚手架验收（工单 #2） | **已验收（2026-10-12）** | 一键 `docker compose up -d --wait` 全 healthy；MySQL 8.4 适配（pymysql/CHAR(36)/迁移重建，ADR-0005）；模板自带测试全绿：pytest 58/58（coverage 92%）、Playwright 62/62；证据 `docs/evidence/m0/`。偏离：asyncmy→pymysql（模板为同步数据层） |
 | Text-to-SQL | **选型与 M1 前置全部完成，待出 Spec 开工** | 2026-10-12：评测集 v1 完成（docs/09：25 问 + 标准 SQL + 黄金基准值实算）；`platform_positions` 已入库（E1 CSV 8 行，含 Probe 靶区）；事件定义验证决策前置 M1 中段；video=试次按 1:1 获认可；只读账户 `lingsight_ro` 五表白名单已验证（备份表/写操作/巨型表全拒）。遗留数据疑点：qc_status 517/549 review 语义待确认、coord 溯源（A100），见 docs/09 |
-| M1-T2 语义层 v1（工单 #3） | **已完成（2026-10-12，提交 b315588）** | `backend/app/text_to_sql/semantic_layer.yaml` 唯一事实来源（ADR-0004）：7 条目（5 已授权表 + platform_positions + trial_metrics 占位）；加载器同源渲染提示词上下文与 AST 白名单；三大陷阱（animal_code/session_label/trial_no）纠正口径 10 项测试锁定；mask_rle_* 全表不可达；双轴 code-review 修订（date_dir 补 0809 探测日、未暴露表的 join 路径不进提示词）。遗留：ADR-0004 标题「MDL-lite」与 GLOSSARY 避免 MDL 词汇冲突，待裁决 |
+| M1-T2 语义层 v1（工单 #3） | **已完成（2026-10-12，提交 b315588）** | `backend/app/text_to_sql/semantic_layer.yaml` 唯一事实来源（ADR-0004）：7 条目（5 已授权表 + platform_positions + trial_metrics 占位）；加载器同源渲染提示词上下文与 AST 白名单；三大陷阱（animal_code/session_label/trial_no）纠正口径 10 项测试锁定；mask_rle_* 全表不可达；双轴 code-review 修订（date_dir 补 0809 探测日、未暴露表的 join 路径不进提示词）。术语对齐：ADR-0004 已删自造词「MDL-lite」（2026-10-13 用户裁决，GLOSSARY 统一用「语义层」） |
 
 | 科研 RAG | **未开始实现** | 先做文献来源与评测集 |
 | Agent 集成 | **未开始实现** | M3 |
