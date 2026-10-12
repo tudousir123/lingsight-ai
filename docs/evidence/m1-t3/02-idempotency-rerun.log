@@ -1,0 +1,21 @@
+== BEFORE rerun: row count / distinct videos / distinct metrics ==
+rows_total	videos	metrics
+2196	549	4
+== rerun compute_trial_metrics (same algo_version) ==
+2026-10-13 00:24:38,086 INFO loaded pool geometry for 549 videos
+2026-10-13 00:24:39,676 INFO computed 100 videos
+2026-10-13 00:24:41,316 INFO computed 200 videos
+2026-10-13 00:24:42,602 INFO computed 300 videos
+2026-10-13 00:24:43,522 INFO computed 400 videos
+2026-10-13 00:24:44,548 INFO computed 500 videos
+2026-10-13 00:24:44,997 INFO computed 549 videos -> 2196 metric rows
+2026-10-13 00:24:44,997 INFO metric=dist_px calc_status=ok rows=549
+2026-10-13 00:24:44,997 INFO metric=in_pool_ratio calc_status=ok rows=549
+2026-10-13 00:24:44,997 INFO metric=speed_px calc_status=ok rows=549
+2026-10-13 00:24:44,997 INFO metric=valid_kp_ratio calc_status=ok rows=549
+2026-10-13 00:24:45,461 INFO wrote 2196 rows (algo_version=v1-polyline-ok-frames) — rerun replaces the same version in place
+== AFTER rerun: identical counts, duplicate-PK check (expect 0) ==
+rows_total	videos	metrics
+2196	549	4
+duplicate_pk_rows
+0

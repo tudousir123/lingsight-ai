@@ -1,0 +1,11 @@
+== root: GRANT SELECT ON water_maze.trial_metrics TO lingsight_ro (ticket #4) ==
+GRANT_OK
+== SHOW GRANTS FOR lingsight_ro ==
+Grants for lingsight_ro@%
+GRANT USAGE ON *.* TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`datasets` TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`platform_positions` TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`qc_summary` TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`rescue_code_definitions_20261011` TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`trial_metrics` TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`videos` TO `lingsight_ro`@`%`

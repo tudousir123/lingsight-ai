@@ -1,0 +1,41 @@
+== DDL check: SHOW CREATE TABLE trial_metrics (idempotent CREATE IF NOT EXISTS applied by compute script) ==
+*************************** 1. row ***************************
+       Table: trial_metrics
+Create Table: CREATE TABLE `trial_metrics` (
+  `video_id` varchar(128) NOT NULL COMMENT '视频=试次标识，关联 videos.video_id（全库无外键，按约定 join）',
+  `metric` varchar(32) NOT NULL COMMENT '指标名：dist_px|speed_px|valid_kp_ratio|in_pool_ratio（口径见 definition 列）',
+  `algo_version` varchar(64) NOT NULL COMMENT '算法版本：重算发新版本不覆盖旧值（ADR-0003），当前 v1-polyline-ok-frames',
+  `value` double DEFAULT NULL COMMENT '指标值；calc_status != ok 时为 NULL',
+  `unit` varchar(16) NOT NULL COMMENT '单位：px | px/s | ratio',
+  `calc_status` varchar(24) NOT NULL COMMENT '计算状态：ok | no_frames | no_ok_frames | insufficient_ok_frames | missing_pool_params',
+  `ok_frames` int NOT NULL COMMENT '口径快照：该视频 status=ok 帧数',
+  `total_frames` int NOT NULL COMMENT '口径快照：该视频全部帧数',
+  `duration_s` double DEFAULT NULL COMMENT '口径快照：ok 帧时间跨度 MAX(time_s)-MIN(time_s)（秒，speed_px 分母）',
+  `definition` varchar(255) NOT NULL COMMENT '指标口径一句话（行级自描述；结构化口径以语义层与 ADR-0003 为准）',
+  `calculated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '本行写入/更新时间（UTC）',
+  PRIMARY KEY (`video_id`,`metric`,`algo_version`),
+  KEY `idx_metric_version` (`metric`,`algo_version`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='试次级行为指标表（ADR-0003）：确定性 Python 从 frame_predictions 计算入库，SQL/LLM 不推导指标；长格式每视频每指标一行'
+== compute run: 549 videos x 4 metrics ==
+2026-10-13 00:25:09,531 INFO loaded pool geometry for 549 videos
+2026-10-13 00:25:11,218 INFO computed 100 videos
+2026-10-13 00:25:12,676 INFO computed 200 videos
+2026-10-13 00:25:13,930 INFO computed 300 videos
+2026-10-13 00:25:14,808 INFO computed 400 videos
+2026-10-13 00:25:15,752 INFO computed 500 videos
+2026-10-13 00:25:16,201 INFO computed 549 videos -> 2196 metric rows
+2026-10-13 00:25:16,202 INFO metric=dist_px calc_status=ok rows=549
+2026-10-13 00:25:16,202 INFO metric=in_pool_ratio calc_status=ok rows=549
+2026-10-13 00:25:16,202 INFO metric=speed_px calc_status=ok rows=549
+2026-10-13 00:25:16,202 INFO metric=valid_kp_ratio calc_status=ok rows=549
+2026-10-13 00:25:16,387 INFO wrote 2196 rows (algo_version=v1-polyline-ok-frames) — rerun replaces the same version in place
+== row sample (per-video rows carry algo_version / unit / calc_status) ==
+video_id	metric	algo_version	value	unit	calc_status	ok_frames	total_frames	duration_s	calculated_at
+0804第一次-A+L1-2-1	dist_px	v1-polyline-ok-frames	9541.7821	px	ok	1865	1865	62.13	2026-10-13 00:25:16
+0804第一次-A+L1-2-1	in_pool_ratio	v1-polyline-ok-frames	1	ratio	ok	1865	1865	62.13	2026-10-13 00:25:16
+0804第一次-A+L1-2-1	speed_px	v1-polyline-ok-frames	153.5695	px/s	ok	1865	1865	62.13	2026-10-13 00:25:16
+0804第一次-A+L1-2-1	valid_kp_ratio	v1-polyline-ok-frames	0.9979	ratio	ok	1865	1865	62.13	2026-10-13 00:25:16
+0804第一次-A+L1-2-2	dist_px	v1-polyline-ok-frames	4993.6688	px	ok	1896	1896	63.17	2026-10-13 00:25:16
+0804第一次-A+L1-2-2	in_pool_ratio	v1-polyline-ok-frames	1	ratio	ok	1896	1896	63.17	2026-10-13 00:25:16
+0804第一次-A+L1-2-2	speed_px	v1-polyline-ok-frames	79.0554	px/s	ok	1896	1896	63.17	2026-10-13 00:25:16
+0804第一次-A+L1-2-2	valid_kp_ratio	v1-polyline-ok-frames	0.98	ratio	ok	1896	1896	63.17	2026-10-13 00:25:16
