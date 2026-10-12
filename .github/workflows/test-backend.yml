@@ -26,6 +26,8 @@ jobs:
         with:
           version: "latest-known"
       - run: docker compose down -v --remove-orphans
+      - name: Set up environment
+        run: cp .env.example .env
       - run: docker compose up -d --wait db mailpit
       - name: Migrate DB
         run: uv run bash scripts/prestart.sh

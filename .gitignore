@@ -30,6 +30,8 @@ data/raw/
 eval/results/local/
 logs/
 *.log
+# M0 acceptance evidence logs are committed on purpose (ticket #2)
+!docs/evidence/**/*.log
 .cache/
 
 # Node / frontend build artifacts

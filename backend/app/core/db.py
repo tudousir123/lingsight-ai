@@ -4,7 +4,13 @@ from app import crud
 from app.core.config import settings
 from app.models import User, UserCreate
 
-engine = create_engine(str(settings.DATABASE_URL), pool_pre_ping=True)
+# READ COMMITTED matches PostgreSQL's default, which the template's tests
+# assume: a long-lived session (e.g. pytest's session-scoped fixture) must see
+# rows committed by other connections. MySQL's default REPEATABLE READ would
+# pin that session to its first-read snapshot.
+engine = create_engine(
+    str(settings.DATABASE_URL), pool_pre_ping=True, isolation_level="READ COMMITTED"
+)
 
 
 # make sure all SQLModel models are imported (app.models) before initializing DB

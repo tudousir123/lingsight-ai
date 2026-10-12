@@ -1,0 +1,62 @@
+=== 2026-10-12 23:26:21 docker compose up -d --wait proxy db backend adminer mailpit ===
+ Container lingsight-ai-db-1  Running
+ Container lingsight-ai-proxy-1  Creating
+ Container lingsight-ai-backend-1  Creating
+ Container lingsight-ai-adminer-1  Creating
+ Container lingsight-ai-mailpit-1  Creating
+ Container lingsight-ai-backend-1  Created
+ Container lingsight-ai-mailpit-1  Created
+ Container lingsight-ai-proxy-1  Created
+ Container lingsight-ai-adminer-1  Created
+ Container lingsight-ai-mailpit-1  Starting
+ Container lingsight-ai-proxy-1  Starting
+ Container lingsight-ai-adminer-1  Starting
+ Container lingsight-ai-db-1  Waiting
+ Container lingsight-ai-proxy-1  Started
+ Container lingsight-ai-mailpit-1  Started
+ Container lingsight-ai-adminer-1  Started
+ Container lingsight-ai-db-1  Healthy
+ Container lingsight-ai-backend-1  Starting
+ Container lingsight-ai-backend-1  Started
+ Container lingsight-ai-mailpit-1  Waiting
+ Container lingsight-ai-proxy-1  Waiting
+ Container lingsight-ai-db-1  Waiting
+ Container lingsight-ai-adminer-1  Waiting
+ Container lingsight-ai-backend-1  Waiting
+ Container lingsight-ai-proxy-1  Healthy
+ Container lingsight-ai-db-1  Healthy
+ Container lingsight-ai-adminer-1  Healthy
+ Container lingsight-ai-mailpit-1  Healthy
+ Container lingsight-ai-backend-1  Healthy
+EXIT=0
+
+=== docker compose ps ===
+NAME                     SERVICE   STATUS
+lingsight-ai-adminer-1   adminer   Up 11 seconds
+lingsight-ai-backend-1   backend   Up 10 seconds (healthy)
+lingsight-ai-db-1        db        Up 44 seconds (healthy)
+lingsight-ai-mailpit-1   mailpit   Up 11 seconds (healthy)
+lingsight-ai-proxy-1     proxy     Up 11 seconds
+
+=== backend health-check (direct :8000) ===
+true
+HTTP 200 in 0.001540s
+=== frontend HTML via backend :8000 ===
+HTTP 200 text/html; charset=utf-8 1200B
+<title>Full Stack FastAPI Project</title>
+=== frontend via proxy :80 ===
+HTTP 200 text/html; charset=utf-8 1200B
+=== login API smoke (superuser created by prestart) ===
+HTTP 200
+token_type: bearer access_token len: 165
+=== MySQL version / schema ===
+v	db
+8.4.11	app
+Field	Type	Null	Key	Default	Extra
+email	varchar(255)	NO	UNI	NULL	
+is_active	tinyint(1)	NO		NULL	
+is_superuser	tinyint(1)	NO		NULL	
+full_name	varchar(255)	YES		NULL	
+id	char(36)	NO	PRI	NULL	
+hashed_password	varchar(255)	NO		NULL	
+created_at	datetime	YES		NULL	

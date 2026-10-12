@@ -1,0 +1,5 @@
+/home/shuncheng/workspace/lingsight-ai/backend/app/core/config.py:75: UserWarning: The value of FIRST_SUPERUSER_PASSWORD is "changethis", for security, please change it, at least for deployments.
+  warnings.warn(message, stacklevel=1)
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> da969c656440, initial schema for mysql

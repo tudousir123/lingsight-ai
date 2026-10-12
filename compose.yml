@@ -18,18 +18,23 @@ services:
       - --log
 
   db:
-    image: postgres:18
+    # MySQL 8.4, same major version as the local water_maze server
+    image: mysql:8.4
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d app"]
+      # Verifies the app user and database are provisioned (first boot runs
+      # the entrypoint init before these exist), not just that mysqld is up
+      test: ["CMD-SHELL", "mysql -uapp -p$$MYSQL_PASSWORD app -e 'SELECT 1'"]
       interval: 10s
       retries: 5
       start_period: 30s
       timeout: 10s
     volumes:
-      - app-db-data:/var/lib/postgresql
+      - app-db-data:/var/lib/mysql
     environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Variable not set}
-      - POSTGRES_DB=app
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?Variable not set}
+      - MYSQL_DATABASE=app
+      - MYSQL_USER=app
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:?Variable not set}
 
   adminer:
     image: adminer
@@ -61,7 +66,7 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       EMAILS_FROM_EMAIL: ${EMAILS_FROM_EMAIL}
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Variable not set}@db:5432/app
+      DATABASE_URL: mysql+pymysql://app:${MYSQL_PASSWORD:?Variable not set}@db:3306/app?charset=utf8mb4
       SENTRY_DSN: ${SENTRY_DSN:-}
 
     healthcheck:

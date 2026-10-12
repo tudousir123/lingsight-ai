@@ -7,9 +7,9 @@
 
 ## Local Development
 
-Run the backend locally and connect it to PostgreSQL in Docker Compose.
+Run the backend locally and connect it to MySQL in Docker Compose.
 
-From the project root, start PostgreSQL and Mailpit:
+From the project root, start MySQL and Mailpit:
 
 ```console
 $ docker compose up -d db mailpit
@@ -92,7 +92,7 @@ When the tests run, they generate `htmlcov/index.html`. Open it in your browser 
 
 ## Migrations
 
-Make sure you create a revision of your models and upgrade the database with that revision every time you change them. From the `backend` directory, use `uv` to run Alembic against the PostgreSQL container:
+Make sure you create a revision of your models and upgrade the database with that revision every time you change them. From the `backend` directory, use `uv` to run Alembic against the MySQL container:
 
 * Alembic is already configured to import your SQLModel models from `./backend/app/models.py`.
 

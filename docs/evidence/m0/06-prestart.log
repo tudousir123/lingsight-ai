@@ -1,0 +1,21 @@
+=== 2026-10-12 23:25:48 docker compose run --rm backend bash scripts/prestart.sh (fresh volume) ===
+ Network lingsight-ai_default  Creating
+ Network lingsight-ai_default  Created
+ Volume lingsight-ai_app-db-data  Creating
+ Volume lingsight-ai_app-db-data  Created
+ Container lingsight-ai-db-1  Creating
+ Container lingsight-ai-db-1  Created
+ Container lingsight-ai-db-1  Starting
+ Container lingsight-ai-db-1  Started
++ alembic upgrade head
+/app/backend/app/core/config.py:75: UserWarning: The value of FIRST_SUPERUSER_PASSWORD is "changethis", for security, please change it, at least for deployments.
+  warnings.warn(message, stacklevel=1)
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> da969c656440, initial schema for mysql
++ python app/initial_data.py
+/app/backend/app/core/config.py:75: UserWarning: The value of FIRST_SUPERUSER_PASSWORD is "changethis", for security, please change it, at least for deployments.
+  warnings.warn(message, stacklevel=1)
+INFO:__main__:Creating initial data
+INFO:__main__:Initial data created
+EXIT=0

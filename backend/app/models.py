@@ -2,11 +2,38 @@ import uuid
 from datetime import UTC, datetime
 
 from pydantic import EmailStr
+from sqlalchemy import CHAR, Dialect, TypeDecorator
 from sqlmodel import Field, Relationship, SQLModel
 
 
 def get_datetime_utc() -> datetime:
     return datetime.now(UTC)
+
+
+class Char36UUID(TypeDecorator[uuid.UUID]):
+    """UUID as CHAR(36) on every backend.
+
+    MySQL has no native UUID type and SQLAlchemy's Uuid(native_uuid=False)
+    would store CHAR(32) without dashes; CHAR(36) keeps the canonical,
+    human-readable form (same as MySQL's UUID() output) and stays portable.
+    """
+
+    impl = CHAR(36)
+    cache_ok = True
+
+    def process_bind_param(
+        self, value: uuid.UUID | None, dialect: Dialect
+    ) -> str | None:
+        if value is None:
+            return value
+        return str(value)
+
+    def process_result_value(
+        self, value: str | None, dialect: Dialect
+    ) -> uuid.UUID | None:
+        if value is None:
+            return value
+        return uuid.UUID(value)
 
 
 # Shared properties
@@ -49,7 +76,9 @@ class UpdatePassword(SQLModel):
 
 # Database model, database table inferred from class name
 class User(UserBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid.UUID = Field(
+        default_factory=uuid.uuid4, primary_key=True, sa_type=Char36UUID
+    )
     hashed_password: str
     created_at: datetime | None = Field(default_factory=get_datetime_utc)
     items: list[Item] = Relationship(back_populates="owner", cascade_delete=True)
@@ -85,10 +114,15 @@ class ItemUpdate(SQLModel):
 
 # Database model, database table inferred from class name
 class Item(ItemBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid.UUID = Field(
+        default_factory=uuid.uuid4, primary_key=True, sa_type=Char36UUID
+    )
     created_at: datetime | None = Field(default_factory=get_datetime_utc)
     owner_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+        foreign_key="user.id",
+        nullable=False,
+        ondelete="CASCADE",
+        sa_type=Char36UUID,
     )
     owner: User | None = Relationship(back_populates="items")
 

@@ -4,7 +4,7 @@ from typing import Literal, Self
 from pydantic import (
     EmailStr,
     HttpUrl,
-    PostgresDsn,
+    MySQLDsn,
     computed_field,
     field_validator,
     model_validator,
@@ -28,15 +28,15 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None
-    DATABASE_URL: PostgresDsn
+    DATABASE_URL: MySQLDsn
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
-    def _use_psycopg_driver(cls, value: str | PostgresDsn) -> str:
+    def _use_pymysql_driver(cls, value: str | MySQLDsn) -> str:
         database_url = str(value)
-        for scheme in ("postgres://", "postgresql://"):
-            if database_url.startswith(scheme):
-                return database_url.replace(scheme, "postgresql+psycopg://", 1)
+        # SQLAlchemy needs the explicit DBAPI; accept bare mysql:// too
+        if database_url.startswith("mysql://"):
+            return database_url.replace("mysql://", "mysql+pymysql://", 1)
         return database_url
 
     SMTP_TLS: bool = True
@@ -79,8 +79,8 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _enforce_non_default_secrets(self) -> Self:
         self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
-        for host in self.DATABASE_URL.hosts():
-            self._check_default_secret("DATABASE_URL password", host["password"])
+        # MySQLDsn is a single-host AnyUrl, unlike the multi-host PostgresDsn
+        self._check_default_secret("DATABASE_URL password", self.DATABASE_URL.password)
         self._check_default_secret(
             "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
         )

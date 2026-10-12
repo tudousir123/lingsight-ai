@@ -6,9 +6,10 @@
 |---|---|---|
 | 产品与选型 | **文档已确定** | 以 README 和 docs/01-product-spec.md 为准 |
 | GitHub 仓库正式更名 | **待执行** | 当前连接器无重命名操作，需要在 GitHub Settings 手动完成 |
-| 青戈 Vue+FastAPI ZIP | **尚未导入** | 当前可访问文件未找到该压缩包；上传后核验许可与结构 |
-| 脚手架启动 | **未验收** | 导入后运行 FastAPI / Vue 并保存日志 |
-| Text-to-SQL | **未开始实现** | 先核对真实 MySQL Schema 与指标聚合语义 |
+| 脚手架选型 | **FastAPI 官方 full-stack-fastapi-template（已落地）** | ADR-0002；MIT、React+TS+Vite、SQLModel+Alembic、JWT、Docker/CI/Playwright |
+| M0 脚手架验收（工单 #2） | **已验收（2026-10-12）** | 一键 `docker compose up -d --wait` 全 healthy；MySQL 8.4 适配（pymysql/CHAR(36)/迁移重建，ADR-0005）；模板自带测试全绿：pytest 58/58（coverage 92%）、Playwright 62/62；证据 `docs/evidence/m0/`。偏离：asyncmy→pymysql（模板为同步数据层） |
+| Text-to-SQL | **选型与 M1 前置全部完成，待出 Spec 开工** | 2026-10-12：评测集 v1 完成（docs/09：25 问 + 标准 SQL + 黄金基准值实算）；`platform_positions` 已入库（E1 CSV 8 行，含 Probe 靶区）；事件定义验证决策前置 M1 中段；video=试次按 1:1 获认可；只读账户 `lingsight_ro` 五表白名单已验证（备份表/写操作/巨型表全拒）。遗留数据疑点：qc_status 517/549 review 语义待确认、coord 溯源（A100），见 docs/09 |
+
 | 科研 RAG | **未开始实现** | 先做文献来源与评测集 |
 | Agent 集成 | **未开始实现** | M3 |
 | CV / Tracking 联通 | **待接入与测试** | 既有平台成果不等于本仓库已经集成 |

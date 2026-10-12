@@ -25,11 +25,13 @@ services:
       - --api.insecure=true
   db:
     ports:
-      - "5432:5432"
+      # 3306/3307 are taken by the local MySQL containers (incl. water_maze)
+      - "3308:3306"
 
   adminer:
     ports:
-      - "8080:8080"
+      # Host 8080 is taken by another local project
+      - "8081:8080"
 
   backend:
     ports:

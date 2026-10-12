@@ -1,0 +1,82 @@
+ Container lingsight-ai-db-1  Running
+ Container lingsight-ai-mailpit-1  Running
+ Container lingsight-ai-backend-1  Running
+ Container lingsight-ai-db-1  Waiting
+ Container lingsight-ai-db-1  Healthy
+◇ injected env (0) from ../.env
+
+Running 62 tests using 4 workers
+
+◇ injected env (0) from ../.env
+
+[1/62] [setup] › tests/auth.setup.ts:6:1 › authenticate
+◇ injected env (0) from ../.env
+
+
+◇ injected env (0) from ../.env
+
+◇ injected env (0) from ../.env
+
+◇ injected env (0) from ../.env
+[2/62] [chromium] › tests/admin.spec.ts:21:3 › Admin user management › Create a new user successfully
+[3/62] [chromium] › tests/admin.spec.ts:7:1 › Admin page is accessible and shows correct title
+[4/62] [chromium] › tests/admin.spec.ts:15:1 › Add User button is visible
+[5/62] [chromium] › tests/admin.spec.ts:45:3 › Admin user management › Create a superuser
+[6/62] [chromium] › tests/admin.spec.ts:69:3 › Admin user management › Edit a user successfully
+[7/62] [chromium] › tests/admin.spec.ts:99:3 › Admin user management › Delete a user successfully
+[8/62] [chromium] › tests/admin.spec.ts:131:3 › Admin user management › Cancel user creation
+[9/62] [chromium] › tests/admin.spec.ts:142:3 › Admin user management › Email is required and must be valid
+[10/62] [chromium] › tests/admin.spec.ts:153:3 › Admin user management › Password must be at least 8 characters
+[11/62] [chromium] › tests/admin.spec.ts:168:3 › Admin user management › Passwords must match
+[12/62] [chromium] › tests/admin.spec.ts:185:3 › Admin page access control › Non-superuser cannot access admin page
+[13/62] [chromium] › tests/admin.spec.ts:198:3 › Admin page access control › Superuser can access admin page
+[14/62] [chromium] › tests/items.spec.ts:11:1 › Items page is accessible and shows correct title
+[15/62] [chromium] › tests/items.spec.ts:17:1 › Add Item button is visible
+[16/62] [chromium] › tests/items.spec.ts:121:3 › Items empty state › Shows empty state message when no items exist
+[17/62] [chromium] › tests/items.spec.ts:37:3 › Items management › Create a new item successfully
+[18/62] [chromium] › tests/items.spec.ts:61:3 › Items management › Cancel item creation
+[19/62] [chromium] › tests/items.spec.ts:90:5 › Items management › Edit and Delete › Edit an item successfully
+[20/62] [chromium] › tests/login.spec.ts:19:1 › Inputs are visible, empty and editable
+[21/62] [chromium] › tests/items.spec.ts:50:3 › Items management › Create item with only required fields
+[22/62] [chromium] › tests/login.spec.ts:26:1 › Log In button is visible
+[23/62] [chromium] › tests/items.spec.ts:69:3 › Items management › Title is required
+[24/62] [chromium] › tests/login.spec.ts:32:1 › Forgot Password link is visible
+[25/62] [chromium] › tests/items.spec.ts:103:5 › Items management › Edit and Delete › Delete an item successfully
+[26/62] [chromium] › tests/login.spec.ts:40:1 › Log in with valid email and password 
+[27/62] [chromium] › tests/login.spec.ts:53:1 › Log in with invalid email
+[28/62] [chromium] › tests/login.spec.ts:62:1 › Log in with invalid password
+[29/62] [chromium] › tests/login.spec.ts:72:1 › Successful log out
+[30/62] [chromium] › tests/login.spec.ts:89:1 › Logged-out user cannot access protected routes
+[31/62] [chromium] › tests/login.spec.ts:109:1 › Redirects to /login when token is wrong
+[32/62] [chromium] › tests/reset-password.spec.ts:10:1 › Password Recovery title is visible
+[33/62] [chromium] › tests/reset-password.spec.ts:18:1 › Input is visible, empty and editable
+[34/62] [chromium] › tests/reset-password.spec.ts:26:1 › Continue button is visible
+[35/62] [chromium] › tests/reset-password.spec.ts:70:1 › Expired or invalid reset link
+[36/62] [chromium] › tests/reset-password.spec.ts:32:1 › User can reset password successfully using the link
+[37/62] [chromium] › tests/reset-password.spec.ts:83:1 › Weak new password validation
+[38/62] [chromium] › tests/sign-up.spec.ts:27:1 › Inputs are visible, empty and editable
+[39/62] [chromium] › tests/sign-up.spec.ts:36:1 › Sign Up button is visible
+[40/62] [chromium] › tests/sign-up.spec.ts:42:1 › Log In link is visible
+[41/62] [chromium] › tests/sign-up.spec.ts:48:1 › Sign up with valid name, email, and password
+[42/62] [chromium] › tests/sign-up.spec.ts:58:1 › Sign up with invalid email
+[43/62] [chromium] › tests/sign-up.spec.ts:73:1 › Sign up with existing email
+[44/62] [chromium] › tests/sign-up.spec.ts:94:1 › Sign up with weak password
+[45/62] [chromium] › tests/sign-up.spec.ts:109:1 › Sign up with mismatched passwords
+[46/62] [chromium] › tests/sign-up.spec.ts:123:1 › Sign up with missing full name
+[47/62] [chromium] › tests/sign-up.spec.ts:136:1 › Sign up with missing email
+[48/62] [chromium] › tests/sign-up.spec.ts:149:1 › Sign up with missing password
+[49/62] [chromium] › tests/user-settings.spec.ts:9:1 › My profile tab is active by default
+[50/62] [chromium] › tests/user-settings.spec.ts:17:1 › All tabs are visible
+[51/62] [chromium] › tests/user-settings.spec.ts:68:3 › Edit user email › Edit user email with a valid email
+[52/62] [chromium] › tests/user-settings.spec.ts:92:3 › Cancel edit actions › Cancel edit action restores original name
+[53/62] [chromium] › tests/user-settings.spec.ts:109:3 › Cancel edit actions › Cancel edit action restores original email
+[54/62] [chromium] › tests/user-settings.spec.ts:130:3 › Change password › Update password successfully
+[55/62] [chromium] › tests/user-settings.spec.ts:205:1 › Appearance button is visible in sidebar
+[56/62] [chromium] › tests/user-settings.spec.ts:210:1 › User can switch between theme modes
+[57/62] [chromium] › tests/user-settings.spec.ts:224:1 › Selected mode is preserved across sessions
+[58/62] [chromium] › tests/user-settings.spec.ts:41:3 › Edit user profile › Edit user name with a valid name
+[59/62] [chromium] › tests/user-settings.spec.ts:169:3 › Change password validation › Update password with weak passwords
+[60/62] [chromium] › tests/user-settings.spec.ts:54:3 › Edit user profile › Edit user email with an invalid email shows error
+[61/62] [chromium] › tests/user-settings.spec.ts:193:3 › Change password validation › Current password and new password are the same
+[62/62] [chromium] › tests/user-settings.spec.ts:182:3 › Change password validation › New password and confirmation password do not match
+  62 passed (39.2s)
