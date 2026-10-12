@@ -60,3 +60,7 @@ full_name	varchar(255)	YES		NULL
 id	char(36)	NO	PRI	NULL	
 hashed_password	varchar(255)	NO		NULL	
 created_at	datetime	YES		NULL	
+
+=== 2026-10-12 23:34:23 healthcheck after MYSQL_PWD change ===
+lingsight-ai-db-1 Up 5 seconds (healthy)
+health status: healthy | last exit: 0

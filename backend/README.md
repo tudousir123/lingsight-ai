@@ -9,6 +9,12 @@
 
 Run the backend locally and connect it to MySQL in Docker Compose.
 
+This repo does not commit `.env`; create it from the template first (all values are placeholders — change them):
+
+```console
+$ cp .env.example .env
+```
+
 From the project root, start MySQL and Mailpit:
 
 ```console

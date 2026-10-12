@@ -22,8 +22,13 @@ services:
     image: mysql:8.4
     healthcheck:
       # Verifies the app user and database are provisioned (first boot runs
-      # the entrypoint init before these exist), not just that mysqld is up
-      test: ["CMD-SHELL", "mysql -uapp -p$$MYSQL_PASSWORD app -e 'SELECT 1'"]
+      # the entrypoint init before these exist), not just that mysqld is up.
+      # MYSQL_PWD keeps the password off the process command line.
+      test:
+        [
+          "CMD-SHELL",
+          "MYSQL_PWD=$$MYSQL_PASSWORD mysql -uapp app -e 'SELECT 1'",
+        ]
       interval: 10s
       retries: 5
       start_period: 30s
