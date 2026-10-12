@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!frontend/.env
 *.key
 *.pem
 *.p12
@@ -31,7 +32,18 @@ logs/
 *.log
 .cache/
 
+# Node / frontend build artifacts
+node_modules/
+backend/app/frontend/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # OS / IDE
 .DS_Store
 .idea/
-.vscode/
+# VS Code: keep the shared extensions and launch configs, ignore the rest
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
