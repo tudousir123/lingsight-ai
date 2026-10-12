@@ -11,9 +11,10 @@ import pytest
 
 from app.text_to_sql.semantic import SemanticLayerError, load
 
-# The five tables `lingsight_ro` can SELECT today (docs/08), plus
-# frame_predictions (waiting for the v_query_* view, ticket #7) and the
-# planned metrics table (ticket #4, ADR-0003).
+# The six tables `lingsight_ro` can SELECT today (docs/08 plus
+# trial_metrics, granted in ticket #4 — see docs/evidence/m1-t3/
+# 04-grant-verify.log), plus frame_predictions (waiting for the
+# v_query_* view, ticket #7).
 EXPECTED_TABLES = {
     "datasets",
     "videos",
@@ -23,17 +24,19 @@ EXPECTED_TABLES = {
     "frame_predictions",
     "trial_metrics",
 }
-GRANTED_TABLES = EXPECTED_TABLES - {"frame_predictions", "trial_metrics"}
+GRANTED_TABLES = EXPECTED_TABLES - {"frame_predictions"}
 
 
-def test_covers_whitelist_plus_platform_and_metrics_placeholder() -> None:
+def test_covers_whitelist_plus_platform_and_metrics() -> None:
     layer = load()
     assert set(layer.tables) == EXPECTED_TABLES
     exposed = {name for name, table in layer.tables.items() if table.exposed}
     assert exposed == GRANTED_TABLES
     # Covered but deliberately not reachable yet.
     assert layer.tables["frame_predictions"].expose_via == "v_query_frame_predictions"
-    assert layer.tables["trial_metrics"].status == "planned"
+    # trial_metrics went live in ticket #4 (M1-T3): no table is left in the
+    # planned state, and the metrics table is exposed with its real columns.
+    assert not any(table.status == "planned" for table in layer.tables.values())
 
 
 def test_prompt_context_and_ast_whitelist_render_from_same_source() -> None:
@@ -148,9 +151,11 @@ def test_relations_synonyms_and_aggregation_grain_reach_the_prompt() -> None:
     assert "platform_positions.day_label" in prompt
     # Join paths to not-yet-queryable tables must NOT teach the LLM to join
     # what the whitelist would reject (frame_predictions waits for the
-    # v_query_* view, trial_metrics for M1-T3).
+    # v_query_* view). trial_metrics is live since ticket #4, so its join
+    # path (with the long-format caution) reaches the prompt.
     assert "frame_predictions.video_id" not in prompt
-    assert "trial_metrics.video_id" not in prompt
+    assert "trial_metrics.video_id" in prompt
+    assert "metric" in prompt
     # Researcher vocabulary maps onto columns…
     assert layer.synonyms["动物"] == "(group_name, mouse_id)"
     assert layer.synonyms["训练日"] == "date_dir"
@@ -160,6 +165,27 @@ def test_relations_synonyms_and_aggregation_grain_reach_the_prompt() -> None:
     # The probe day is a real date_dir value (docs/08: 499 training + 50
     # probe videos on 0809 = 549) and must be in the declared domain.
     assert "0809" in layer.tables["videos"].columns["date_dir"].domain
+
+
+def test_trial_metrics_schema_matches_the_live_table() -> None:
+    # Ticket #4 finalized the table: long format, PK (video_id, metric,
+    # algo_version), every row self-describing its unit and calc_status
+    # (ADR-0003 recomputation is versioned). These facts anchor the
+    # Text-to-SQL prompts to the real water_maze.trial_metrics.
+    layer = load()
+    table = layer.tables["trial_metrics"]
+    assert table.primary_key == ("video_id", "metric", "algo_version")
+    metric = table.columns["metric"]
+    for name in ("dist_px", "speed_px", "valid_kp_ratio", "in_pool_ratio"):
+        assert name in metric.domain
+    assert "calc_status" in table.columns
+    assert "calculated_at" in table.columns
+    # Aggregation guidance travels with the columns, not just the rules.
+    assert "calc_status='ok'" in table.columns["value"].caution
+    assert "algo_version" in table.columns["algo_version"].caution
+    # Researcher vocabulary maps onto the metric names…
+    assert "metric='dist_px'" in layer.synonyms["游泳距离"]
+    assert "metric='speed_px'" in layer.synonyms["平均速度"]
 
 
 def test_loader_rejects_unknown_schema_version(tmp_path: Path) -> None:

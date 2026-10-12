@@ -30,20 +30,22 @@ synonyms:
   试次尾号: trial_no
   放鼠象限(训练期): session_no
   放鼠象限(探测期): session_label
+  游泳距离: "trial_metrics（metric='dist_px'）"
+  平均速度: "trial_metrics（metric='speed_px'）"
 
 # 表关系：全库无外键，join 只能依据此声明（docs/08 风险 4）
 relations:
   - {from: videos.dataset_id, to: datasets.dataset_id, cardinality: many_to_one}
   - {from: qc_summary.video_id, to: videos.video_id, cardinality: one_to_one}
   - {from: frame_predictions.video_id, to: videos.video_id, cardinality: many_to_one}
-  - {from: trial_metrics.video_id, to: videos.video_id, cardinality: one_to_one, note: 指标表 planned（M1-T3），建表后生效}
+  - {from: trial_metrics.video_id, to: videos.video_id, cardinality: many_to_one, note: 长格式——每视频每指标一行（4 指标），join 前先按 metric（必要时加 algo_version）过滤}
   - {from: videos.date_dir, to: platform_positions.day_label, cardinality: label_match, note: 软对应——仅训练日 0804–0808 匹配；platform_positions 另含 Probe 靶区行与 all 汇总行，join 前须按 day_label 过滤}
 
 # 聚合口径（docs/09 公共口径 + ADR-0003）
 aggregation_rules:
   - 组间统计的推荐聚合口径是逐鼠-逐日：先按 (group_name, mouse_id, date_dir) 聚合再组间比较；试次直均有伪重复风险（统计单位=动物，docs/09 Q17）
   - 帧级统计默认只使用 status='ok' 帧；头尾关键点统计须再 AND head_x IS NOT NULL（ok 帧中 head 缺 2137、tail 缺 4179）
-  - 聚合统计优先查 trial_metrics 指标表（确定性 Python 预计算，ADR-0003）；建表前的帧级折线长聚合由管线内置临时表完成，不由 LLM 现场推导
+  - 聚合统计优先查 trial_metrics 指标表（确定性 Python 预计算，ADR-0003；过滤 metric + algo_version，只取 calc_status='ok' 的 value）；表未覆盖的指标不得让 LLM 现场对帧数据推导，先扩展指标表发新版本
   - 统计与对比必须先声明 phase（训练期/探测期），两阶段不可混算
 
 tables:
@@ -185,8 +187,19 @@ tables:
       instant_static_by_iou: {reason: 管线内部质量量（疑似静止标记），聚合已入 qc_summary}
 
   trial_metrics:
-    description: 试次级行为指标表（ADR-0003）：确定性 Python 计算的游泳距离/平均速度/关键点占比/在池时间占比，含算法版本、单位、计算状态
-    # M1-T3（工单 #4）建表后翻转为 exposed: true；列设计由该票定稿（候选：metric/value_px/algo_version/unit/calc_status）
-    status: planned
-    exposed: false
+    description: 试次级行为指标表（ADR-0003，M1-T3 已上线）：确定性 Python 从 frame_predictions 预计算，SQL/LLM 不推导指标；长格式每视频每指标一行
+    exposed: true
     primary_key: [video_id, metric, algo_version]
+    columns:
+      video_id: {type: varchar(128), meaning: 视频标识（视频=试次），关联 videos.video_id}
+      metric: {type: varchar(32), meaning: 指标名, domain: "dist_px=游泳距离 | speed_px=平均速度 | valid_kp_ratio=有效关键点帧占比 | in_pool_ratio=在池时间占比"}
+      algo_version: {type: varchar(64), meaning: 算法版本（重算发新版本，不覆盖旧值）, domain: "v1-polyline-ok-frames（当前）", caution: 聚合须固定 algo_version，避免新旧版本混算}
+      value: {type: double, meaning: 指标值, caution: 仅 calc_status='ok' 的行参与聚合}
+      unit: {type: varchar(16), meaning: 单位, domain: "px | px/s | ratio"}
+      calc_status: {type: varchar(24), meaning: 计算状态（失败行保留原因而非静默缺行）, domain: "ok=已算出 | no_frames/no_ok_frames/insufficient_ok_frames=帧不足 | missing_pool_params=缺池参数"}
+      ok_frames: {type: int, meaning: 口径快照：该视频 status='ok' 帧数}
+      total_frames: {type: int, meaning: 口径快照：该视频全部帧数}
+      duration_s: {type: double, meaning: 口径快照：ok 帧时间跨度（秒，speed_px 的分母）}
+      calculated_at: {type: timestamp, meaning: 本行写入/更新时间（UTC）}
+    excluded_columns:
+      definition: {reason: 行级口径文本快照（溯源用），结构化口径以本语义层与 ADR-0003 为准}

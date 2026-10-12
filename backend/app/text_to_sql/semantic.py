@@ -64,7 +64,7 @@ class Relation(BaseModel):
 class TableSpec(BaseModel):
     description: str
     exposed: bool = True
-    # Not created yet (ADR-0003 metrics table) — covered, but not queryable.
+    # Covered in the layer but not created in the DB yet — not queryable.
     status: Literal["planned"] | None = None
     # View that will replace direct access (ticket #7: v_query_* views).
     expose_via: str | None = None
