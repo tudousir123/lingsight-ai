@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import pymysql  # type: ignore[import-untyped]
+import pymysql.cursors  # type: ignore[import-untyped]
 
 from app.text_to_sql.settings import ResearchQuerySettings
 
