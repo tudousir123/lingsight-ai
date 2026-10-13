@@ -187,6 +187,7 @@ def main(argv: list[str] | None = None) -> int:
     questions = selected_questions(args.ids)
     try:
         provider = OpenAICompatProvider.from_settings(settings)
+        provider.probe()
         executor = ResearchQueryExecutor(settings)
         executor.run("SELECT 1")
     except (ProviderError, QueryExecutionError) as error:

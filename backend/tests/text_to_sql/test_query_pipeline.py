@@ -522,3 +522,42 @@ def test_provider_error_surfaces_vendor_reason(
     )
     with pytest.raises(ProviderError, match=r"HTTP 429.*1113: 余额不足"):
         provider.chat([{"role": "user", "content": "hi"}])
+
+
+def test_probe_reports_transport_failure_as_provider_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Env gates rely on probe() to skip cleanly when the proxy is down.
+
+    A configured-but-down endpoint must surface as ProviderError
+    ("unreachable"), never as an unhandled httpx error.
+    """
+
+    def refused(_url: str, /, **_kwargs: Any) -> httpx.Response:
+        raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr(httpx, "get", refused)
+    provider = OpenAICompatProvider(
+        base_url="http://127.0.0.1:9/v1",
+        api_key=None,
+        model="m",
+    )
+    with pytest.raises(ProviderError, match="unreachable: ConnectError"):
+        provider.probe()
+
+
+def test_probe_treats_any_http_status_as_alive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Liveness is transport-level: a 404 on the base path still means up."""
+
+    def not_found(_url: str, /, **_kwargs: Any) -> httpx.Response:
+        return httpx.Response(404)
+
+    monkeypatch.setattr(httpx, "get", not_found)
+    provider = OpenAICompatProvider(
+        base_url="http://127.0.0.1:9/v1",
+        api_key=None,
+        model="m",
+    )
+    provider.probe()

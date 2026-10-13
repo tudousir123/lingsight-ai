@@ -32,6 +32,7 @@ from app.text_to_sql.executor import (
     QueryExecutionError,
     ResearchQueryExecutor,
 )
+from app.text_to_sql.gateway import OpenAICompatProvider, ProviderError
 from app.text_to_sql.pipeline import (
     ResearchQueryAnswer,
     ResearchQueryRejection,
@@ -46,6 +47,10 @@ pytestmark = [pytest.mark.env_gated]
 _SKIP_LLM = (
     "execution layer needs a real LLM endpoint: set LLM_BASE_URL, LLM_API_KEY "
     "and LLM_MODEL in the environment (see backend/.env)"
+)
+_SKIP_LLM_DOWN = (
+    "the configured LLM endpoint did not respond — start the local proxy "
+    "to run the execution layer"
 )
 _SKIP_DB = (
     "execution layer needs the water_maze research DB with LINGSIGHT_RO_PASSWORD "
@@ -89,6 +94,12 @@ def db_available(settings: ResearchQuerySettings) -> ResearchQueryExecutor:
 def _llm_available(settings: ResearchQuerySettings) -> None:
     if not (settings.LLM_BASE_URL and settings.LLM_API_KEY):
         pytest.skip(_SKIP_LLM)
+    # Liveness, not configuration presence: a configured-but-down proxy
+    # must skip these tests, not fail them as if the code were broken.
+    try:
+        OpenAICompatProvider.from_settings(settings).probe()
+    except ProviderError as error:
+        pytest.skip(f"{_SKIP_LLM_DOWN} ({error})")
 
 
 def _golden(executor: ResearchQueryExecutor, qid: int) -> Any:

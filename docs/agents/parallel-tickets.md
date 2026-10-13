@@ -13,6 +13,7 @@
    `docker exec lingsight-ai-db-1 sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS app_tN; GRANT ALL ON app_tN.* TO \"app\"@\"%\";"'`
 4. **派 agent**：任务书自包含（票号 + worktree 路径 + 只读主树参考文档的绝对路径 + 测试/静态检查命令 + 禁改清单：progress.md、semantic 层（除非票就是它）、依赖（除非票需要）、不 push 不动 tracker）。
 5. **合并收口**（主会话）：先 `git diff --name-only` 查两票文件交集；顺序 merge；合并后全量 pytest + ruff + mypy；把 worktree `.env` 里的新凭据变量并回主 `.env` 再删 worktree/分支/临时库。
+6. **推送后看 CI 再收口**：本地合并不开 PR 的分支在推送 main 前没有任何 CI——批次推送后、写验收/closeout 之前，先确认 GitHub Actions 全绿（2026-10-13 的 33 提交大推送一次踩爆两个潜伏工作流 bug，均到推送后才暴露）。
 
 ## 什么时候不用
 

@@ -43,6 +43,11 @@ class ProviderError(Exception):
         self.reason_code = "provider_error"
 
 
+def _unreachable(error: Exception) -> ProviderError:
+    """Transport-level failure: no HTTP exchange happened at all."""
+    return ProviderError(f"LLM endpoint unreachable: {error.__class__.__name__}")
+
+
 class Provider(Protocol):
     def chat(self, messages: list[Message]) -> str:
         """Return the assistant message content for the given conversation."""
@@ -80,6 +85,18 @@ class OpenAICompatProvider:
             timeout_seconds=settings.LLM_TIMEOUT_SECONDS,
         )
 
+    def probe(self) -> None:
+        """Transport-level liveness check; any HTTP status counts as alive.
+
+        Env gates (test fixtures, run_eval) call this to tell "endpoint
+        down" from a code failure without spending tokens — the LLM-side
+        counterpart of ``executor.run("SELECT 1")`` on the DB side.
+        """
+        try:
+            httpx.get(self._base_url, timeout=5.0)
+        except httpx.HTTPError as error:
+            raise _unreachable(error) from error
+
     def chat(self, messages: list[Message]) -> str:
         headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
         payload = {
@@ -96,8 +113,7 @@ class OpenAICompatProvider:
                 timeout=self._timeout_seconds,
             )
         except httpx.HTTPError as error:
-            msg = f"LLM endpoint unreachable: {error.__class__.__name__}"
-            raise ProviderError(msg) from error
+            raise _unreachable(error) from error
         if response.status_code != 200:
             raise ProviderError(
                 f"LLM endpoint returned HTTP {response.status_code}"

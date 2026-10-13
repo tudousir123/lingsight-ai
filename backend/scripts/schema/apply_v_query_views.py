@@ -74,7 +74,7 @@ def main() -> int:
         # GRANT names the account host '@%', which PyMySQL would read as a
         # format specifier — go through the raw DBAPI cursor instead.
         raw = conn.connection
-        raw.cursor().execute(V_QUERY_FRAME_PREDICTIONS_GRANT)  # type: ignore[attr-defined]
+        raw.cursor().execute(V_QUERY_FRAME_PREDICTIONS_GRANT)
         conn.commit()
         logger.info("granted SELECT ON v_query_frame_predictions TO lingsight_ro")
 
