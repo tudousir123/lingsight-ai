@@ -56,6 +56,21 @@ React UI → FastAPI
 
 每个里程碑以**真实运行记录和测试通过**为完成标准，不以 README 或代码生成作为完成证据。
 
+## M1 当前状态（2026-10-13，以运行记录为准）
+
+Text-to-SQL 最小闭环已端到端跑通并留档（除人机协作的事件定义票 #6 挂起外全部收口）：
+
+- **语义层**（[ADR-0004]）：`backend/app/text_to_sql/semantic_layer.yaml` 唯一事实来源，同源渲染 LLM 提示词与 SQLGlot 白名单；三大口径陷阱（animal_code/session_label/trial_no）测试锁定。
+- **指标表**（[ADR-0003]）：`trial_metrics` 由确定性 Python 预计算（算法版本化、重跑幂等）；组×日黄金矩阵 60/60 验证，库刷新后可重算再生。
+- **查询管线**：`POST /api/v1/research/query`——生成→校验（白名单/单 SELECT/强制 LIMIT）→ `lingsight_ro` 限时执行 → 有界修复（≤2 次，权限零放宽、空结果零篡改）→ 口径声明回答。真实 LLM（本地代理 gemini-3.8-flash）演示：『一共有多少只动物』→ **6**（非陷阱值 26）。
+- **安全**：备份表/写操作/跨库实测拒绝；mask 族列按用户决策开放（[ADR-0007]），帧级唯一入口为 `v_query_frame_predictions` 视图；凭据全环境变量。
+- **评测**（[docs/09]）：25 问黄金评测集双层套件，正式基线 **25/25（A 9/9、B 5/5、C 6/6、D 5/5）**，证据 `docs/evidence/m1-t6/`；端到端演示链路 `docs/evidence/m1-t9/demo/`。
+
+[ADR-0003]: docs/adr/0003-metrics-deterministic-python.md
+[ADR-0004]: docs/adr/0004-yaml-semantic-layer.md
+[ADR-0007]: docs/adr/0007-open-mask-columns-to-query-surface.md
+[docs/09]: docs/09-golden-qa-draft.md
+
 ## 安全和科研可信度
 
 - 禁止让 LLM 直接执行任意 SQL；SQLGlot AST 是防护之一，**数据库只读权限、表列白名单、超时和行数限制**必须在服务侧实现。
