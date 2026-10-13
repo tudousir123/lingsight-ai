@@ -54,3 +54,4 @@ backend/app/frontend/
 # 由 scripts/metrics/render_sampling_review.py 确定性再生成
 docs/evidence/m1-t7/sampling-review.html
 docs/evidence/m1-t7/clips/
+docs/evidence/m1-t7/dispute-review.html
