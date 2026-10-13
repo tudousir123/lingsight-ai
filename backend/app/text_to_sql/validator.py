@@ -20,6 +20,7 @@ Scope handling relies on ``sqlglot.optimizer.scope`` so that aliases, CTEs
 and derived tables resolve lexically instead of by global name matching.
 """
 
+import re
 from dataclasses import dataclass
 from typing import Literal, cast
 
@@ -28,6 +29,10 @@ from sqlglot import exp
 from sqlglot.optimizer.scope import Scope, build_scope
 
 from app.text_to_sql.semantic import AstWhitelist
+
+#: sqlglot decorates parse errors with ANSI emphasis codes; strip them so
+#: messages stay clean in repair prompts and HTTP responses.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 #: Typed rejection codes the pipeline can emit (see pipeline / route layers).
 ReasonCode = Literal[
@@ -88,7 +93,7 @@ def _parse_single(sql: str) -> exp.Expression:
     try:
         statements = sqlglot.parse(sql, read="mysql")
     except sqlglot.errors.ParseError as error:
-        msg = f"SQL could not be parsed: {error}"
+        msg = f"SQL could not be parsed: {_ANSI_RE.sub('', str(error))}"
         raise ValidationFailure("parse_error", msg) from error
     non_empty = [s for s in statements if s is not None]
     if len(non_empty) != 1:
