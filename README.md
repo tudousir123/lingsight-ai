@@ -21,7 +21,7 @@
 
 | 层 | 方案 |
 |---|---|
-| 全栈 | **青戈 Vue + FastAPI 脚手架**（待确认 ZIP 并导入；目前未提交） |
+| 全栈 | **FastAPI 官方 full-stack-fastapi-template**（MIT；React+TS 前端；默认 PostgreSQL，适配 MySQL 后使用，实验数据仍以本机 MySQL 为权威，见 ADR-0002） |
 | LLM | 云端 API，经过可替换的 Model Gateway |
 | Agent | Python 单主 Agent + 工具接口；Text-to-SQL 参考 LangGraph SQL Agent |
 | SQL | SQLAlchemy + SQLGlot + 只读数据库账户 + 白名单 Schema + 执行限额 |
@@ -35,7 +35,7 @@
 ## 端到端工作流
 
 ```text
-Vue UI → FastAPI
+React UI → FastAPI
   ├─ Video Jobs → GPU Worker → 场景分割 / 小鼠 Mask / Pose / Tracking
   │                            → 帧级轨迹与行为指标 → MySQL
   └─ Research Agent
@@ -48,7 +48,7 @@ Vue UI → FastAPI
 
 ## 从 0 到 1 的实施顺序
 
-1. **M0 基础就位**：核验青戈脚手架的许可证及 ZIP；导入原始工程；确认 FastAPI、Vue 和本地配置可启动，保存启动/测试记录。
+1. **M0 基础就位**：导入 FastAPI 官方 full-stack-fastapi-template（MIT），完成 PostgreSQL→MySQL 适配；确认 FastAPI、React 前端和本地配置可启动，保存启动/测试记录。
 2. **M1 Text-to-SQL 最小闭环**：对现有 MySQL 建立只读账号、允许查询的视图和科研语义字典；实现查询计划、SQL 校验、执行与错误反馈。用 20–30 个真实问题对人工 SQL 标准答案进行对照。
 3. **M2 科研 RAG**：导入一批授权论文及实验手册，评估 PDF 解析、Chunk、混合检索、Rerank、证据完整性和引用。
 4. **M3 Agent 集成**：自然语言协同调用 SQL、Python 统计与 RAG 工具，输出可回溯图表和回答。
@@ -76,4 +76,4 @@ Vue UI → FastAPI
 
 ## License
 
-**待确认。** 目前不推断青戈脚手架及其他代码的再分发授权；仓库原有授权条款不得因改名而自动改变。
+应用代码基于 [FastAPI 官方 full-stack-fastapi-template](https://github.com/fastapi/full-stack-fastapi-template)（MIT）；其余引用的开源项目按各自许可证使用。仓库内禁止上传无再分发授权的第三方代码、私人科研数据与密钥。

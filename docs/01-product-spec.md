@@ -5,7 +5,7 @@
 
 ## 交付边界
 - 第一范式：Morris 水迷宫。
-- UI：青戈 Vue + FastAPI 项目（待 ZIP 核验与导入）。
+- UI/基座：FastAPI 官方 full-stack-fastapi-template（MIT，React 前端），数据库适配为本机 MySQL（权威实验库 water_maze，见 ADR-0002 与 docs/08 Schema 审查）。
 - Agent：一期使用云端 API；单主 Agent 通过 typed Tool 调用 SQL、统计、科研 RAG。
 - 隐藏平台不可见时需元数据/校准输入，不能生成猜测坐标。
 - 首次出现、首次入水、碰台、有效上台等事件分别定义并评测。
