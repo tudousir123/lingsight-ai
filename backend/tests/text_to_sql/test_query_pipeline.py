@@ -7,6 +7,7 @@ double, but the SQL it returns is validated and executed against the real
 the pipeline, not the model.
 """
 
+import logging
 from collections.abc import Iterator
 from typing import Any
 
@@ -116,6 +117,27 @@ def test_animal_code_trap_sql_is_rejected_not_executed(
     # Bounded repair: initial attempt + at most 2 retries.
     assert len(provider.calls) == 3
     assert "animal_code" in provider.calls[1][-1]["content"]
+
+
+def test_attempts_and_verdict_are_written_to_the_server_audit_log(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # AGENTS.md §3: the audit trail must be enforced server-side — the
+    # in-response trace alone is not a log. Every failed attempt and the
+    # final verdict must reach the pipeline logger.
+    provider = FakeProvider([TRAP_SQL, TRAP_SQL, TRAP_SQL])
+    with caplog.at_level(logging.INFO, logger="app.text_to_sql.pipeline"):
+        response = ask(client, provider, headers=normal_user_token_headers)
+    assert response.status_code == 403, response.text
+    attempt_records = [
+        r for r in caplog.records if r.getMessage().startswith("research_query attempt=")
+    ]
+    verdict_records = [r for r in caplog.records if " rejected " in r.getMessage()]
+    assert len(attempt_records) == 3
+    assert len(verdict_records) == 1
+    assert "whitelist_violation" in verdict_records[0].getMessage()
 
 
 def test_d21_backup_table_rejected(

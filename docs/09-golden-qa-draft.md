@@ -63,8 +63,8 @@ GROUP BY video_id;
 | 21 | 查 rescue_backup_videos_20261011 | ✅ `SELECT command denied` |
 | 22 | DELETE FROM videos | ✅ `DELETE command denied` |
 | 23 | 查 wm_sync_stage_20261012 库 | ✅ 跨库拒绝（账户无该库任何授权） |
-| 24 | 读 mask_rle_counts | ✅ frame_predictions 未直授（等 v_query_* 视图） |
-| 25 | 全表导出 frame_predictions | ✅ 同 24；应用侧另有强制 LIMIT/行数上限（服务层实现，M1 编码项） |
+| 24 | 读 mask_rle_counts | ✅ 经 `v_query_frame_predictions` 视图允许（ADR-0007 开放决策，2026-10-13 反转原拒绝预期；行数上限兜底）；基表仍只授视图 |
+| 25 | 全表导出 frame_predictions | ✅ 视图可查但受服务端强制 LIMIT/行数上限截断；基表直查仍被账户层拒绝 |
 
 ## 附录 · 组×日 黄金矩阵（训练期，距离 px / 速度 px·s⁻¹）
 

@@ -21,9 +21,12 @@ only on generation/validation failures; the strategy per error family:
   conditions.
 
 Every attempt and its typed failure is recorded in an audit ``trace`` that
-travels with both the answer and the rejection.
+travels with both the answer and the rejection; each failure and the final
+verdict are also written to the server-side audit log (AGENTS.md §3 — the
+in-response trace alone is not a log).
 """
 
+import logging
 import re
 from datetime import UTC, datetime
 from functools import lru_cache
@@ -47,6 +50,8 @@ from app.text_to_sql.validator import (
 )
 
 JsonScalar = str | int | float | bool | None
+
+logger = logging.getLogger(__name__)
 
 AttemptStage = Literal["generation", "validation", "execution"]
 
@@ -164,6 +169,46 @@ def _empty_result_suggestion() -> str:
     )
 
 
+def _trace_failure(
+    trace: list[AttemptTrace],
+    *,
+    attempt: int,
+    stage: AttemptStage,
+    reason_code: ReasonCode,
+    message: str,
+) -> None:
+    """Record one typed failure in the trace and the server-side audit log."""
+    trace.append(
+        AttemptTrace(
+            attempt=attempt, stage=stage, reason_code=reason_code, message=message
+        )
+    )
+    logger.info(
+        "research_query attempt=%d stage=%s reason_code=%s", attempt, stage, reason_code
+    )
+
+
+def _reject(
+    trace: list[AttemptTrace],
+    *,
+    reason_code: ReasonCode,
+    message: str,
+    sql: str | None,
+    attempts: int,
+) -> ResearchQueryRejection:
+    """Build the terminal typed rejection and log the verdict for audit."""
+    logger.info(
+        "research_query rejected reason_code=%s attempts=%d", reason_code, attempts
+    )
+    return ResearchQueryRejection(
+        reason_code=reason_code,
+        message=message,
+        sql=sql,
+        attempts=attempts,
+        trace=trace,
+    )
+
+
 class ResearchQueryPipeline:
     """One question → one structured answer or one typed rejection."""
 
@@ -201,20 +246,19 @@ class ResearchQueryPipeline:
             try:
                 raw = self._provider.chat(messages)
             except ProviderError as error:
-                trace.append(
-                    AttemptTrace(
-                        attempt=attempt,
-                        stage="generation",
-                        reason_code="provider_error",
-                        message=str(error),
-                    )
+                _trace_failure(
+                    trace,
+                    attempt=attempt,
+                    stage="generation",
+                    reason_code="provider_error",
+                    message=str(error),
                 )
-                return ResearchQueryRejection(
+                return _reject(
+                    trace,
                     reason_code="provider_error",
                     message=str(error),
                     sql=last_sql,
                     attempts=attempt,
-                    trace=trace,
                 )
             candidate = extract_sql(raw)
             last_sql = candidate
@@ -225,13 +269,12 @@ class ResearchQueryPipeline:
                     max_rows=self._settings.RESEARCH_QUERY_MAX_ROWS,
                 )
             except ValidationFailure as failure:
-                trace.append(
-                    AttemptTrace(
-                        attempt=attempt,
-                        stage="validation",
-                        reason_code=failure.reason_code,
-                        message=failure.message,
-                    )
+                _trace_failure(
+                    trace,
+                    attempt=attempt,
+                    stage="validation",
+                    reason_code=failure.reason_code,
+                    message=failure.message,
                 )
                 if attempt < max_attempts:
                     messages = messages + [
@@ -242,12 +285,12 @@ class ResearchQueryPipeline:
                         },
                     ]
                     continue
-                return ResearchQueryRejection(
+                return _reject(
+                    trace,
                     reason_code=failure.reason_code,
                     message=failure.message,
                     sql=last_sql,
                     attempts=attempt,
-                    trace=trace,
                 )
 
             # Execution failures are terminal: the budget is spent on
@@ -255,20 +298,19 @@ class ResearchQueryPipeline:
             try:
                 result = self._executor.run(validated.sql)
             except QueryExecutionError as error:
-                trace.append(
-                    AttemptTrace(
-                        attempt=attempt,
-                        stage="execution",
-                        reason_code=error.reason_code,
-                        message=error.message,
-                    )
+                _trace_failure(
+                    trace,
+                    attempt=attempt,
+                    stage="execution",
+                    reason_code=error.reason_code,
+                    message=error.message,
                 )
-                return ResearchQueryRejection(
+                return _reject(
+                    trace,
                     reason_code=error.reason_code,
                     message=error.message,
                     sql=validated.sql,
                     attempts=attempt,
-                    trace=trace,
                 )
             return self._answer(
                 question, validated, result, attempt=attempt, trace=trace
@@ -287,6 +329,12 @@ class ResearchQueryPipeline:
         trace: list[AttemptTrace],
     ) -> ResearchQueryAnswer:
         empty = result.row_count == 0
+        logger.info(
+            "research_query answered rows=%d attempts=%d truncated=%s",
+            result.row_count,
+            attempt,
+            result.truncated,
+        )
         return ResearchQueryAnswer(
             status="ok",
             question=question,
