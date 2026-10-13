@@ -1,5 +1,17 @@
 # FastAPI Project - Frontend
 
+## LingSight AI 水迷宫界面预览
+
+默认登录后的首页已读取后端实验与试次目录；普通用户只看到应用库中显式授予访问权限的实验，管理员可浏览全部。试次详情使用 `/experiments/:experimentId/trials/:trialId` 固定地址。后端需要配置研究库只读账户；研究库不可用、无权限和视频文件不可访问会分别显示状态。当前详情页只展示试次元数据，视频核对和结果联动由后续工单实现。旧的四页效果图保留在开发演示模式。
+
+部署时先运行 Alembic 迁移，再由管理员在应用库的 `experiment_access` 表写入 `(user_id, experiment_id)` 授权；`user_id` 对应应用库 `user.id`，`experiment_id` 对应研究库 `datasets.dataset_id`。目前没有授权管理界面，未授予实验的普通用户会看到空实验列表。当前科研语义层将 `0804–0808` 映射为第 1–5 训练日，目录页的训练日筛选沿用这一已确认口径；接入其他实验协议前须先核定其训练日映射。
+
+开发演示模式仍保留「实验管理」「分析任务」「统计与报告」四页，入口位于 `/`、`/prepare`、`/results`、`/reports`。除单独启用的本机 HealthAD 样片外，这些效果图使用虚构示例数据与合成水迷宫图片；视频导入、实际推理、人工几何保存、事件复核及报告导出尚未连接后端。启动开发演示模式需要设置 `VITE_DEMO_PREVIEW=true`。
+
+页面以 [shadcn/ui 官方 dashboard-01](https://ui.shadcn.com/blocks?category=dashboard) 的卡片、侧栏、表格和图表组合为参考，在已有 FastAPI 模板前端中改造；未覆盖现有登录与用户管理。官方块采用 MIT 许可，来源：[shadcn-ui/ui](https://github.com/shadcn-ui/ui)。默认示例图是合成画面；本地开发可单独启用 `003_HealthAD` 的实拍视频演示。
+
+本机若已有 `frontend/public/local-preview/003-healthad-*` 素材，可在 `frontend` 目录运行 `VITE_DEMO_PREVIEW=true VITE_HEALTHAD_SAMPLE=true npm run dev -- --host 127.0.0.1` 打开免登录演示页。在此模式下，视频列表、人工检查和分析结果均对应 `0809第一象限-A2-2-4.mp4`；结果页读取同名离线推理 JSON 的 244 帧中心点及头尾关键点，展示真实轨迹、有效帧数和 1124.1 px 路径长度，不再使用其他试次的虚构指标。播放器使用既有离线推理生成的 `adaptive_overlay` 视频，同源人工 LabelMe 水池与标志物轮廓叠加其上；基准平台圆来自本机 `E1_分析前置_20260110/task3_platform/platform_coordinates.csv` 的 0809 共识坐标（1501.7, 622.6，半径 46 px），不是视频模型检测结果。速度曲线由对应推理 JSON 的逐帧中心点计算：30 fps、前后各 3 帧的中心位移除以时间差，单位 px/s；没有空间标定时不换算成 cm/s。平台区域首次进入时间仅为中心点与标定圆重合的候选，未判定有效上台。视频进度与曲线指示线同步。素材目录由 `.gitignore` 排除，Vite 构建关闭 `public` 目录复制，正式产物只打包代码引用的合成示例图，不包含这段本地视频或标注。
+
 The frontend is built with [Vite](https://vitejs.dev/), [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [TanStack Query](https://tanstack.com/query), [TanStack Router](https://tanstack.com/router), [Tailwind CSS](https://tailwindcss.com/), and [shadcn/ui](https://ui.shadcn.com/).
 
 ## Requirements

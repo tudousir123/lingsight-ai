@@ -17,7 +17,11 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
+import { Route as LayoutPrepareRouteImport } from './routes/_layout/prepare'
+import { Route as LayoutReportsRouteImport } from './routes/_layout/reports'
+import { Route as LayoutResultsRouteImport } from './routes/_layout/results'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutExperimentsExperimentIdTrialsTrialIdRouteImport } from './routes/_layout/experiments.$experimentId.trials.$trialId'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -58,11 +62,32 @@ const LayoutItemsRoute = LayoutItemsRouteImport.update({
   path: '/items',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutPrepareRoute = LayoutPrepareRouteImport.update({
+  id: '/prepare',
+  path: '/prepare',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutReportsRoute = LayoutReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutResultsRoute = LayoutResultsRouteImport.update({
+  id: '/results',
+  path: '/results',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutExperimentsExperimentIdTrialsTrialIdRoute =
+  LayoutExperimentsExperimentIdTrialsTrialIdRouteImport.update({
+    id: '/experiments/$experimentId/trials/$trialId',
+    path: '/experiments/$experimentId/trials/$trialId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -72,7 +97,11 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
   '/items': typeof LayoutItemsRoute
+  '/prepare': typeof LayoutPrepareRoute
+  '/reports': typeof LayoutReportsRoute
+  '/results': typeof LayoutResultsRoute
   '/settings': typeof LayoutSettingsRoute
+  '/experiments/$experimentId/trials/$trialId': typeof LayoutExperimentsExperimentIdTrialsTrialIdRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -81,8 +110,12 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
   '/items': typeof LayoutItemsRoute
+  '/prepare': typeof LayoutPrepareRoute
+  '/reports': typeof LayoutReportsRoute
+  '/results': typeof LayoutResultsRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
+  '/experiments/$experimentId/trials/$trialId': typeof LayoutExperimentsExperimentIdTrialsTrialIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -93,8 +126,12 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/items': typeof LayoutItemsRoute
+  '/_layout/prepare': typeof LayoutPrepareRoute
+  '/_layout/reports': typeof LayoutReportsRoute
+  '/_layout/results': typeof LayoutResultsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/experiments/$experimentId/trials/$trialId': typeof LayoutExperimentsExperimentIdTrialsTrialIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,7 +143,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/items'
+    | '/prepare'
+    | '/reports'
+    | '/results'
     | '/settings'
+    | '/experiments/$experimentId/trials/$trialId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -115,8 +156,12 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/items'
+    | '/prepare'
+    | '/reports'
+    | '/results'
     | '/settings'
     | '/'
+    | '/experiments/$experimentId/trials/$trialId'
   id:
     | '__root__'
     | '/_layout'
@@ -126,8 +171,12 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_layout/admin'
     | '/_layout/items'
+    | '/_layout/prepare'
+    | '/_layout/reports'
+    | '/_layout/results'
     | '/_layout/settings'
     | '/_layout/'
+    | '/_layout/experiments/$experimentId/trials/$trialId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -196,11 +245,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutItemsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/prepare': {
+      id: '/_layout/prepare'
+      path: '/prepare'
+      fullPath: '/prepare'
+      preLoaderRoute: typeof LayoutPrepareRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/reports': {
+      id: '/_layout/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof LayoutReportsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/results': {
+      id: '/_layout/results'
+      path: '/results'
+      fullPath: '/results'
+      preLoaderRoute: typeof LayoutResultsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/settings': {
       id: '/_layout/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof LayoutSettingsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/experiments/$experimentId/trials/$trialId': {
+      id: '/_layout/experiments/$experimentId/trials/$trialId'
+      path: '/experiments/$experimentId/trials/$trialId'
+      fullPath: '/experiments/$experimentId/trials/$trialId'
+      preLoaderRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdRouteImport
       parentRoute: typeof LayoutRoute
     }
   }
@@ -209,15 +286,24 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
+  LayoutPrepareRoute: typeof LayoutPrepareRoute
+  LayoutReportsRoute: typeof LayoutReportsRoute
+  LayoutResultsRoute: typeof LayoutResultsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
+  LayoutExperimentsExperimentIdTrialsTrialIdRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutItemsRoute: LayoutItemsRoute,
+  LayoutPrepareRoute: LayoutPrepareRoute,
+  LayoutReportsRoute: LayoutReportsRoute,
+  LayoutResultsRoute: LayoutResultsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
+  LayoutExperimentsExperimentIdTrialsTrialIdRoute:
+    LayoutExperimentsExperimentIdTrialsTrialIdRoute,
 }
 
 const LayoutRouteWithChildren =

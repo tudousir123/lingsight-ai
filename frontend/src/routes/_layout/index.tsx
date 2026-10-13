@@ -1,31 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router"
+import { ExperimentPage } from "@/features/mwm-demo/pages"
+import { TrialDirectoryPage } from "@/features/trials/directory"
 
-import useAuth from "@/hooks/useAuth"
+function HomePage() {
+  const isDemo =
+    import.meta.env.DEV && import.meta.env.VITE_DEMO_PREVIEW === "true"
+  return isDemo ? <ExperimentPage /> : <TrialDirectoryPage />
+}
 
 export const Route = createFileRoute("/_layout/")({
-  component: Dashboard,
-  head: () => ({
-    meta: [
-      {
-        title: "Dashboard - FastAPI Template",
-      },
-    ],
-  }),
+  component: HomePage,
+  head: () => ({ meta: [{ title: "实验与视频管理 - LingSight AI" }] }),
 })
-
-function Dashboard() {
-  const { user: currentUser } = useAuth()
-
-  return (
-    <div>
-      <div>
-        <h1 className="text-2xl truncate max-w-sm">
-          Hi, {currentUser?.full_name || currentUser?.email} 👋
-        </h1>
-        <p className="text-muted-foreground">
-          Welcome back, nice to see you again!!!
-        </p>
-      </div>
-    </div>
-  )
-}

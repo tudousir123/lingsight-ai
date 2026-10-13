@@ -36,7 +36,10 @@ logs/
 
 # Node / frontend build artifacts
 node_modules/
+frontend/.tanstack/
 backend/app/frontend/
+frontend/public/local-preview/
+docs/local-product-manual/
 /test-results/
 /playwright-report/
 /blob-report/

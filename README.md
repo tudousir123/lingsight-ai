@@ -58,6 +58,8 @@ React UI → FastAPI
 
 ## M1 当前状态（2026-10-13，以运行记录为准）
 
+前端已提供[水迷宫四页界面预览](frontend/README.md)：实验视频管理、分析准备、单次结果及统计报告。它复用现有 React/shadcn/ui 基座与官方 dashboard-01 页面组合，展示虚构数据和合成画面；视频导入、模型推理、几何保存与报告导出仍待接入。
+
 Text-to-SQL 最小闭环已端到端跑通并留档（除人机协作的事件定义票 #6 挂起外全部收口）：
 
 - **语义层**（[ADR-0004]）：`backend/app/text_to_sql/semantic_layer.yaml` 唯一事实来源，同源渲染 LLM 提示词与 SQLGlot 白名单；三大口径陷阱（animal_code/session_label/trial_no）测试锁定。

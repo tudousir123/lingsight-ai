@@ -1,0 +1,454 @@
+import { useQuery } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
+import { AxiosError } from "axios"
+import { ChevronLeft, ChevronRight, Search } from "lucide-react"
+import { useState } from "react"
+import { ExperimentsService, type TrialSummary } from "@/client"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+
+const pageSize = 5
+const trainingDays = ["0804", "0805", "0806", "0807", "0808"] as const
+
+function phaseLabel(phase: string) {
+  if (phase === "training_day") return "训练期"
+  if (phase === "probe_platform_present") return "探测期（有台）"
+  return phase
+}
+
+function TrialRow({ trial }: { trial: TrialSummary }) {
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="font-medium text-slate-900">{trial.video_name}</div>
+        <div className="text-xs text-muted-foreground">{trial.id}</div>
+      </TableCell>
+      <TableCell>
+        {trial.group_name} · {trial.mouse_id}
+      </TableCell>
+      <TableCell>{phaseLabel(trial.phase)}</TableCell>
+      <TableCell>
+        {trial.training_day
+          ? `第 ${trial.training_day} 训练日`
+          : trial.date_dir}
+        <span className="block text-xs text-muted-foreground">
+          {trial.session_label} · 试次 {trial.trial_no}
+        </span>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-wrap gap-1">
+          <Badge variant={trial.media_available ? "secondary" : "outline"}>
+            {trial.media_available ? "视频可用" : "视频未接入"}
+          </Badge>
+          <Badge variant={trial.result_available ? "secondary" : "outline"}>
+            {trial.result_available ? "结果可用" : "无离线结果"}
+          </Badge>
+        </div>
+      </TableCell>
+      <TableCell className="text-right">
+        <Link
+          to="/experiments/$experimentId/trials/$trialId"
+          params={{ experimentId: trial.experiment_id, trialId: trial.id }}
+          aria-label={`查看试次 ${trial.video_name}`}
+          className="font-medium text-blue-600 hover:underline"
+        >
+          查看试次
+        </Link>
+      </TableCell>
+    </TableRow>
+  )
+}
+
+export function TrialDirectoryPage() {
+  const [experimentId, setExperimentId] = useState<string | null>(null)
+  const [groupName, setGroupName] = useState("")
+  const [mouseId, setMouseId] = useState("")
+  const [phase, setPhase] = useState("all")
+  const [dateDir, setDateDir] = useState("")
+  const [search, setSearch] = useState("")
+  const [skip, setSkip] = useState(0)
+
+  const experiments = useQuery({
+    queryKey: ["experiments"],
+    queryFn: async () => (await ExperimentsService.listExperiments()).data.data,
+    retry: false,
+  })
+  const selectedId = experimentId ?? experiments.data?.[0]?.id
+  const selected = experiments.data?.find((item) => item.id === selectedId)
+  const trials = useQuery({
+    queryKey: ["trials", selectedId, groupName, mouseId, phase, dateDir, skip],
+    queryFn: async () =>
+      (
+        await ExperimentsService.listTrials({
+          path: { experiment_id: selectedId! },
+          query: {
+            group_name: groupName.trim() || undefined,
+            mouse_id: mouseId.trim() || undefined,
+            phase: phase === "all" ? undefined : phase,
+            date_dir: dateDir.trim() || undefined,
+            skip,
+            limit: pageSize,
+          },
+        })
+      ).data,
+    enabled: Boolean(selectedId),
+    retry: false,
+  })
+  const tokens = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const visible =
+    trials.data?.data.filter((trial) => {
+      const label =
+        `${trial.video_name} ${trial.group_name} ${trial.mouse_id} ${trial.date_dir}`.toLowerCase()
+      return tokens.every((token) => label.includes(token))
+    }) ?? []
+
+  const resetFilters = () => setSkip(0)
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm text-slate-500">实验管理</p>
+        <h1 className="text-2xl font-semibold text-slate-900">
+          实验与视频管理
+        </h1>
+        <p className="text-sm text-slate-500">
+          从已有实验中选择试次，查看对应视频及分析状态。
+        </p>
+      </div>
+
+      {experiments.isPending ? (
+        <Card>
+          <CardContent>正在加载实验列表…</CardContent>
+        </Card>
+      ) : experiments.isError ? (
+        <Card>
+          <CardContent className="flex items-center justify-between gap-3">
+            <span>实验列表加载失败</span>
+            <Button
+              variant="outline"
+              onClick={() => void experiments.refetch()}
+            >
+              重试
+            </Button>
+          </CardContent>
+        </Card>
+      ) : experiments.data.length === 0 ? (
+        <Card>
+          <CardContent>
+            暂无可访问的实验。请联系管理员确认实验权限。
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <Card className="gap-3 py-4">
+            <CardHeader>
+              <CardTitle>实验</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-3">
+              <Select
+                value={selectedId}
+                onValueChange={(value) => {
+                  setExperimentId(value)
+                  resetFilters()
+                }}
+              >
+                <SelectTrigger
+                  aria-label="选择实验"
+                  className="w-full max-w-md"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {experiments.data.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-slate-500">
+                {selected?.trial_count ?? 0} 条试次
+              </span>
+            </CardContent>
+          </Card>
+
+          <Card className="gap-3 py-4">
+            <CardHeader>
+              <CardTitle>试次视频</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 flex flex-wrap gap-2">
+                <div className="relative min-w-48 flex-1">
+                  <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
+                  <Input
+                    aria-label="搜索试次"
+                    placeholder="当前页搜索视频或动物"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Input
+                  aria-label="实验组"
+                  placeholder="实验组"
+                  value={groupName}
+                  onChange={(event) => {
+                    setGroupName(event.target.value)
+                    resetFilters()
+                  }}
+                  className="w-28"
+                />
+                <Input
+                  aria-label="鼠号"
+                  placeholder="鼠号"
+                  value={mouseId}
+                  onChange={(event) => {
+                    setMouseId(event.target.value)
+                    resetFilters()
+                  }}
+                  className="w-24"
+                />
+                <Select
+                  value={phase}
+                  onValueChange={(value) => {
+                    setPhase(value)
+                    resetFilters()
+                  }}
+                >
+                  <SelectTrigger aria-label="实验阶段" className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部阶段</SelectItem>
+                    <SelectItem value="training_day">训练期</SelectItem>
+                    <SelectItem value="probe_platform_present">
+                      探测期（有台）
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={dateDir || "all"}
+                  onValueChange={(value) => {
+                    setDateDir(value === "all" ? "" : value)
+                    resetFilters()
+                  }}
+                >
+                  <SelectTrigger aria-label="训练日" className="w-36">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部日期</SelectItem>
+                    {trainingDays.map((day, index) => (
+                      <SelectItem key={day} value={day}>
+                        第 {index + 1} 训练日
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {trials.isPending ? (
+                <p className="py-10 text-center text-sm text-slate-500">
+                  正在加载试次…
+                </p>
+              ) : trials.isError ? (
+                <div className="flex items-center justify-between gap-3 py-6">
+                  <span>试次列表加载失败</span>
+                  <Button
+                    variant="outline"
+                    onClick={() => void trials.refetch()}
+                  >
+                    重试
+                  </Button>
+                </div>
+              ) : trials.data.count === 0 ? (
+                <p className="py-10 text-center text-sm text-slate-500">
+                  该实验没有符合条件的试次。
+                </p>
+              ) : visible.length === 0 ? (
+                <p className="py-10 text-center text-sm text-slate-500">
+                  当前页没有匹配的试次，请调整搜索词。
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>视频</TableHead>
+                        <TableHead>动物（实验组 · 鼠号）</TableHead>
+                        <TableHead>阶段</TableHead>
+                        <TableHead>日期 / 区块 / 试次</TableHead>
+                        <TableHead>素材</TableHead>
+                        <TableHead className="text-right">操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {visible.map((trial) => (
+                        <TrialRow key={trial.id} trial={trial} />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {trials.data && trials.data.count > pageSize && (
+                <div className="mt-4 flex items-center justify-end gap-3 text-sm">
+                  <span>
+                    共 {trials.data.count} 条 · 第{" "}
+                    {Math.floor(skip / pageSize) + 1} 页
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={skip === 0}
+                    onClick={() => setSkip(Math.max(0, skip - pageSize))}
+                  >
+                    <ChevronLeft />
+                    上一页
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={skip + pageSize >= trials.data.count}
+                    onClick={() => setSkip(skip + pageSize)}
+                  >
+                    下一页
+                    <ChevronRight />
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
+  )
+}
+
+function errorStatus(error: unknown): number | undefined {
+  return error instanceof AxiosError ? error.response?.status : undefined
+}
+
+export function TrialDetailPage({
+  experimentId,
+  trialId,
+}: {
+  experimentId: string
+  trialId: string
+}) {
+  const trial = useQuery({
+    queryKey: ["trial", experimentId, trialId],
+    queryFn: async () =>
+      (
+        await ExperimentsService.getTrial({
+          path: { experiment_id: experimentId, trial_id: trialId },
+        })
+      ).data,
+    retry: false,
+  })
+
+  return (
+    <div className="space-y-4">
+      <Link to="/" className="text-sm text-blue-600 hover:underline">
+        ← 返回试次列表
+      </Link>
+      {trial.isPending ? (
+        <Card>
+          <CardContent>正在加载试次…</CardContent>
+        </Card>
+      ) : trial.isError ? (
+        <Card>
+          <CardContent className="space-y-3">
+            <p>
+              {errorStatus(trial.error) === 403
+                ? "无权访问此实验"
+                : errorStatus(trial.error) === 404
+                  ? "试次不存在或不属于此实验"
+                  : "试次加载失败"}
+            </p>
+            <Button variant="outline" onClick={() => void trial.refetch()}>
+              重试
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div>
+            <p className="text-sm text-slate-500">
+              {experimentId} · 试次 {trial.data.id}
+            </p>
+            <h1 className="text-2xl font-semibold text-slate-900">
+              {trial.data.video_name}
+            </h1>
+            <p className="text-sm text-slate-500">
+              {trial.data.group_name} · {trial.data.mouse_id}
+            </p>
+          </div>
+          <Card className="gap-3 py-4">
+            <CardHeader>
+              <CardTitle>试次信息</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <span className="text-slate-500">实验阶段</span>
+                <p>{phaseLabel(trial.data.phase)}</p>
+              </div>
+              <div>
+                <span className="text-slate-500">实验日期</span>
+                <p>
+                  {trial.data.date_dir}
+                  {trial.data.training_day
+                    ? ` · 第 ${trial.data.training_day} 训练日`
+                    : ""}
+                </p>
+              </div>
+              <div>
+                <span className="text-slate-500">区块</span>
+                <p>{trial.data.session_label}</p>
+              </div>
+              <div>
+                <span className="text-slate-500">试次序号</span>
+                <p>{trial.data.trial_no}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="gap-3 py-4">
+            <CardHeader>
+              <CardTitle>可用素材</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              <Badge variant="secondary">
+                {trial.data.media_available
+                  ? "视频文件可用"
+                  : "视频文件暂不可用"}
+              </Badge>
+              <Badge variant="secondary">
+                {trial.data.result_available ? "已有离线结果" : "尚无离线结果"}
+              </Badge>
+              <p className="w-full text-sm text-slate-500">
+                当前仅提供试次信息，视频核对暂不可用。
+              </p>
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
+  )
+}

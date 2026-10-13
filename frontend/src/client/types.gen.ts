@@ -35,6 +35,34 @@ export type Body_login_login_access_token = {
 };
 
 /**
+ * ExperimentSummary
+ */
+export type ExperimentSummary = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Trial Count
+     */
+    trial_count: number;
+};
+
+/**
+ * ExperimentsPublic
+ */
+export type ExperimentsPublic = {
+    /**
+     * Data
+     */
+    data: Array<ExperimentSummary>;
+};
+
+/**
  * HTTPValidationError
  */
 export type HTTPValidationError = {
@@ -159,6 +187,16 @@ export type PrivateUserCreate = {
 };
 
 /**
+ * ResearchQueryRequest
+ */
+export type ResearchQueryRequest = {
+    /**
+     * Question
+     */
+    question: string;
+};
+
+/**
  * Token
  */
 export type Token = {
@@ -170,6 +208,78 @@ export type Token = {
      * Token Type
      */
     token_type?: string;
+};
+
+/**
+ * TrialSummary
+ */
+export type TrialSummary = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Experiment Id
+     */
+    experiment_id: string;
+    /**
+     * Video Name
+     */
+    video_name: string;
+    /**
+     * Group Name
+     */
+    group_name: string;
+    /**
+     * Mouse Id
+     */
+    mouse_id: string;
+    /**
+     * Phase
+     */
+    phase: string;
+    /**
+     * Date Dir
+     */
+    date_dir: string;
+    /**
+     * Training Day
+     */
+    training_day: number | null;
+    /**
+     * Session No
+     */
+    session_no: number;
+    /**
+     * Session Label
+     */
+    session_label: string;
+    /**
+     * Trial No
+     */
+    trial_no: string;
+    /**
+     * Media Available
+     */
+    media_available: boolean;
+    /**
+     * Result Available
+     */
+    result_available: boolean;
+};
+
+/**
+ * TrialsPublic
+ */
+export type TrialsPublic = {
+    /**
+     * Data
+     */
+    data: Array<TrialSummary>;
+    /**
+     * Count
+     */
+    count: number;
 };
 
 /**
@@ -920,6 +1030,134 @@ export type itemsUpdateItemResponses = {
 };
 
 export type itemsUpdateItemResponse = itemsUpdateItemResponses[keyof itemsUpdateItemResponses];
+
+export type researchResearchQueryData = {
+    body: ResearchQueryRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/research/query';
+};
+
+export type researchResearchQueryErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type researchResearchQueryError = researchResearchQueryErrors[keyof researchResearchQueryErrors];
+
+export type researchResearchQueryResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type experimentsListExperimentsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/experiments';
+};
+
+export type experimentsListExperimentsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ExperimentsPublic;
+};
+
+export type experimentsListExperimentsResponse = experimentsListExperimentsResponses[keyof experimentsListExperimentsResponses];
+
+export type experimentsListTrialsData = {
+    body?: never;
+    path: {
+        /**
+         * Experiment Id
+         */
+        experiment_id: string;
+    };
+    query?: {
+        /**
+         * Group Name
+         */
+        group_name?: string | null;
+        /**
+         * Mouse Id
+         */
+        mouse_id?: string | null;
+        /**
+         * Phase
+         */
+        phase?: string | null;
+        /**
+         * Date Dir
+         */
+        date_dir?: string | null;
+        /**
+         * Skip
+         */
+        skip?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/experiments/{experiment_id}/trials';
+};
+
+export type experimentsListTrialsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type experimentsListTrialsError = experimentsListTrialsErrors[keyof experimentsListTrialsErrors];
+
+export type experimentsListTrialsResponses = {
+    /**
+     * Successful Response
+     */
+    200: TrialsPublic;
+};
+
+export type experimentsListTrialsResponse = experimentsListTrialsResponses[keyof experimentsListTrialsResponses];
+
+export type experimentsGetTrialData = {
+    body?: never;
+    path: {
+        /**
+         * Experiment Id
+         */
+        experiment_id: string;
+        /**
+         * Trial Id
+         */
+        trial_id: string;
+    };
+    query?: never;
+    url: '/api/v1/experiments/{experiment_id}/trials/{trial_id}';
+};
+
+export type experimentsGetTrialErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type experimentsGetTrialError = experimentsGetTrialErrors[keyof experimentsGetTrialErrors];
+
+export type experimentsGetTrialResponses = {
+    /**
+     * Successful Response
+     */
+    200: TrialSummary;
+};
+
+export type experimentsGetTrialResponse = experimentsGetTrialResponses[keyof experimentsGetTrialResponses];
 
 export type privateCreateUserData = {
     body: PrivateUserCreate;
