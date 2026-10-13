@@ -1,4 +1,4 @@
-"""Single-command execution report for the 25-question golden QA suite.
+"""Single-command execution report for the 26-question golden QA suite.
 
 Usage (from ``backend/``, with LLM_* and LINGSIGHT_RO_PASSWORD configured):
 
@@ -57,7 +57,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--ids",
         default="",
-        help="comma-separated question ids to run (default: all 25)",
+        help=f"comma-separated question ids to run (default: all {len(QUESTIONS)})",
     )
     parser.add_argument(
         "--output-dir",

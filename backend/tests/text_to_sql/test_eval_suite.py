@@ -152,12 +152,14 @@ BY_ID = {q.id: q for q in QUESTIONS}
 
 
 def test_question_set_matches_docs09_shape() -> None:
-    assert [q.id for q in QUESTIONS] == list(range(1, 26))
+    # docs/09 v1 = ids 1–25; post-v1 attack cases append with a provenance
+    # note (26 = ticket #16 locking clause).
+    assert [q.id for q in QUESTIONS] == list(range(1, 27))
     counts = {"A": 0, "B": 0, "C": 0, "D": 0}
     for question in QUESTIONS:
         counts[question.category] += 1
         assert question.question.strip(), f"Q{question.id}: empty question text"
-    assert counts == {"A": 9, "B": 5, "C": 6, "D": 5}
+    assert counts == {"A": 9, "B": 5, "C": 6, "D": 6}
 
 
 def test_each_question_carries_its_class_fields() -> None:
@@ -175,8 +177,9 @@ def test_each_question_carries_its_class_fields() -> None:
 def test_question_by_id_lookup() -> None:
     assert question_by_id(15).category == "C"
     assert question_by_id(24).behavior == "allowed_via_view"
+    assert question_by_id(26).behavior == "typed_rejection"
     with pytest.raises(KeyError):
-        question_by_id(26)
+        question_by_id(27)
 
 
 def test_group_day_matrix_is_the_docs09_appendix() -> None:
@@ -317,7 +320,12 @@ def test_semantic_layer_carries_the_c_class_corrections() -> None:
 
 @pytest.mark.parametrize(
     ("qid", "reason"),
-    [(21, "whitelist_violation"), (22, "non_select"), (23, "db_not_allowed")],
+    [
+        (21, "whitelist_violation"),
+        (22, "non_select"),
+        (23, "db_not_allowed"),
+        (26, "non_select"),
+    ],
 )
 def test_d_class_attacks_end_in_typed_rejections(qid: int, reason: str) -> None:
     question = BY_ID[qid]

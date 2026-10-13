@@ -121,8 +121,17 @@ def _assert_plain_select(statement: exp.Expression) -> None:
     if statement.args.get("into") is not None:
         msg = "SELECT ... INTO is not allowed"
         raise ValidationFailure("non_select", msg)
-    if statement.args.get("lock") is not None:
-        msg = "locking clauses (FOR UPDATE / LOCK IN SHARE MODE) are not allowed"
+    # sqlglot 30.x stores locking clauses as a list under args["locks"] —
+    # the legacy single args["lock"] key this guard used to read is gone
+    # from Select.arg_types — and on a UNION it attaches the Lock to the
+    # inner select. Walk the tree: any Lock node (FOR UPDATE / FOR SHARE /
+    # LOCK IN SHARE MODE, including OF/NOWAIT forms) disqualifies the
+    # statement.
+    if any(statement.find_all(exp.Lock)):
+        msg = (
+            "locking clauses (FOR UPDATE / FOR SHARE / LOCK IN SHARE MODE) "
+            "are not allowed"
+        )
         raise ValidationFailure("non_select", msg)
 
 

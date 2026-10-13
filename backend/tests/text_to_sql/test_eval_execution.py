@@ -143,7 +143,7 @@ def test_fake_provider_golden_path_smoke(
     assert verdict.passed, verdict.detail
 
 
-# --- the real run: 25 questions through the real model --------------------------
+# --- the real run: 26 questions through the real model --------------------------
 
 
 @pytest.mark.parametrize("question", QUESTIONS, ids=lambda q: f"Q{q.id}-{q.category}")
