@@ -16,6 +16,14 @@ class CatalogUnavailable(Exception):
     """Research database could not serve a catalog request."""
 
 
+TRIAL_SELECT = (
+    "SELECT v.video_id, v.dataset_id, v.source_video_path, v.group_name, "
+    "v.mouse_id, v.phase, v.date_dir, v.session_no, v.session_label, "
+    "v.trial_no, v.processed_frame_count, q.video_id AS result_video_id "
+    "FROM videos v LEFT JOIN qc_summary q ON q.video_id = v.video_id "
+)
+
+
 class TrialCatalog:
     def __init__(self, settings: ResearchQuerySettings) -> None:
         self.settings = settings
@@ -98,11 +106,7 @@ class TrialCatalog:
             f"SELECT COUNT(*) AS count FROM videos v WHERE {restriction}", tuple(params)
         )[0]["count"]
         rows = self._read(
-            "SELECT v.video_id, v.dataset_id, v.source_video_path, v.group_name, "
-            "v.mouse_id, v.phase, v.date_dir, v.session_no, v.session_label, "
-            "v.trial_no, v.processed_frame_count, q.video_id AS result_video_id "
-            "FROM videos v LEFT JOIN qc_summary q ON q.video_id = v.video_id "
-            f"WHERE {restriction} "
+            TRIAL_SELECT + f"WHERE {restriction} "
             "ORDER BY v.date_dir, v.session_no, v.group_name, v.mouse_id, "
             "CAST(v.trial_no AS UNSIGNED), v.video_id LIMIT %s OFFSET %s",
             (*params, limit, skip),
@@ -111,11 +115,7 @@ class TrialCatalog:
 
     def get_trial(self, experiment_id: str, trial_id: str) -> dict[str, Any] | None:
         rows = self._read(
-            "SELECT v.video_id, v.dataset_id, v.source_video_path, v.group_name, "
-            "v.mouse_id, v.phase, v.date_dir, v.session_no, v.session_label, "
-            "v.trial_no, v.processed_frame_count, q.video_id AS result_video_id "
-            "FROM videos v LEFT JOIN qc_summary q ON q.video_id = v.video_id "
-            "WHERE v.dataset_id = %s AND v.video_id = %s LIMIT 1",
+            TRIAL_SELECT + "WHERE v.dataset_id = %s AND v.video_id = %s LIMIT 1",
             (experiment_id, trial_id),
         )
         return self._trial(rows[0]) if rows else None

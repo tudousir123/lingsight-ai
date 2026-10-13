@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table"
 
 const pageSize = 5
+const trainingDays = ["0804", "0805", "0806", "0807", "0808"] as const
 
 function phaseLabel(phase: string) {
   if (phase === "training_day") return "训练期"
@@ -242,16 +243,25 @@ export function TrialDirectoryPage() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                <Input
-                  aria-label="实验日期"
-                  placeholder="日期，如 0804"
-                  value={dateDir}
-                  onChange={(event) => {
-                    setDateDir(event.target.value)
+                <Select
+                  value={dateDir || "all"}
+                  onValueChange={(value) => {
+                    setDateDir(value === "all" ? "" : value)
                     resetFilters()
                   }}
-                  className="w-32"
-                />
+                >
+                  <SelectTrigger aria-label="训练日" className="w-36">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部日期</SelectItem>
+                    {trainingDays.map((day, index) => (
+                      <SelectItem key={day} value={day}>
+                        第 {index + 1} 训练日
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {trials.isPending ? (

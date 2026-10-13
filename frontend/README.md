@@ -4,6 +4,8 @@
 
 默认登录后的首页已读取后端实验与试次目录；普通用户只看到应用库中显式授予访问权限的实验，管理员可浏览全部。试次详情使用 `/experiments/:experimentId/trials/:trialId` 固定地址。后端需要配置研究库只读账户；研究库不可用、无权限和视频文件不可访问会分别显示状态。当前详情页只展示试次元数据，视频核对和结果联动由后续工单实现。旧的四页效果图保留在开发演示模式。
 
+部署时先运行 Alembic 迁移，再由管理员在应用库的 `experiment_access` 表写入 `(user_id, experiment_id)` 授权；`user_id` 对应应用库 `user.id`，`experiment_id` 对应研究库 `datasets.dataset_id`。目前没有授权管理界面，未授予实验的普通用户会看到空实验列表。当前科研语义层将 `0804–0808` 映射为第 1–5 训练日，目录页的训练日筛选沿用这一已确认口径；接入其他实验协议前须先核定其训练日映射。
+
 开发演示模式仍保留「实验管理」「分析任务」「统计与报告」四页，入口位于 `/`、`/prepare`、`/results`、`/reports`。除单独启用的本机 HealthAD 样片外，这些效果图使用虚构示例数据与合成水迷宫图片；视频导入、实际推理、人工几何保存、事件复核及报告导出尚未连接后端。启动开发演示模式需要设置 `VITE_DEMO_PREVIEW=true`。
 
 页面以 [shadcn/ui 官方 dashboard-01](https://ui.shadcn.com/blocks?category=dashboard) 的卡片、侧栏、表格和图表组合为参考，在已有 FastAPI 模板前端中改造；未覆盖现有登录与用户管理。官方块采用 MIT 许可，来源：[shadcn-ui/ui](https://github.com/shadcn-ui/ui)。默认示例图是合成画面；本地开发可单独启用 `003_HealthAD` 的实拍视频演示。

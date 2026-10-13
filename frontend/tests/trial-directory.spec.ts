@@ -108,3 +108,24 @@ test("an experiment with no matching trials has an empty state", async ({
   await page.goto("/")
   await expect(page.getByText("该实验没有符合条件的试次。")).toBeVisible()
 })
+
+test("researcher filters by training-day number", async ({ page }) => {
+  await page.route("**/api/v1/experiments", (route) =>
+    route.fulfill({ json: { data: [experiment] } }),
+  )
+  await page.route("**/api/v1/experiments/fixture-e1/trials?*", (route) => {
+    const dateDir = new URL(route.request().url()).searchParams.get("date_dir")
+    return route.fulfill({
+      json: {
+        data: dateDir === "0804" ? [trial] : [trial, otherTrial],
+        count: dateDir === "0804" ? 1 : 2,
+      },
+    })
+  })
+
+  await page.goto("/")
+  await page.getByRole("combobox", { name: "训练日" }).click()
+  await page.getByRole("option", { name: "第 1 训练日" }).click()
+  await expect(page.getByText("sample-a.mp4")).toBeVisible()
+  await expect(page.getByText("sample-b.mp4")).toHaveCount(0)
+})
