@@ -163,6 +163,61 @@ def test_d23_cross_database_rejected(
     assert body["reason_code"] == "db_not_allowed"
 
 
+def test_frame_query_runs_through_the_view(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    # Ticket #7 (M1-T8): the AST whitelist now points at
+    # v_query_frame_predictions, and the account layer granted exactly that
+    # view (docs/evidence/m1-t8/02-ro-view-probe.log) — so a frame query
+    # executes for real. 788,088 = the docs/09 Q10 golden decomposition
+    # (783,790 ok + 4,292 miss + 6 coord).
+    provider = FakeProvider(["SELECT COUNT(*) AS n FROM v_query_frame_predictions"])
+    response = ask(client, provider, headers=normal_user_token_headers)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["rows"] == [[788088]]
+    assert body["data_source"]["tables"] == ["v_query_frame_predictions"]
+
+
+def test_d24_mask_rle_counts_rejected_before_execution(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    # docs/09 D24, updated by ticket #7: the column is not whitelisted, so
+    # the AST guard rejects it before execution — and even a bypass would
+    # hit the physical absence of the column in the view (Unknown column,
+    # docs/evidence/m1-t8/02-ro-view-probe.log probe ②).
+    provider = FakeProvider(
+        [
+            "SELECT mask_rle_counts FROM v_query_frame_predictions LIMIT 1",
+            "SELECT mask_rle_counts FROM v_query_frame_predictions LIMIT 1",
+        ]
+    )
+    response = ask(client, provider, headers=normal_user_token_headers)
+    assert response.status_code == 403, response.text
+    body = response.json()
+    assert body["reason_code"] == "whitelist_violation"
+    assert "mask_rle_counts" in body["message"]
+
+
+def test_base_table_frame_predictions_is_not_an_entry_point(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    # Ticket #7: the whitelist no longer offers the base table, so the AST
+    # guard refuses it — matching the account layer, where the base table
+    # was never granted (docs/evidence/m1-t8/02-ro-view-probe.log probe ③).
+    provider = FakeProvider(
+        [
+            "SELECT COUNT(*) AS n FROM frame_predictions",
+            "SELECT COUNT(*) AS n FROM frame_predictions",
+        ]
+    )
+    response = ask(client, provider, headers=normal_user_token_headers)
+    assert response.status_code == 403, response.text
+    body = response.json()
+    assert body["reason_code"] == "whitelist_violation"
+    assert "frame_predictions" in body["message"]
+
+
 def test_execution_error_is_typed_and_not_retried(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:

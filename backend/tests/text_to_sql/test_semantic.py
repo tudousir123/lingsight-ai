@@ -11,29 +11,30 @@ import pytest
 
 from app.text_to_sql.semantic import SemanticLayerError, load
 
-# The six tables `lingsight_ro` can SELECT today (docs/08 plus
-# trial_metrics, granted in ticket #4 — see docs/evidence/m1-t3/
-# 04-grant-verify.log), plus frame_predictions (waiting for the
-# v_query_* view, ticket #7).
+# Everything `lingsight_ro` can SELECT today: the six directly granted base
+# tables (docs/08 plus trial_metrics from ticket #4 — docs/evidence/m1-t3/
+# 04-grant-verify.log) and the v_query_frame_predictions view that ticket #7
+# (M1-T8) created and granted in place of base-table access
+# (docs/evidence/m1-t8/02-ro-view-probe.log).
 EXPECTED_TABLES = {
     "datasets",
     "videos",
     "qc_summary",
     "rescue_code_definitions_20261011",
     "platform_positions",
-    "frame_predictions",
+    "v_query_frame_predictions",
     "trial_metrics",
 }
-GRANTED_TABLES = EXPECTED_TABLES - {"frame_predictions"}
 
 
 def test_covers_whitelist_plus_platform_and_metrics() -> None:
     layer = load()
     assert set(layer.tables) == EXPECTED_TABLES
     exposed = {name for name, table in layer.tables.items() if table.exposed}
-    assert exposed == GRANTED_TABLES
-    # Covered but deliberately not reachable yet.
-    assert layer.tables["frame_predictions"].expose_via == "v_query_frame_predictions"
+    # Ticket #7 flipped frame data to the view: every layer entry is now
+    # queryable by the account, and the ungranted base table is not an entry.
+    assert exposed == EXPECTED_TABLES
+    assert "frame_predictions" not in layer.tables
     # trial_metrics went live in ticket #4 (M1-T3): no table is left in the
     # planned state, and the metrics table is exposed with its real columns.
     assert not any(table.status == "planned" for table in layer.tables.values())
@@ -42,7 +43,7 @@ def test_covers_whitelist_plus_platform_and_metrics() -> None:
 def test_prompt_context_and_ast_whitelist_render_from_same_source() -> None:
     layer = load()
     whitelist = layer.ast_whitelist()
-    assert set(whitelist.tables) == GRANTED_TABLES
+    assert set(whitelist.tables) == EXPECTED_TABLES
     prompt = layer.render_prompt_context()
     for table, columns in whitelist.tables.items():
         assert table in prompt
@@ -97,10 +98,48 @@ def test_rle_and_mask_columns_unreachable_anywhere() -> None:
     for columns in layer.ast_whitelist().tables.values():
         assert not any(column.startswith("mask_rle") for column in columns)
         assert "rle_format" not in columns
-    # …and the exclusion is recorded with a reason on the owning table.
-    frames = layer.tables["frame_predictions"]
+    # …and the exclusion is recorded with a reason on the owning entry (the
+    # frame view since ticket #7; the columns are absent from the view DDL
+    # itself, so the exclusion is physical, not just advisory).
+    frames = layer.tables["v_query_frame_predictions"]
     assert "mask_rle_counts" in frames.excluded_columns
     assert frames.excluded_columns["mask_rle_counts"].reason
+
+
+def test_frame_view_is_the_only_query_entry_point() -> None:
+    # Ticket #7 (M1-T8): water_maze gained v_query_frame_predictions —
+    # created from the base table with exactly the 12 curated columns and
+    # granted to lingsight_ro while frame_predictions itself stays ungranted
+    # (docs/evidence/m1-t8/02-ro-view-probe.log, docs/09 D24). The semantic
+    # layer must point at the view and only the view.
+    layer = load()
+    view = layer.tables["v_query_frame_predictions"]
+    assert view.exposed
+    assert view.view_of == "frame_predictions"
+    assert set(view.columns) == {
+        "video_id",
+        "frame_idx",
+        "time_s",
+        "center_x",
+        "center_y",
+        "head_x",
+        "head_y",
+        "tail_x",
+        "tail_y",
+        "status",
+        "head_tail_mode",
+        "head_tail_corrected",
+    }
+    # The AST whitelist has no second, ungrantable entry point to offer.
+    assert "frame_predictions" not in layer.ast_whitelist().tables
+    # Every declared frame join path starts at the view.
+    frame_endpoints = [
+        endpoint
+        for relation in layer.relations
+        for endpoint in relation.endpoint_tables()
+        if "frame" in endpoint
+    ]
+    assert set(frame_endpoints) == {"v_query_frame_predictions"}
 
 
 def test_loader_rejects_ambiguous_column_membership(tmp_path: Path) -> None:
@@ -141,6 +180,33 @@ def test_loader_rejects_exposed_table_without_columns(tmp_path: Path) -> None:
         load(bad)
 
 
+def test_loader_rejects_view_alongside_its_exposed_base_table(
+    tmp_path: Path,
+) -> None:
+    # Ticket #7: the view is the ONLY query entry point for frame data. A
+    # layer that also exposes the base table would teach the LLM a second
+    # path that the account layer refuses (docs/09 D24/D25) — fail at load.
+    bad = tmp_path / "two-entry.yaml"
+    bad.write_text(
+        """
+        version: 1
+        tables:
+          frame_predictions:
+            description: base table
+            columns:
+              video_id: {meaning: 视频标识}
+          v_query_frame_predictions:
+            description: view over the base table
+            view_of: frame_predictions
+            columns:
+              video_id: {meaning: 视频标识}
+        """,
+        encoding="utf-8",
+    )
+    with pytest.raises(SemanticLayerError, match="v_query_frame_predictions"):
+        load(bad)
+
+
 def test_relations_synonyms_and_aggregation_grain_reach_the_prompt() -> None:
     # docs/08 risk 4: no foreign keys anywhere — join paths must be declared
     # here, or a wrong join silently succeeds.
@@ -149,11 +215,13 @@ def test_relations_synonyms_and_aggregation_grain_reach_the_prompt() -> None:
     assert "videos.dataset_id" in prompt
     assert "datasets.dataset_id" in prompt
     assert "platform_positions.day_label" in prompt
-    # Join paths to not-yet-queryable tables must NOT teach the LLM to join
-    # what the whitelist would reject (frame_predictions waits for the
-    # v_query_* view). trial_metrics is live since ticket #4, so its join
-    # path (with the long-format caution) reaches the prompt.
-    assert "frame_predictions.video_id" not in prompt
+    # Ticket #7 flipped the frame join endpoint to the view. NB: plain
+    # substring checks are useless here ("frame_predictions.video_id" is a
+    # suffix of "v_query_frame_predictions.video_id"), so the endpoint is
+    # asserted on the parsed relations in test_frame_view_is_the_only_
+    # query_entry_point; the prompt must carry the view endpoint, and the
+    # trial_metrics join path (long-format caution) still reaches it.
+    assert "v_query_frame_predictions.video_id" in prompt
     assert "trial_metrics.video_id" in prompt
     assert "metric" in prompt
     # Researcher vocabulary maps onto columns…
