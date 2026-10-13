@@ -68,6 +68,10 @@ class TableSpec(BaseModel):
     status: Literal["planned"] | None = None
     # View that will replace direct access (ticket #7: v_query_* views).
     expose_via: str | None = None
+    # This entry is a read-only view over that base table (ticket #7): the
+    # view is the single query entry point; the base table itself stays
+    # ungranted for `lingsight_ro`.
+    view_of: str | None = None
     primary_key: tuple[str, ...] = ()
     columns: dict[str, ColumnSpec] = Field(default_factory=dict)
     excluded_columns: dict[str, ExcludedColumn] = Field(default_factory=dict)
@@ -117,6 +121,19 @@ class SemanticLayer(BaseModel):
                 if endpoint not in self.tables:
                     msg = f"relation {relation.from_!r} → {relation.to!r} references unknown table {endpoint!r}"
                     raise SemanticLayerError(msg)
+        for name, table in self.tables.items():
+            # A view entry must not coexist with its exposed base table:
+            # two entry points would disagree with the account layer, where
+            # only the view is granted (ticket #7, docs/09 D24/D25).
+            if table.view_of is None:
+                continue
+            base = self.tables.get(table.view_of)
+            if base is not None and base.exposed:
+                msg = (
+                    f"table {name!r} is a view over {table.view_of!r}, which is "
+                    "also exposed — the view must be the only query entry point"
+                )
+                raise SemanticLayerError(msg)
 
     def ast_whitelist(self) -> AstWhitelist:
         """Whitelist for SQLGlot validation: exposed tables, curated columns only."""

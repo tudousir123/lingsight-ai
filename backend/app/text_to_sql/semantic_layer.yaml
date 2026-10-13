@@ -37,7 +37,7 @@ synonyms:
 relations:
   - {from: videos.dataset_id, to: datasets.dataset_id, cardinality: many_to_one}
   - {from: qc_summary.video_id, to: videos.video_id, cardinality: one_to_one}
-  - {from: frame_predictions.video_id, to: videos.video_id, cardinality: many_to_one}
+  - {from: v_query_frame_predictions.video_id, to: videos.video_id, cardinality: many_to_one}
   - {from: trial_metrics.video_id, to: videos.video_id, cardinality: many_to_one, note: 长格式——每视频每指标一行（4 指标），join 前先按 metric（必要时加 algo_version）过滤}
   - {from: videos.date_dir, to: platform_positions.day_label, cardinality: label_match, note: 软对应——仅训练日 0804–0808 匹配；platform_positions 另含 Probe 靶区行与 all 汇总行，join 前须按 day_label 过滤}
 
@@ -151,11 +151,10 @@ tables:
     excluded_columns:
       note: {reason: 自由文本备注，不作结构化口径来源}
 
-  frame_predictions:
-    description: 帧级轨迹与姿态预测（~78.8 万行）：中心/头/尾坐标、状态与修复方式
-    # lingsight_ro 未直授本表；待 M1-T8（工单 #7）建 v_query_frame_predictions 只读视图后切换暴露
-    exposed: false
-    expose_via: v_query_frame_predictions
+  v_query_frame_predictions:
+    description: 帧级轨迹与姿态（~78.8 万行）只读视图：中心/头/尾坐标、状态与修复方式；基表 frame_predictions 的唯一查询入口（工单 #7/M1-T8，mask_rle_* 等排除列物理不存在于视图）
+    exposed: true
+    view_of: frame_predictions
     primary_key: [video_id, frame_idx]
     columns:
       video_id: {type: varchar(128), meaning: 关联 videos.video_id（视频=试次）}
@@ -170,6 +169,8 @@ tables:
       status: {type: varchar(8), meaning: 帧状态, domain: "ok=可用 | miss=全坐标空 | coord=有中心、无头尾无 mask（6 帧，A100 端溯源中）"}
       head_tail_mode: {type: varchar(32), meaning: 关键点来源/修复方式, domain: "heatmap_peak | viterbi_rescue | partial_rescue"}
       head_tail_corrected: {type: tinyint, meaning: 头尾修正标记（1=经修复）}
+    # 排除列是基表 frame_predictions 中真实存在但视图不暴露（物理不存在）的列，
+    # 记录与原因保留在此供 LLM 纠错与人工审查（工单 #7；docs/08 风险 8、docs/09 D24）
     excluded_columns:
       mask_rle_counts: {reason: 全帧 COCO RLE 长文本（docs/08 风险 8），语义层不暴露}
       rle_format: {reason: RLE 编码格式标记，随 RLE 一并排除}
