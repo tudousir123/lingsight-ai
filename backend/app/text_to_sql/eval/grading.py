@@ -44,6 +44,13 @@ _ABS_TOL = 0.01
 #: Reason codes that count as the D-class permission-family rejection.
 _REJECTION_FAMILY = PERMISSION_REASON_CODES
 
+#: Rejection reasons that mean infrastructure, not model competence.
+#: Both live harnesses (run_eval, the env-gated pytest layer) retry such
+#: failures exactly once — a transport hiccup says nothing about the
+#: answer (retro 2026-10-13: Q21 once failed a whole question on a
+#: single provider_error).
+INFRA_REASON_CODES = frozenset({"provider_error", "timeout"})
+
 Outcome = ResearchQueryAnswer | ResearchQueryRejection
 
 

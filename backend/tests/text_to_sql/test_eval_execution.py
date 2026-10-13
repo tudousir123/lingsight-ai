@@ -26,7 +26,7 @@ from fastapi.testclient import TestClient
 
 from app.api.routes.research import get_query_provider
 from app.main import app
-from app.text_to_sql.eval.grading import grade_question
+from app.text_to_sql.eval.grading import INFRA_REASON_CODES, grade_question
 from app.text_to_sql.eval.questions import QUESTIONS, question_by_id
 from app.text_to_sql.executor import (
     QueryExecutionError,
@@ -156,6 +156,13 @@ def test_real_model_question(
 ) -> None:
     outcome = _ask(client, normal_user_token_headers, question.question)
     verdict = grade_question(question, outcome, _golden(db_available, question.id))
+    if not verdict.passed and verdict.reason_code in INFRA_REASON_CODES:
+        # One infrastructure retry, same policy as run_eval (single source:
+        # grading.INFRA_REASON_CODES) — a transport hiccup says nothing
+        # about the model's answer; Q21 once failed on a single
+        # provider_error (retro 2026-10-13).
+        outcome = _ask(client, normal_user_token_headers, question.question)
+        verdict = grade_question(question, outcome, _golden(db_available, question.id))
     assert verdict.passed, (
         f"Q{question.id} [{question.category}] {question.question}\n"
         f"verdict: {verdict.outcome} — {verdict.detail}\n"

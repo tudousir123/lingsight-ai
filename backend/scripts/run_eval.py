@@ -29,6 +29,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.text_to_sql.eval.grading import (  # noqa: E402
+    INFRA_REASON_CODES,
     Verdict,
     grade_question,
     summarize,
@@ -102,10 +103,6 @@ def run_one(
         payload["columns"] = list(outcome.columns)
         payload["caliber_note"] = outcome.caliber_note
     return verdict, payload, elapsed
-
-
-#: Rejection reasons that mean infrastructure, not model competence.
-_INFRA_REASONS = frozenset({"provider_error", "timeout"})
 
 
 def build_report(
@@ -201,7 +198,7 @@ def main(argv: list[str] | None = None) -> int:
     for question in questions:
         try:
             verdict, payload, elapsed = run_one(pipeline, executor, question)
-            if verdict.reason_code in _INFRA_REASONS:
+            if verdict.reason_code in INFRA_REASON_CODES:
                 # One infrastructure retry: a provider timeout says nothing
                 # about the model's answer, and the baseline should not be
                 # skewed by transport hiccups.
