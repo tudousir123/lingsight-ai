@@ -26,7 +26,15 @@ from dataclasses import dataclass
 
 from sqlalchemy import text
 
-from app.metrics.definitions import ALGO_VERSION_EVENTS
+from app.metrics.definitions import (
+    ALGO_VERSION_EVENTS,
+    ESCAPE_LATENCY_S,
+    EVENT_METRICS,
+    FIRST_DETECTION_S,
+    MOUNT_S,
+    PLATFORM_CONTACT_S,
+    WATER_ENTRY_S,
+)
 from scripts.metrics._db import metrics_engine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -45,17 +53,8 @@ SQL = text(
     "JOIN qc_summary q ON q.video_id = v.video_id "
     f"WHERE m.algo_version = '{ALGO_VERSION_EVENTS}' "
     "  AND v.phase = 'training_day' "
-    "  AND m.metric IN ('first_detection_s', 'water_entry_s', "
-    "                   'platform_contact_s', 'mount_s', 'escape_latency_s') "
+    f"  AND m.metric IN ({', '.join(repr(name) for name in EVENT_METRICS)}) "
     "ORDER BY m.video_id, m.metric"
-)
-
-_EVENT_ORDER = (
-    "first_detection_s",
-    "water_entry_s",
-    "platform_contact_s",
-    "mount_s",
-    "escape_latency_s",
 )
 
 
@@ -73,13 +72,24 @@ class Trial:
 
     @property
     def mounted(self) -> bool:
-        return self.events["escape_latency_s"][1] == "ok"
+        return self.events[ESCAPE_LATENCY_S][1] == "ok"
+
+
+@dataclass
+class _TrialMeta:
+    group: str
+    mouse: str
+    day: str
+    session: str
+    trial_no: str
+    path: str
+    qc: str
 
 
 def load_trials() -> list[Trial]:
     engine = metrics_engine()
     by_video: dict[str, dict[str, tuple[float | None, str]]] = {}
-    meta: dict[str, tuple[str, str, str, str, str, str, str]] = {}
+    meta: dict[str, _TrialMeta] = {}
     with engine.connect() as conn:
         for row in conn.execute(SQL):
             (
@@ -99,28 +109,19 @@ def load_trials() -> list[Trial]:
                 None if value is None else float(value),
                 str(status),
             )
-            meta[video_id] = (
-                str(group),
-                str(mouse),
-                str(day),
-                str(session),
-                str(trial_no),
-                str(path),
-                str(qc),
+            meta[video_id] = _TrialMeta(
+                group=str(group),
+                mouse=str(mouse),
+                day=str(day),
+                session=str(session),
+                trial_no=str(trial_no),
+                path=str(path),
+                qc=str(qc),
             )
     trials = [
-        Trial(
-            video_id=video_id,
-            group=meta[video_id][0],
-            mouse=meta[video_id][1],
-            day=meta[video_id][2],
-            session=meta[video_id][3],
-            trial_no=meta[video_id][4],
-            path=meta[video_id][5],
-            qc=meta[video_id][6],
-            events=events,
-        )
-        for video_id, events in by_video.items()
+        Trial(video_id=video_id, **vars(m), events=events)
+        for video_id, m in meta.items()
+        if (events := by_video.get(video_id)) is not None
     ]
     return sorted(trials, key=lambda t: (t.day, t.group, t.mouse, t.session))
 
@@ -152,7 +153,7 @@ def _event_cell(trial: Trial, metric: str) -> str:
     value, status = trial.events[metric]
     if value is None:
         return f"—（{status}）"
-    if metric == "escape_latency_s":  # a duration, not an event frame index
+    if metric == ESCAPE_LATENCY_S:  # a duration, not an event frame index
         return f"{value:.2f}s"
     return f"{value:.2f}s (帧{round(value * FPS)})"
 
@@ -176,11 +177,11 @@ def render(trials: list[Trial]) -> str:
         lines.append(
             f"| {index} | `{trial.video_id}` | {trial.group}/{trial.mouse} "
             f"| {trial.day}/s{trial.session}/{trial.trial_no} | {trial.qc} "
-            f"| {_event_cell(trial, 'first_detection_s')} "
-            f"| {_event_cell(trial, 'water_entry_s')} "
-            f"| {_event_cell(trial, 'platform_contact_s')} "
-            f"| {_event_cell(trial, 'mount_s')} "
-            f"| {_event_cell(trial, 'escape_latency_s')} |　|"
+            f"| {_event_cell(trial, FIRST_DETECTION_S)} "
+            f"| {_event_cell(trial, WATER_ENTRY_S)} "
+            f"| {_event_cell(trial, PLATFORM_CONTACT_S)} "
+            f"| {_event_cell(trial, MOUNT_S)} "
+            f"| {_event_cell(trial, ESCAPE_LATENCY_S)} |　|"
         )
     lines += [
         "",

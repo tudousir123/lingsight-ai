@@ -97,7 +97,7 @@ def _num(value: Any) -> float | None:
     return None if value is None else float(value)
 
 
-def _circle(cx: Any, cy: Any, r: float | Any) -> CircleGeometry | None:
+def _circle(cx: Any, cy: Any, r: float | None) -> CircleGeometry | None:
     if cx is None or cy is None:
         return None
     radius = float(r) if r is not None else None

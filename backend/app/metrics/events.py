@@ -24,6 +24,7 @@ from app.metrics.compute import CircleGeometry
 from app.metrics.definitions import (
     ALGO_VERSION_EVENTS,
     ESCAPE_LATENCY_S,
+    EVENT_METRICS,
     FIRST_DETECTION_S,
     METRIC_DEFINITIONS,
     MOUNT_MIN_FRAMES,
@@ -225,27 +226,9 @@ def compute_trial_events(
         )
 
     if not ordered:
-        return [
-            row(metric, None, STATUS_NO_FRAMES)
-            for metric in (
-                FIRST_DETECTION_S,
-                WATER_ENTRY_S,
-                PLATFORM_CONTACT_S,
-                MOUNT_S,
-                ESCAPE_LATENCY_S,
-            )
-        ]
+        return [row(metric, None, STATUS_NO_FRAMES) for metric in EVENT_METRICS]
     if not usable:
-        return [
-            row(metric, None, STATUS_NO_OK_FRAMES)
-            for metric in (
-                FIRST_DETECTION_S,
-                WATER_ENTRY_S,
-                PLATFORM_CONTACT_S,
-                MOUNT_S,
-                ESCAPE_LATENCY_S,
-            )
-        ]
+        return [row(metric, None, STATUS_NO_OK_FRAMES) for metric in EVENT_METRICS]
 
     # 首次出现: the first ok frame is the latency clock's start.
     first_detection_time = usable[0].time_s

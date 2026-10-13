@@ -21,7 +21,7 @@ status: accepted (2026-10-13, docs/10 四项口径全部经实验负责人书面
 
 ## Consequences
 
-- 事件实现为确定性 Python（与 ADR-0003 同纪律），潜伏期以新 `algo_version` 入 `trial_metrics`；碰台/首次入水作为事件帧进入评测（事件帧误差）。
+- 事件实现为确定性 Python（与 ADR-0003 同纪律），潜伏期与四个事件时刻以独立 `algo_version` 入 `trial_metrics`；事件时刻（碰台/首次入水等）经抽样人工核验比对事件帧（docs/10 AC2），评测套件纳入的是潜伏期两问（黄金 SQL 可判分；事件帧误差属人工核验范畴，不进 SQL 判分）。
 - 碰台的 mask 判定需解码 COCO 列主序 RLE（`coco_counts_column_major`）；解码器以库内 `mask_area_px`/`mask_bbox_*` 为验证锚（和/极值一致才算通过），并以 bbox 预筛避免全量解码。
 - docs/09 延迟清单前两问（逐日潜伏期学习曲线、第 1 vs 5 天改善）进入评测套件。
 - 抽样人工核验（N=10 分层）不一致时，先改 docs/10 再改代码。

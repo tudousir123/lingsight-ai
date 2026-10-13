@@ -22,6 +22,7 @@ from app.metrics.events import (
 from app.metrics.definitions import (
     ALGO_VERSION_EVENTS,
     ESCAPE_LATENCY_S,
+    STATUS_MISSING_POOL_PARAMS,
     FIRST_DETECTION_S,
     MOUNT_S,
     MOUNT_MIN_FRAMES,
@@ -240,7 +241,7 @@ def test_water_entry_missing_or_never() -> None:
         row.metric: row
         for row in compute_trial_events("t", simple_trial(), pool=None, platform=PLATFORM)
     }
-    assert rows[WATER_ENTRY_S].calc_status == "missing_pool_params"
+    assert rows[WATER_ENTRY_S].calc_status == STATUS_MISSING_POOL_PARAMS
     assert rows[MOUNT_S].value == 1.0
 
 

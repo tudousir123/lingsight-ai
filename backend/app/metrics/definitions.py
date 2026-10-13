@@ -45,6 +45,15 @@ PLATFORM_CONTACT_S: MetricName = "platform_contact_s"
 MOUNT_S: MetricName = "mount_s"
 ESCAPE_LATENCY_S: MetricName = "escape_latency_s"
 
+#: The event batch, in its fixed row order (docs/10 v1; ADR-0006).
+EVENT_METRICS: tuple[MetricName, ...] = (
+    FIRST_DETECTION_S,
+    WATER_ENTRY_S,
+    PLATFORM_CONTACT_S,
+    MOUNT_S,
+    ESCAPE_LATENCY_S,
+)
+
 # calc_status values — why a row has (or lacks) a value.
 STATUS_OK = "ok"
 STATUS_NO_FRAMES = "no_frames"
