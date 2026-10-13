@@ -24,15 +24,17 @@ from typing import Any
 import sqlglot
 from sqlglot import exp
 
+from app.text_to_sql.eval.questions import REL_TOL as QUESTIONS_REL_TOL
 from app.text_to_sql.eval.questions import EvalQuestion, ExpectedCell
 from app.text_to_sql.executor import ExecutionResult
 from app.text_to_sql.pipeline import (
     ResearchQueryAnswer,
     ResearchQueryRejection,
 )
+from app.text_to_sql.validator import PERMISSION_REASON_CODES
 
 #: Relative tolerance for every numeric comparison (ticket #9 contract).
-REL_TOL = 0.005
+REL_TOL = QUESTIONS_REL_TOL
 
 #: Small absolute floor so near-zero values (e.g. ratios rounded to
 #: different precisions by the model) do not fail on rounding noise; the
@@ -40,7 +42,7 @@ REL_TOL = 0.005
 _ABS_TOL = 0.01
 
 #: Reason codes that count as the D-class permission-family rejection.
-_REJECTION_FAMILY = frozenset({"whitelist_violation", "db_not_allowed", "non_select"})
+_REJECTION_FAMILY = PERMISSION_REASON_CODES
 
 Outcome = ResearchQueryAnswer | ResearchQueryRejection
 

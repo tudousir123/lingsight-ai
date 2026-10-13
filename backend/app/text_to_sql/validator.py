@@ -30,6 +30,14 @@ from sqlglot.optimizer.scope import Scope, build_scope
 
 from app.text_to_sql.semantic import AstWhitelist
 
+#: Rejection reasons in the permission family: whitelist violations,
+#: forbidden databases, and non-SELECT statements. The pipeline's repair
+#: feedback and the eval grader's D-class assertions share this one set
+#: (ADR-0001: permission errors never relax constraints).
+PERMISSION_REASON_CODES = frozenset(
+    {"whitelist_violation", "db_not_allowed", "non_select"}
+)
+
 #: sqlglot decorates parse errors with ANSI emphasis codes; strip them so
 #: messages stay clean in repair prompts and HTTP responses.
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")

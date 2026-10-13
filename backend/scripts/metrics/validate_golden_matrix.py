@@ -28,44 +28,18 @@ from typing import Any
 from sqlalchemy import text
 
 from app.metrics.definitions import ALGO_VERSION
+from app.text_to_sql.eval.questions import (
+    GROUP_DAY_MATRIX as GOLDEN,
+)
+from app.text_to_sql.eval.questions import (
+    REL_TOL,
+)
 from scripts.metrics._db import metrics_engine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("validate_golden_matrix")
 
 # docs/09 appendix · 组×日 黄金矩阵（训练期）: (group, day) -> (dist_px, speed_px)
-GOLDEN: dict[tuple[str, str], tuple[float, float]] = {
-    ("A+L1", "0804"): (8359.0, 129.0),
-    ("A+L1", "0805"): (8350.0, 130.2),
-    ("A+L1", "0806"): (7091.0, 116.0),
-    ("A+L1", "0807"): (5430.0, 112.2),
-    ("A+L1", "0808"): (2856.0, 90.7),
-    ("A+L3", "0804"): (7545.0, 124.1),
-    ("A+L3", "0805"): (5241.0, 97.7),
-    ("A+L3", "0806"): (5715.0, 121.3),
-    ("A+L3", "0807"): (3769.0, 117.5),
-    ("A+L3", "0808"): (4461.0, 113.1),
-    ("A2", "0804"): (7076.0, 125.7),
-    ("A2", "0805"): (7819.0, 126.9),
-    ("A2", "0806"): (5040.0, 113.1),
-    ("A2", "0807"): (3175.0, 117.5),
-    ("A2", "0808"): (3397.0, 103.6),
-    ("A3", "0804"): (6487.0, 104.6),
-    ("A3", "0805"): (6692.0, 107.5),
-    ("A3", "0806"): (3605.0, 79.7),
-    ("A3", "0807"): (3233.0, 94.9),
-    ("A3", "0808"): (3101.0, 98.2),
-    ("c1", "0804"): (7982.0, 123.3),
-    ("c1", "0805"): (5628.0, 98.1),
-    ("c1", "0806"): (5267.0, 97.4),
-    ("c1", "0807"): (4206.0, 101.8),
-    ("c1", "0808"): (4168.0, 88.0),
-    ("c2", "0804"): (6840.0, 108.1),
-    ("c2", "0805"): (6131.0, 102.0),
-    ("c2", "0806"): (5221.0, 94.0),
-    ("c2", "0807"): (4306.0, 94.2),
-    ("c2", "0808"): (4562.0, 93.2),
-}
 GROUPS = ["A+L1", "A+L3", "A2", "A3", "c1", "c2"]
 DAYS = ["0804", "0805", "0806", "0807", "0808"]
 
@@ -78,7 +52,6 @@ for day in DAYS:
     EXPECTED_VIDEOS[("c2", day)] = 20
 EXPECTED_VIDEOS[("A3", "0806")] = 15
 
-REL_TOL = 0.005
 ABS_TOL = {"dist_px": 1.0, "speed_px": 0.1}
 SQL_EQUIVALENCE_TOL = 1e-9
 

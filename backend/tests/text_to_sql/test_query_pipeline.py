@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 
 from app.api.routes.research import get_query_provider, get_research_settings
 from app.main import app
+from app.text_to_sql.executor import QueryExecutionError, ResearchQueryExecutor
 from app.text_to_sql.gateway import OpenAICompatProvider, ProviderError
 from app.text_to_sql.settings import ResearchQuerySettings
 
@@ -78,8 +79,28 @@ def _clear_overrides() -> Iterator[None]:
     app.dependency_overrides.pop(get_research_settings, None)
 
 
+@pytest.fixture(scope="module")
+def research_db() -> None:
+    """Skip when the water_maze research DB is not reachable (CI).
+
+    CI provisions only the app database; tests whose generated SQL passes
+    validation and reaches the executor need lingsight_ro on the research
+    DB. Structure/rejection tests below run everywhere.
+    """
+    try:
+        ResearchQueryExecutor(get_research_settings()).run("SELECT 1")
+    except QueryExecutionError:
+        pytest.skip(
+            "needs the water_maze research DB with LINGSIGHT_RO_PASSWORD "
+            "(CI runs the structure layer only)"
+        )
+
+
+@pytest.mark.env_gated
 def test_canonical_animal_count_returns_6_with_caliber_note(
-    client: TestClient, normal_user_token_headers: dict[str, str]
+    research_db: None,  # noqa: ARG001 — fixture gates research-DB reachability
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
 ) -> None:
     # C15 demo question: the answer must be 6 — the (group_name, mouse_id)
     # grain — never the animal_code trap value 26.
@@ -132,7 +153,9 @@ def test_attempts_and_verdict_are_written_to_the_server_audit_log(
         response = ask(client, provider, headers=normal_user_token_headers)
     assert response.status_code == 403, response.text
     attempt_records = [
-        r for r in caplog.records if r.getMessage().startswith("research_query attempt=")
+        r
+        for r in caplog.records
+        if r.getMessage().startswith("research_query attempt=")
     ]
     verdict_records = [r for r in caplog.records if " rejected " in r.getMessage()]
     assert len(attempt_records) == 3
@@ -188,8 +211,11 @@ def test_d23_cross_database_rejected(
     assert body["attempts"] == 3
 
 
+@pytest.mark.env_gated
 def test_frame_query_runs_through_the_view(
-    client: TestClient, normal_user_token_headers: dict[str, str]
+    research_db: None,  # noqa: ARG001 — fixture gates research-DB reachability
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
 ) -> None:
     # Ticket #7 (M1-T8): the AST whitelist now points at
     # v_query_frame_predictions, and the account layer granted exactly that
@@ -204,8 +230,11 @@ def test_frame_query_runs_through_the_view(
     assert body["data_source"]["tables"] == ["v_query_frame_predictions"]
 
 
+@pytest.mark.env_gated
 def test_d24_mask_rle_counts_readable_through_the_view(
-    client: TestClient, normal_user_token_headers: dict[str, str]
+    research_db: None,  # noqa: ARG001 — fixture gates research-DB reachability
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
 ) -> None:
     # docs/09 D24, reversed by user decision 2026-10-13 (ADR-0007, ticket
     # #15): the mask family is open on the query surface. A small-range RLE
@@ -243,8 +272,11 @@ def test_base_table_frame_predictions_is_not_an_entry_point(
     assert body["attempts"] == 3
 
 
+@pytest.mark.env_gated
 def test_execution_error_is_typed_and_not_retried(
-    client: TestClient, normal_user_token_headers: dict[str, str]
+    research_db: None,  # noqa: ARG001 — fixture gates research-DB reachability
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
 ) -> None:
     # A SQL error that only MySQL can catch (unknown function) surfaces as a
     # typed execution_error — and execution failures never trigger repair.
@@ -258,8 +290,11 @@ def test_execution_error_is_typed_and_not_retried(
     assert [t["stage"] for t in body["trace"]] == ["execution"]
 
 
+@pytest.mark.env_gated
 def test_timeout_is_typed(
-    client: TestClient, normal_user_token_headers: dict[str, str]
+    research_db: None,  # noqa: ARG001 — fixture gates research-DB reachability
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
 ) -> None:
     # SET SESSION MAX_EXECUTION_TIME kills a slow statement server-side; the
     # pipeline maps it to the `timeout` reason code, names the explicit time
@@ -284,8 +319,11 @@ def test_timeout_is_typed(
     assert [t["stage"] for t in body["trace"]] == ["execution"]
 
 
+@pytest.mark.env_gated
 def test_validation_repair_recovers_from_fence_and_missing_table(
-    client: TestClient, normal_user_token_headers: dict[str, str]
+    research_db: None,  # noqa: ARG001 — fixture gates research-DB reachability
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
 ) -> None:
     # First completion is a non-whitelisted guess; the repair round-trip
     # (error fed back) yields a valid statement that then executes for real.
@@ -305,8 +343,11 @@ def test_validation_repair_recovers_from_fence_and_missing_table(
     assert [t["reason_code"] for t in body["trace"]] == ["whitelist_violation"]
 
 
+@pytest.mark.env_gated
 def test_markdown_fence_is_stripped_from_model_output(
-    client: TestClient, normal_user_token_headers: dict[str, str]
+    research_db: None,  # noqa: ARG001 — fixture gates research-DB reachability
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
 ) -> None:
     provider = FakeProvider([f"```mysql\n{CANONICAL_SQL}\n```"])
     response = ask(client, provider, headers=normal_user_token_headers)
@@ -317,8 +358,11 @@ def test_markdown_fence_is_stripped_from_model_output(
 # --- ticket #8: typed repair loop and error taxonomy --------------------------
 
 
+@pytest.mark.env_gated
 def test_syntax_error_recovers_within_retry_budget(
-    client: TestClient, normal_user_token_headers: dict[str, str]
+    research_db: None,  # noqa: ARG001 — fixture gates research-DB reachability
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
 ) -> None:
     # Acceptance 1: an injected syntax error recovers within the <=2-retry
     # budget — the parse failure is fed back and the next attempt executes.
@@ -396,8 +440,11 @@ def test_permission_failure_retries_with_identical_whitelist(
     assert "不会放宽" in provider.calls[2][-1]["content"]
 
 
+@pytest.mark.env_gated
 def test_empty_result_is_returned_verbatim_without_rewrite(
-    client: TestClient, normal_user_token_headers: dict[str, str]
+    research_db: None,  # noqa: ARG001 — fixture gates research-DB reachability
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
 ) -> None:
     # Acceptance 3: an empty result set is not an error. The SQL executes
     # verbatim, the answer carries an empty marker plus a deterministic

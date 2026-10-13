@@ -24,3 +24,7 @@ export METRICS_DB_PW=$(docker exec healthad-mysql printenv MYSQL_ROOT_PASSWORD)
 uv run python -m scripts.metrics.compute_trial_metrics      # 建表（幂等）+ 计算入库
 uv run python -m scripts.metrics.validate_golden_matrix     # 黄金矩阵验证，exit 0 = PASS
 ```
+
+## 追记（2026-10-13 11:40）
+
+研究库再次刷新（ok 帧 784,055→784,246，+191，修复管线持续工作），逐试次 CTE 交叉核对如实报警。按 ADR-0003 幂等纪律整版重算 `v1-polyline-ok-frames`（2196 行原地替换，calculated_at 2026-10-13 11:40），三层验证复跑 **OVERALL: PASS**。矩阵 60/60 在两次刷新间始终通过（0.5% 容差吸收漂移）；黄金值快照再生机制首次实战。

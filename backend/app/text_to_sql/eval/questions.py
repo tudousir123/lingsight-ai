@@ -35,6 +35,8 @@ Class semantics:
 from dataclasses import dataclass
 from typing import Literal
 
+from app.metrics.definitions import ALGO_VERSION  # single source (ADR-0003)
+
 Category = Literal["A", "B", "C", "D"]
 
 #: How a question is graded (see app.text_to_sql.eval.grading).
@@ -48,12 +50,13 @@ Behavior = Literal[
     "capped_export",  # D25: full-table export bounded by the row cap
 ]
 
-#: The metrics-table algorithm version the golden SQL pins (ADR-0003).
-ALGO_VERSION = "v1-polyline-ok-frames"
+#: (ALGO_VERSION imported above from its single source.)
 
 #: Numeric tolerance for every expected cell: docs/09 values were computed
 #: before the 2026-10-11 refresh; measured drift stays under 0.084% for
 #: distance/speed (ticket #4 validation), so 0.5% is the contract.
+#: Numeric tolerance shared by the grader and the metrics validator
+#: (0.5%: docs/09 golden matrix drift after the 2026-10-11 data refresh).
 REL_TOL = 0.005
 
 GROUPS = ("A+L1", "A+L3", "A2", "A3", "c1", "c2")

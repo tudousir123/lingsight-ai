@@ -43,6 +43,7 @@ from app.text_to_sql.gateway import Message, Provider, ProviderError
 from app.text_to_sql.semantic import AstWhitelist, SemanticLayer, load
 from app.text_to_sql.settings import ResearchQuerySettings
 from app.text_to_sql.validator import (
+    PERMISSION_REASON_CODES,
     ReasonCode,
     ValidatedSql,
     ValidationFailure,
@@ -119,11 +120,9 @@ SYSTEM_PROMPT_TEMPLATE = """你是一个 MySQL 分析型 SQL 生成器，只访�
 
 _FENCE_RE = re.compile(r"^```[a-zA-Z]*\s*|\s*```$")
 
-#: Reason codes whose repair feedback must state that constraints stay
-#: frozen (ADR-0001 hard boundary: no relaxation on permission errors).
-_PERMISSION_REASON_CODES = frozenset(
-    {"whitelist_violation", "db_not_allowed", "non_select"}
-)
+#: Repair feedback must state constraints stay frozen for these reasons
+#: (ADR-0001 hard boundary: no relaxation on permission errors).
+_PERMISSION_REASON_CODES = PERMISSION_REASON_CODES
 
 
 @lru_cache(maxsize=1)
