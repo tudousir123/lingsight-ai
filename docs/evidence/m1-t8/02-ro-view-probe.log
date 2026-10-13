@@ -1,0 +1,52 @@
+# M1-T8 lingsight_ro 视角实测（工单 #7 验收证据）
+# 时间：2026-10-13T00:07:00Z
+# 连接：容器内 mysql 客户端，密码经进程 env 注入（-e RO_PW），未回显未落盘
+
+## ① 经视图查询帧级精选列（期望：成功）
+\$ mysql -ulingsight_ro water_maze -e "SELECT COUNT(*) AS n FROM v_query_frame_predictions"
+mysql: [Warning] Using a password on the command line interface can be insecure.
+n
+788088
+exit=0
+
+\$ mysql -ulingsight_ro water_maze -e "SELECT * FROM v_query_frame_predictions LIMIT 1" (\G)
+mysql: [Warning] Using a password on the command line interface can be insecure.
+*************************** 1. row ***************************
+           video_id: 0804???-A+L1-2-1
+          frame_idx: 0
+             time_s: 0
+           center_x: 1152.92
+           center_y: 482.7
+             head_x: 1134
+             head_y: 455
+             tail_x: 1162
+             tail_y: 515
+             status: ok
+     head_tail_mode: heatmap_peak
+head_tail_corrected: 0
+exit=0
+
+## ② 视图查 mask_rle_counts（期望：Unknown column，物理不可达）
+\$ mysql -ulingsight_ro water_maze -e "SELECT mask_rle_counts FROM v_query_frame_predictions LIMIT 1"
+mysql: [Warning] Using a password on the command line interface can be insecure.
+ERROR 1054 (42S22) at line 1: Unknown column 'mask_rle_counts' in 'field list'
+exit=1
+
+## ③ 直查基表 frame_predictions（期望：SELECT command denied）
+\$ mysql -ulingsight_ro water_maze -e "SELECT COUNT(*) FROM frame_predictions"
+mysql: [Warning] Using a password on the command line interface can be insecure.
+ERROR 1142 (42000) at line 1: SELECT command denied to user 'lingsight_ro'@'localhost' for table 'frame_predictions'
+exit=1
+
+## ④ SHOW GRANTS 摘录（期望：含视图授权，无基表 frame_predictions 授权）
+\$ mysql -ulingsight_ro water_maze -e "SHOW GRANTS"
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Grants for lingsight_ro@%
+GRANT USAGE ON *.* TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`datasets` TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`platform_positions` TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`qc_summary` TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`rescue_code_definitions_20261011` TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`trial_metrics` TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`v_query_frame_predictions` TO `lingsight_ro`@`%`
+GRANT SELECT ON `water_maze`.`videos` TO `lingsight_ro`@`%`

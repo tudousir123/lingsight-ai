@@ -1,0 +1,13 @@
+2026-10-13 08:06:40,861 INFO applied CREATE OR REPLACE VIEW v_query_frame_predictions
+2026-10-13 08:06:40,874 INFO granted SELECT ON v_query_frame_predictions TO lingsight_ro
+2026-10-13 08:06:40,875 INFO view projection (12 columns): video_id, frame_idx, time_s, center_x, center_y, head_x, head_y, tail_x, tail_y, status, head_tail_mode, head_tail_corrected
+2026-10-13 08:06:41,341 INFO view row count: 788088
+2026-10-13 08:06:41,341 INFO grant: GRANT USAGE ON *.* TO `lingsight_ro`@`%`
+2026-10-13 08:06:41,342 INFO grant: GRANT SELECT ON `water_maze`.`datasets` TO `lingsight_ro`@`%`
+2026-10-13 08:06:41,342 INFO grant: GRANT SELECT ON `water_maze`.`platform_positions` TO `lingsight_ro`@`%`
+2026-10-13 08:06:41,342 INFO grant: GRANT SELECT ON `water_maze`.`qc_summary` TO `lingsight_ro`@`%`
+2026-10-13 08:06:41,342 INFO grant: GRANT SELECT ON `water_maze`.`rescue_code_definitions_20261011` TO `lingsight_ro`@`%`
+2026-10-13 08:06:41,342 INFO grant: GRANT SELECT ON `water_maze`.`trial_metrics` TO `lingsight_ro`@`%`
+2026-10-13 08:06:41,342 INFO grant: GRANT SELECT ON `water_maze`.`v_query_frame_predictions` TO `lingsight_ro`@`%`
+2026-10-13 08:06:41,342 INFO grant: GRANT SELECT ON `water_maze`.`videos` TO `lingsight_ro`@`%`
+2026-10-13 08:06:41,342 INFO done — script is replayable and leaves the same state
