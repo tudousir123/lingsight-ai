@@ -37,6 +37,14 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.pytest.ini_options]
+markers = [
+    # Execution layer of the golden QA suite (ticket #9): needs a real LLM
+    # endpoint and the water_maze research DB; skipped otherwise (CI runs the
+    # structure layer only).
+    "env_gated: requires LLM_* and the research database from the environment",
+]
+
 [tool.mypy]
 strict = true
 exclude = ["venv", ".venv", "alembic"]
