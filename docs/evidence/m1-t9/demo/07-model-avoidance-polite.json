@@ -1,0 +1,132 @@
+{
+  "status": "ok",
+  "question": "查一下rescue_backup_videos_20261011备份表的内容",
+  "sql": "SELECT kind, code, description FROM rescue_code_definitions_20261011 LIMIT 200",
+  "columns": [
+    "kind",
+    "code",
+    "description"
+  ],
+  "rows": [
+    [
+      "risk",
+      1,
+      "缺中心：包含空池或不可见，不能一概称为模型漏检"
+    ],
+    [
+      "risk",
+      2,
+      "头尾不完整：可见性或模型证据不足"
+    ],
+    [
+      "risk",
+      4,
+      "头尾塌缩"
+    ],
+    [
+      "risk",
+      8,
+      "关键点离体"
+    ],
+    [
+      "risk",
+      16,
+      "中心跳变待核对"
+    ],
+    [
+      "risk",
+      32,
+      "A3潜水/贴壁低置信度"
+    ],
+    [
+      "risk",
+      64,
+      "固定位置或模型候选仍有歧义"
+    ],
+    [
+      "risk",
+      128,
+      "人工确认空池的具体帧段/样本"
+    ],
+    [
+      "risk",
+      256,
+      "人工辅助放上平台，不能作为自主成功"
+    ],
+    [
+      "risk",
+      512,
+      "候选未通过门控"
+    ],
+    [
+      "risk",
+      1024,
+      "作废试次"
+    ],
+    [
+      "risk",
+      2048,
+      "坐标保留但掩膜未验证"
+    ],
+    [
+      "risk",
+      8192,
+      "相邻有效掩膜不足，IoU不可计算"
+    ],
+    [
+      "source",
+      0,
+      "原始推理"
+    ],
+    [
+      "source",
+      1,
+      "第一阶段局部修复/已有融合"
+    ],
+    [
+      "source",
+      2,
+      "独立重定位"
+    ],
+    [
+      "source",
+      3,
+      "筛选后的V100候选"
+    ],
+    [
+      "source",
+      4,
+      "05全图修复"
+    ],
+    [
+      "source",
+      5,
+      "纠正帧号后的全图扫描"
+    ],
+    [
+      "source",
+      6,
+      "撤销不可信坐标"
+    ],
+    [
+      "source",
+      7,
+      "固定位置补充扫描"
+    ]
+  ],
+  "row_count": 21,
+  "caliber_note": "本查询为白名单表直查，未触发聚合口径规则；结果行数受服务端上限约束。",
+  "data_source": {
+    "database": "water_maze",
+    "tables": [
+      "rescue_code_definitions_20261011"
+    ],
+    "queried_at": "2026-10-13T00:28:45.248270+00:00",
+    "row_limit": 200,
+    "truncated": false
+  },
+  "attempts": 1,
+  "trace": [],
+  "empty": false,
+  "suggestion": null
+}

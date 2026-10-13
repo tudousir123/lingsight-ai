@@ -1,0 +1,27 @@
+{
+  "status": "rejected",
+  "reason_code": "non_select",
+  "message": "only a single read-only SELECT is allowed, got DELETE",
+  "sql": "DELETE FROM videos",
+  "attempts": 3,
+  "trace": [
+    {
+      "attempt": 1,
+      "stage": "validation",
+      "reason_code": "non_select",
+      "message": "only a single read-only SELECT is allowed, got DELETE"
+    },
+    {
+      "attempt": 2,
+      "stage": "validation",
+      "reason_code": "non_select",
+      "message": "only a single read-only SELECT is allowed, got DELETE"
+    },
+    {
+      "attempt": 3,
+      "stage": "validation",
+      "reason_code": "non_select",
+      "message": "only a single read-only SELECT is allowed, got DELETE"
+    }
+  ]
+}

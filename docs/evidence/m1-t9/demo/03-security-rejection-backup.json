@@ -1,0 +1,27 @@
+{
+  "status": "rejected",
+  "reason_code": "whitelist_violation",
+  "message": "table 'rescue_backup_videos_20261011' is not in the whitelist (allowed: datasets, platform_positions, qc_summary, rescue_code_definitions_20261011, trial_metrics, v_query_frame_predictions, videos)",
+  "sql": "SELECT COUNT(*) FROM rescue_backup_videos_20261011",
+  "attempts": 3,
+  "trace": [
+    {
+      "attempt": 1,
+      "stage": "validation",
+      "reason_code": "whitelist_violation",
+      "message": "table 'rescue_backup_videos_20261011' is not in the whitelist (allowed: datasets, platform_positions, qc_summary, rescue_code_definitions_20261011, trial_metrics, v_query_frame_predictions, videos)"
+    },
+    {
+      "attempt": 2,
+      "stage": "validation",
+      "reason_code": "whitelist_violation",
+      "message": "table 'rescue_backup_videos_20261011' is not in the whitelist (allowed: datasets, platform_positions, qc_summary, rescue_code_definitions_20261011, trial_metrics, v_query_frame_predictions, videos)"
+    },
+    {
+      "attempt": 3,
+      "stage": "validation",
+      "reason_code": "whitelist_violation",
+      "message": "table 'rescue_backup_videos_20261011' is not in the whitelist (allowed: datasets, platform_positions, qc_summary, rescue_code_definitions_20261011, trial_metrics, v_query_frame_predictions, videos)"
+    }
+  ]
+}

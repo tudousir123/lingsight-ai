@@ -1,0 +1,28 @@
+{
+  "status": "ok",
+  "question": "一共有多少只动物",
+  "sql": "SELECT COUNT(DISTINCT CONCAT(group_name, '|', mouse_id)) AS total_animals FROM videos LIMIT 200",
+  "columns": [
+    "total_animals"
+  ],
+  "rows": [
+    [
+      6
+    ]
+  ],
+  "row_count": 1,
+  "caliber_note": "动物口径：动物 = (group_name, mouse_id)（标准表达 COUNT(DISTINCT CONCAT(group_name, '|', mouse_id))；animal_code 是组-鼠-试次编码，不能当动物数）\n聚合口径：组间统计的推荐聚合口径是逐鼠-逐日：先按 (group_name, mouse_id, date_dir) 聚合再组间比较；试次直均有伪重复风险（统计单位=动物，docs/09 Q17）",
+  "data_source": {
+    "database": "water_maze",
+    "tables": [
+      "videos"
+    ],
+    "queried_at": "2026-10-13T00:27:35.973929+00:00",
+    "row_limit": 200,
+    "truncated": false
+  },
+  "attempts": 1,
+  "trace": [],
+  "empty": false,
+  "suggestion": null
+}
