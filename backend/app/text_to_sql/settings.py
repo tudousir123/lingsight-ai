@@ -40,8 +40,10 @@ class ResearchQuerySettings(BaseSettings):
     RESEARCH_QUERY_MAX_ROWS: int = 200
     #: Server-side MAX_EXECUTION_TIME for read-only SELECTs (MySQL 8).
     RESEARCH_QUERY_TIMEOUT_MS: int = 10_000
-    #: Bounded repair: validation failures are fed back at most this often.
-    RESEARCH_QUERY_REPAIR_ATTEMPTS: int = 1
+    #: Bounded repair (issue #8): total retry budget for generation/validation
+    #: failures, shared across syntax and permission classes. Execution
+    #: failures and empty results are never retried.
+    RESEARCH_QUERY_REPAIR_ATTEMPTS: int = 2
 
     @property
     def read_timeout_seconds(self) -> float:

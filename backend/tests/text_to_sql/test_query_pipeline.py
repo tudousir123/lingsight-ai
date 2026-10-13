@@ -103,16 +103,18 @@ def test_animal_code_trap_sql_is_rejected_not_executed(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
     # The trap SQL never reaches the database: the AST whitelist rejects the
-    # excluded column, one bounded repair attempt still fails, then rejection.
-    provider = FakeProvider([TRAP_SQL, TRAP_SQL])
+    # excluded column, the bounded repair budget (2 retries) is exhausted,
+    # then rejection.
+    provider = FakeProvider([TRAP_SQL, TRAP_SQL, TRAP_SQL])
     response = ask(client, provider, headers=normal_user_token_headers)
     assert response.status_code == 403, response.text
     body = response.json()
     assert body["status"] == "rejected"
     assert body["reason_code"] == "whitelist_violation"
     assert "animal_code" in body["message"]
-    # Bounded repair: at most one retry after the first validation failure.
-    assert len(provider.calls) == 2
+    assert body["attempts"] == 3
+    # Bounded repair: initial attempt + at most 2 retries.
+    assert len(provider.calls) == 3
     assert "animal_code" in provider.calls[1][-1]["content"]
 
 
@@ -124,6 +126,7 @@ def test_d21_backup_table_rejected(
         [
             "SELECT COUNT(*) AS n FROM rescue_backup_videos_20261011",
             "SELECT COUNT(*) AS n FROM rescue_backup_videos_20261011",
+            "SELECT COUNT(*) AS n FROM rescue_backup_videos_20261011",
         ]
     )
     response = ask(client, provider, headers=normal_user_token_headers)
@@ -131,19 +134,21 @@ def test_d21_backup_table_rejected(
     body = response.json()
     assert body["reason_code"] == "whitelist_violation"
     assert "rescue_backup_videos_20261011" in body["message"]
+    assert body["attempts"] == 3
 
 
 def test_d22_delete_rejected(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
     # docs/09 D22: write operations must be refused before execution. The
-    # bounded repair round happens too — the model stays wrong, so the final
+    # bounded repair rounds happen too — the model stays wrong, so the final
     # verdict is still a typed rejection.
-    provider = FakeProvider(["DELETE FROM videos", "DELETE FROM videos"])
+    provider = FakeProvider(["DELETE FROM videos"] * 3)
     response = ask(client, provider, headers=normal_user_token_headers)
     assert response.status_code == 400, response.text
     body = response.json()
     assert body["reason_code"] == "non_select"
+    assert body["attempts"] == 3
 
 
 def test_d23_cross_database_rejected(
@@ -152,15 +157,13 @@ def test_d23_cross_database_rejected(
     # docs/09 D23: schema-qualified (cross-database) references must be
     # refused even though the table name itself looks familiar.
     provider = FakeProvider(
-        [
-            "SELECT COUNT(*) AS n FROM wm_sync_stage_20261012.videos",
-            "SELECT COUNT(*) AS n FROM wm_sync_stage_20261012.videos",
-        ]
+        ["SELECT COUNT(*) AS n FROM wm_sync_stage_20261012.videos"] * 3
     )
     response = ask(client, provider, headers=normal_user_token_headers)
     assert response.status_code == 403, response.text
     body = response.json()
     assert body["reason_code"] == "db_not_allowed"
+    assert body["attempts"] == 3
 
 
 def test_frame_query_runs_through_the_view(
@@ -229,13 +232,16 @@ def test_execution_error_is_typed_and_not_retried(
     body = response.json()
     assert body["reason_code"] == "execution_error"
     assert len(provider.calls) == 1
+    assert body["attempts"] == 1
+    assert [t["stage"] for t in body["trace"]] == ["execution"]
 
 
 def test_timeout_is_typed(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
     # SET SESSION MAX_EXECUTION_TIME kills a slow statement server-side; the
-    # pipeline maps it to the `timeout` reason code.
+    # pipeline maps it to the `timeout` reason code, names the explicit time
+    # budget, and never retries execution failures (ticket #8).
     settings = ResearchQuerySettings(
         _env_file=None,
         LINGSIGHT_RO_PASSWORD=_env_password(),
@@ -248,6 +254,12 @@ def test_timeout_is_typed(
     assert response.status_code == 504, response.text
     body = response.json()
     assert body["reason_code"] == "timeout"
+    assert body["message"]
+    assert "MAX_EXECUTION_TIME" in body["message"]
+    assert "1000" in body["message"]
+    assert len(provider.calls) == 1
+    assert body["attempts"] == 1
+    assert [t["stage"] for t in body["trace"]] == ["execution"]
 
 
 def test_validation_repair_recovers_from_fence_and_missing_table(
@@ -267,6 +279,8 @@ def test_validation_repair_recovers_from_fence_and_missing_table(
     assert body["rows"] == [[1]]
     assert body["data_source"]["tables"] == ["datasets"]
     assert len(provider.calls) == 2
+    assert body["attempts"] == 2
+    assert [t["reason_code"] for t in body["trace"]] == ["whitelist_violation"]
 
 
 def test_markdown_fence_is_stripped_from_model_output(
@@ -274,8 +288,117 @@ def test_markdown_fence_is_stripped_from_model_output(
 ) -> None:
     provider = FakeProvider([f"```mysql\n{CANONICAL_SQL}\n```"])
     response = ask(client, provider, headers=normal_user_token_headers)
-    assert response.status_code == 200, response.text
+    assert response.status_code == 200
     assert response.json()["rows"] == [[6]]
+
+
+# --- ticket #8: typed repair loop and error taxonomy --------------------------
+
+
+def test_syntax_error_recovers_within_retry_budget(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    # Acceptance 1: an injected syntax error recovers within the <=2-retry
+    # budget — the parse failure is fed back and the next attempt executes.
+    provider = FakeProvider(["SELECT COUNT(* FROM videos", CANONICAL_SQL])
+    response = ask(client, provider, headers=normal_user_token_headers)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["rows"] == [[6]]
+    assert body["attempts"] == 2
+    assert [t["reason_code"] for t in body["trace"]] == ["parse_error"]
+    assert body["trace"][0]["stage"] == "validation"
+    assert body["trace"][0]["attempt"] == 1
+    # The failed SQL was fed back verbatim as repair context (assistant turn).
+    assert provider.calls[1][-2]["role"] == "assistant"
+    assert "SELECT COUNT(* FROM videos" in provider.calls[1][-2]["content"]
+    # The typed failure itself also reaches the repair prompt, ANSI-free.
+    assert "parse_error" in provider.calls[1][-1]["content"]
+    assert "\x1b" not in provider.calls[1][-1]["content"]
+
+
+def test_syntax_error_exhausts_budget_then_fails_typed(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    # Acceptance 1 (exhaustion side): after the budget is spent the verdict
+    # is a typed, structured failure — never a fabricated answer.
+    provider = FakeProvider(["SELECT COUNT(* FROM videos", "WHERE (", "FROM"])
+    response = ask(client, provider, headers=normal_user_token_headers)
+    assert response.status_code == 400, response.text
+    body = response.json()
+    assert body["status"] == "rejected"
+    assert body["reason_code"] == "parse_error"
+    assert body["message"]
+    assert body["attempts"] == 3
+    assert [t["reason_code"] for t in body["trace"]] == ["parse_error"] * 3
+    assert len(provider.calls) == 3
+
+
+def test_permission_failure_retries_with_identical_whitelist(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Acceptance 2: zero relaxation. Every retry validates against the very
+    # same frozen whitelist and row cap; the system prompt (the whitelist's
+    # source) is byte-identical across attempts; the repair prompt states
+    # that the whitelist will not be widened; the verdict stays typed.
+    import app.text_to_sql.pipeline as pipeline_module
+
+    real_validate = pipeline_module.validate_sql
+    seen_whitelists: list[object] = []
+    seen_caps: list[int] = []
+
+    def spy(sql: str, whitelist: object, *, max_rows: int) -> object:
+        seen_whitelists.append(whitelist)
+        seen_caps.append(max_rows)
+        return real_validate(sql, whitelist, max_rows=max_rows)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(pipeline_module, "validate_sql", spy)
+    provider = FakeProvider([TRAP_SQL, TRAP_SQL, TRAP_SQL])
+    response = ask(client, provider, headers=normal_user_token_headers)
+    assert response.status_code == 403, response.text
+    body = response.json()
+    assert body["reason_code"] == "whitelist_violation"
+    assert body["attempts"] == 3
+    assert [t["reason_code"] for t in body["trace"]] == ["whitelist_violation"] * 3
+    # One frozen whitelist object validated all three attempts.
+    assert len(seen_whitelists) == 3
+    assert all(w is seen_whitelists[0] for w in seen_whitelists)
+    assert set(seen_caps) == {200}
+    # The system prompt never changed between retries.
+    assert len({repr(call[0]) for call in provider.calls}) == 1
+    # The repair prompt says the constraints will not be relaxed.
+    assert "不会放宽" in provider.calls[1][-1]["content"]
+    assert "不会放宽" in provider.calls[2][-1]["content"]
+
+
+def test_empty_result_is_returned_verbatim_without_rewrite(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    # Acceptance 3: an empty result set is not an error. The SQL executes
+    # verbatim, the answer carries an empty marker plus a deterministic
+    # suggestion, and there is no second "loosened conditions" model call.
+    empty_sql = (
+        "SELECT video_id FROM videos WHERE group_name = 'NO_SUCH_GROUP' LIMIT 10"
+    )
+    provider = FakeProvider([empty_sql])
+    response = ask(client, provider, headers=normal_user_token_headers)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["rows"] == []
+    assert body["row_count"] == 0
+    assert body["empty"] is True
+    assert "phase" in body["suggestion"]
+    assert "不会自动" in body["suggestion"]
+    # Executed SQL == model output, byte for byte.
+    assert body["sql"] == empty_sql
+    # No condition-loosening retry ever happened.
+    assert len(provider.calls) == 1
+    assert body["attempts"] == 1
+    assert body["trace"] == []
 
 
 def test_requires_authentication(client_no_auth: TestClient) -> None:

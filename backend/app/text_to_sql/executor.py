@@ -3,8 +3,9 @@
 Each query gets its own short-lived connection (connect + read timeouts), a
 server-side ``MAX_EXECUTION_TIME`` for SELECT statements, and a hard row cap
 fetched with one lookahead so truncation is observable. Execution errors are
-typed and are never retried by the pipeline — repair is a validation-stage
-concern (full repair loop is ticket #8).
+typed with the explicit time budget in timeout messages and are never
+retried by the pipeline — the repair budget (issue #8) is spent on
+generation/validation failures only.
 """
 
 import math
@@ -95,7 +96,9 @@ class ResearchQueryExecutor:
                 truncated = len(fetched) > settings.RESEARCH_QUERY_MAX_ROWS
                 rows = tuple(fetched[: settings.RESEARCH_QUERY_MAX_ROWS])
         except (OperationalError, ProgrammingError, DatabaseError) as error:
-            raise _to_execution_error(error) from error
+            raise _to_execution_error(
+                error, timeout_ms=settings.RESEARCH_QUERY_TIMEOUT_MS
+            ) from error
         finally:
             connection.close()
 
@@ -107,16 +110,23 @@ class ResearchQueryExecutor:
         )
 
 
-def _to_execution_error(error: pymysql.MySQLError) -> QueryExecutionError:
+def _to_execution_error(
+    error: pymysql.MySQLError, *, timeout_ms: int
+) -> QueryExecutionError:
     errno = error.args[0] if error.args and isinstance(error.args[0], int) else None
     text = str(error)
     if errno in _TIMEOUT_ERRNOS or "maximum statement execution time" in text:
         return QueryExecutionError(
-            "timeout", "statement exceeded MAX_EXECUTION_TIME and was aborted"
+            "timeout",
+            "statement exceeded MAX_EXECUTION_TIME "
+            f"({timeout_ms} ms server-side budget) and was aborted",
         )
     lowered = text.lower()
     if "timed out" in lowered or "timeout" in lowered:
-        return QueryExecutionError("timeout", text)
+        return QueryExecutionError(
+            "timeout",
+            f"{text} (statement budget: MAX_EXECUTION_TIME {timeout_ms} ms)",
+        )
     if errno in (1142, 1143, 1227, 1698):
         # ER_TABLEACCESS_DENIED_ERROR / access-denied family: never relaxed.
         return QueryExecutionError("execution_error", f"database refused: {text}")
