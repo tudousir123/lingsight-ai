@@ -1,9 +1,27 @@
-"""The explicit query pipeline: generate → validate → (repair once) → execute.
+"""The explicit query pipeline: generate → validate → typed repair → execute.
 
 Pure Python orchestration, no agent framework (ADR-0001): each stage is a
 plain function call, failures are typed values, and the answer carries a
 deterministic caliber note (口径声明) rendered from the semantic layer —
 never invented by the model.
+
+Repair policy (issue #8): one shared, bounded retry budget (default 2) spent
+only on generation/validation failures; the strategy per error family:
+
+* syntax/parse (``parse_error``, fenced or malformed output) — feed the
+  error back as context and retry, counted against the budget;
+* whitelist/permission (``whitelist_violation`` / ``db_not_allowed`` /
+  ``non_select``) — the model may rewrite against the *same* frozen
+  whitelist and validator settings; the constraints are never relaxed, and
+  exhaustion ends in a typed rejection (ADR-0001 / docs/09 D-class);
+* execution (``execution_error`` / ``timeout``) — never retried; the
+  timeout message names the server-side time budget explicitly;
+* empty result — not an error: the empty set is returned verbatim with a
+  deterministic suggestion; the SQL is never rewritten to "loosen"
+  conditions.
+
+Every attempt and its typed failure is recorded in an audit ``trace`` that
+travels with both the answer and the rejection.
 """
 
 import re
@@ -19,7 +37,7 @@ from app.text_to_sql.executor import (
     ResearchQueryExecutor,
 )
 from app.text_to_sql.gateway import Message, Provider, ProviderError
-from app.text_to_sql.semantic import SemanticLayer, load
+from app.text_to_sql.semantic import AstWhitelist, SemanticLayer, load
 from app.text_to_sql.settings import ResearchQuerySettings
 from app.text_to_sql.validator import (
     ReasonCode,
@@ -29,6 +47,17 @@ from app.text_to_sql.validator import (
 )
 
 JsonScalar = str | int | float | bool | None
+
+AttemptStage = Literal["generation", "validation", "execution"]
+
+
+class AttemptTrace(BaseModel):
+    """One failed attempt, for evaluation and audit (issue #8)."""
+
+    attempt: int = Field(ge=1, description="1-based generation attempt index")
+    stage: AttemptStage
+    reason_code: ReasonCode
+    message: str
 
 
 class DataSource(BaseModel):
@@ -48,6 +77,16 @@ class ResearchQueryAnswer(BaseModel):
     row_count: int
     caliber_note: str = Field(description="口径声明：聚合口径与陷阱纠正（语义层渲染）")
     data_source: DataSource
+    attempts: int = Field(ge=1, description="生成调用次数（含修复重试）")
+    trace: list[AttemptTrace] = Field(
+        default_factory=list, description="成功前各次尝试的类型化失败轨迹"
+    )
+    empty: bool = Field(
+        default=False, description="True 当结果集为空；空结果不是错误，SQL 原样返回"
+    )
+    suggestion: str | None = Field(
+        default=None, description="仅空结果时给出的确定性改写建议（不自动改写）"
+    )
 
 
 class ResearchQueryRejection(BaseModel):
@@ -55,6 +94,10 @@ class ResearchQueryRejection(BaseModel):
     reason_code: ReasonCode
     message: str
     sql: str | None = None
+    attempts: int = Field(ge=1, description="生成调用次数（含修复重试）")
+    trace: list[AttemptTrace] = Field(
+        default_factory=list, description="各次尝试的类型化失败轨迹（含终局失败）"
+    )
 
 
 SYSTEM_PROMPT_TEMPLATE = """你是一个 MySQL 分析型 SQL 生成器，只访问水迷宫科研数据库（water_maze）。
@@ -71,6 +114,12 @@ SYSTEM_PROMPT_TEMPLATE = """你是一个 MySQL 分析型 SQL 生成器，只访�
 
 _FENCE_RE = re.compile(r"^```[a-zA-Z]*\s*|\s*```$")
 
+#: Reason codes whose repair feedback must state that constraints stay
+#: frozen (ADR-0001 hard boundary: no relaxation on permission errors).
+_PERMISSION_REASON_CODES = frozenset(
+    {"whitelist_violation", "db_not_allowed", "non_select"}
+)
+
 
 @lru_cache(maxsize=1)
 def _cached_semantic_layer() -> SemanticLayer:
@@ -83,6 +132,36 @@ def extract_sql(raw: str) -> str:
     if text.startswith("```"):
         text = _FENCE_RE.sub("", text).strip()
     return text
+
+
+def _repair_instruction(failure: ValidationFailure) -> str:
+    """Typed feedback for the next generation attempt (issue #8)."""
+    head = f"上面的 SQL 被安全校验拒绝：{failure.reason_code} — {failure.message}。"
+    if failure.reason_code in _PERMISSION_REASON_CODES:
+        return (
+            head + "安全约束与表/列白名单不会放宽；请只依据系统消息中的白名单表/列"
+            "与陷阱纠正口径改写（如改用允许的表/列、去掉库名前缀、改为只读 "
+            "SELECT），重新输出一条修正后的单条 SELECT（不要解释、不要代码块）。"
+        )
+    return (
+        head + "请修正语法或列歧义等问题，只输出一条合法的 MySQL 单条 SELECT"
+        "（只用白名单表/列；不要解释、不要代码块）。"
+    )
+
+
+def _empty_result_suggestion() -> str:
+    """Deterministic rewrite hint for empty results (never a rewrite).
+
+    An empty set is not an error (issue #8): the SQL ran verbatim, and the
+    pipeline never loosens conditions on its own — it only suggests what the
+    user could re-ask.
+    """
+    return (
+        "查询已按原 SQL 执行，结果为空；系统不会自动修改或放宽查询条件重查。"
+        "改写建议：检查 WHERE 过滤条件是否过窄或取值不匹配"
+        "（如 phase（training_day/probe 各变体）、group_name、date_dir、session_no），"
+        "并确认所问数据的阶段口径后重新提问。"
+    )
 
 
 class ResearchQueryPipeline:
@@ -111,36 +190,55 @@ class ResearchQueryPipeline:
             },
             {"role": "user", "content": question},
         ]
-        attempts = 1 + max(0, self._settings.RESEARCH_QUERY_REPAIR_ATTEMPTS)
+        max_attempts = 1 + max(0, self._settings.RESEARCH_QUERY_REPAIR_ATTEMPTS)
+        # Frozen for the whole run: every attempt (and every retry) validates
+        # against the identical whitelist and row cap — never relaxed.
+        whitelist: AstWhitelist = self._semantic.ast_whitelist()
+        trace: list[AttemptTrace] = []
         last_sql: str | None = None
 
-        for attempt in range(attempts):
+        for attempt in range(1, max_attempts + 1):
             try:
                 raw = self._provider.chat(messages)
             except ProviderError as error:
+                trace.append(
+                    AttemptTrace(
+                        attempt=attempt,
+                        stage="generation",
+                        reason_code="provider_error",
+                        message=str(error),
+                    )
+                )
                 return ResearchQueryRejection(
-                    reason_code="provider_error", message=str(error), sql=last_sql
+                    reason_code="provider_error",
+                    message=str(error),
+                    sql=last_sql,
+                    attempts=attempt,
+                    trace=trace,
                 )
             candidate = extract_sql(raw)
             last_sql = candidate
             try:
                 validated = validate_sql(
                     candidate,
-                    self._semantic.ast_whitelist(),
+                    whitelist,
                     max_rows=self._settings.RESEARCH_QUERY_MAX_ROWS,
                 )
             except ValidationFailure as failure:
-                if attempt + 1 < attempts:
+                trace.append(
+                    AttemptTrace(
+                        attempt=attempt,
+                        stage="validation",
+                        reason_code=failure.reason_code,
+                        message=failure.message,
+                    )
+                )
+                if attempt < max_attempts:
                     messages = messages + [
                         {"role": "assistant", "content": raw},
                         {
                             "role": "user",
-                            "content": (
-                                "上面的 SQL 被安全校验拒绝："
-                                f"{failure.reason_code} — {failure.message}。"
-                                "请只依据系统消息中的白名单表/列与陷阱纠正口径，"
-                                "重新输出一条修正后的单条 SELECT（不要解释、不要代码块）。"
-                            ),
+                            "content": _repair_instruction(failure),
                         },
                     ]
                     continue
@@ -148,25 +246,47 @@ class ResearchQueryPipeline:
                     reason_code=failure.reason_code,
                     message=failure.message,
                     sql=last_sql,
+                    attempts=attempt,
+                    trace=trace,
                 )
 
-            # Execution failures are terminal (repair is ticket #8).
+            # Execution failures are terminal: the budget is spent on
+            # generation/validation only, never on re-running MySQL.
             try:
                 result = self._executor.run(validated.sql)
             except QueryExecutionError as error:
+                trace.append(
+                    AttemptTrace(
+                        attempt=attempt,
+                        stage="execution",
+                        reason_code=error.reason_code,
+                        message=error.message,
+                    )
+                )
                 return ResearchQueryRejection(
                     reason_code=error.reason_code,
                     message=error.message,
                     sql=validated.sql,
+                    attempts=attempt,
+                    trace=trace,
                 )
-            return self._answer(question, validated, result)
+            return self._answer(
+                question, validated, result, attempt=attempt, trace=trace
+            )
 
         # Unreachable: the loop always returns inside its body.
         raise AssertionError("pipeline loop exhausted without a verdict")
 
     def _answer(
-        self, question: str, validated: ValidatedSql, result: ExecutionResult
+        self,
+        question: str,
+        validated: ValidatedSql,
+        result: ExecutionResult,
+        *,
+        attempt: int,
+        trace: list[AttemptTrace],
     ) -> ResearchQueryAnswer:
+        empty = result.row_count == 0
         return ResearchQueryAnswer(
             status="ok",
             question=question,
@@ -182,6 +302,10 @@ class ResearchQueryPipeline:
                 row_limit=self._settings.RESEARCH_QUERY_MAX_ROWS,
                 truncated=result.truncated,
             ),
+            attempts=attempt,
+            trace=trace,
+            empty=empty,
+            suggestion=_empty_result_suggestion() if empty else None,
         )
 
     def _caliber_note(self, sql: str) -> str:
