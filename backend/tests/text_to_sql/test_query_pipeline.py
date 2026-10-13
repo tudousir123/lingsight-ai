@@ -182,27 +182,22 @@ def test_frame_query_runs_through_the_view(
     assert body["data_source"]["tables"] == ["v_query_frame_predictions"]
 
 
-def test_d24_mask_rle_counts_rejected_before_execution(
+def test_d24_mask_rle_counts_readable_through_the_view(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
-    # docs/09 D24, updated by ticket #7: the column is not whitelisted, so
-    # the AST guard rejects it before execution — and even a bypass would
-    # hit the physical absence of the column in the view (Unknown column,
-    # docs/evidence/m1-t8/02-ro-view-probe.log probe ②).
+    # docs/09 D24, reversed by user decision 2026-10-13 (ADR-0007, ticket
+    # #15): the mask family is open on the query surface. A small-range RLE
+    # read through the view succeeds — one row, capped by the row limit;
+    # the row cap (200) is what bounds the longtext payload now.
     provider = FakeProvider(
-        [
-            "SELECT mask_rle_counts FROM v_query_frame_predictions LIMIT 1",
-            "SELECT mask_rle_counts FROM v_query_frame_predictions LIMIT 1",
-            "SELECT mask_rle_counts FROM v_query_frame_predictions LIMIT 1",
-        ]
+        ["SELECT mask_rle_counts FROM v_query_frame_predictions LIMIT 1"]
     )
     response = ask(client, provider, headers=normal_user_token_headers)
-    assert response.status_code == 403, response.text
+    assert response.status_code == 200, response.text
     body = response.json()
-    assert body["reason_code"] == "whitelist_violation"
-    assert "mask_rle_counts" in body["message"]
-    # Repair budget is 2 (ticket #8): initial attempt + 2 retries, then fail.
-    assert body["attempts"] == 3
+    assert body["columns"] == ["mask_rle_counts"]
+    assert body["row_count"] == 1
+    assert body["data_source"]["tables"] == ["v_query_frame_predictions"]
 
 
 def test_base_table_frame_predictions_is_not_an_entry_point(

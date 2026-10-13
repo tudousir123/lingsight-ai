@@ -1,0 +1,12 @@
+== ADR-0007 / 工单 #15 mask 开放探测（2026-10-13，lingsight_ro 视角）==
+-- ① 视图 24 列投影确认
+video_id frame_idx time_s center_x center_y head_x head_y tail_x tail_y status head_tail_mode head_tail_corrected mask_valid mask_centroid_x mask_centroid_y mask_area_px mask_bbox_x1 mask_bbox_y1 mask_bbox_x2 mask_bbox_y2 mask_rle_counts mask_width mask_height rle_format 
+-- ② RLE 小范围读取（LIMIT 3，ok 帧；含解码参数与面积）
+video_id	frame_idx	rle_len	mask_width	mask_height	rle_format	mask_area_px
+0804???-A+L1-2-1	0	316	2560	1440	coco_counts_column_major	1070.5
+0804???-A+L1-2-1	1	391	2560	1440	coco_counts_column_major	1045.5
+0804???-A+L1-2-1	2	383	2560	1440	coco_counts_column_major	1027
+-- ③ IoU 内部列物理不可达（期望 Unknown column 1054）
+ERROR 1054 (42S22) at line 1: Unknown column 'prev_mask_iou' in 'field list'
+-- ④ 基表直查拒绝（期望 1142）
+ERROR 1142 (42000) at line 1: SELECT command denied to user 'lingsight_ro'@'localhost' for table 'frame_predictions'

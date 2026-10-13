@@ -91,27 +91,45 @@ def test_trial_no_varchar_ordering_correction() -> None:
     assert "CAST" in correction.canonical_sql
 
 
-def test_rle_and_mask_columns_unreachable_anywhere() -> None:
-    # docs/08 risk 8: mask_rle_counts is whole-frame COCO RLE longtext.
-    # The RLE family stays out of every table's whitelist…
+def test_mask_family_is_whitelisted_with_rle_caution() -> None:
+    # Reversed by user decision 2026-10-13 (ADR-0007, ticket #15): the mask
+    # family — RLE encoding, decode parameters, derived columns — is
+    # queryable, and the RLE longtext column carries a size caution.
     layer = load()
-    for columns in layer.ast_whitelist().tables.values():
-        assert not any(column.startswith("mask_rle") for column in columns)
-        assert "rle_format" not in columns
-    # …and the exclusion is recorded with a reason on the owning entry (the
-    # frame view since ticket #7; the columns are absent from the view DDL
-    # itself, so the exclusion is physical, not just advisory).
     frames = layer.tables["v_query_frame_predictions"]
-    assert "mask_rle_counts" in frames.excluded_columns
-    assert frames.excluded_columns["mask_rle_counts"].reason
+    for column in (
+        "mask_rle_counts",
+        "rle_format",
+        "mask_width",
+        "mask_height",
+        "mask_valid",
+        "mask_centroid_x",
+        "mask_centroid_y",
+        "mask_area_px",
+        "mask_bbox_x1",
+        "mask_bbox_y1",
+        "mask_bbox_x2",
+        "mask_bbox_y2",
+    ):
+        assert column in frames.columns
+        assert layer.ast_whitelist().allows("v_query_frame_predictions", column)
+        assert column not in frames.excluded_columns
+    assert frames.columns["mask_rle_counts"].caution
+    assert "mask_rle_counts" in layer.render_prompt_context()
+    # Pipeline-internal IoU quality columns stay excluded (ADR-0007).
+    assert not layer.ast_whitelist().allows(
+        "v_query_frame_predictions", "prev_mask_iou"
+    )
+    assert "prev_mask_iou" in frames.excluded_columns
 
 
 def test_frame_view_is_the_only_query_entry_point() -> None:
     # Ticket #7 (M1-T8): water_maze gained v_query_frame_predictions —
-    # created from the base table with exactly the 12 curated columns and
-    # granted to lingsight_ro while frame_predictions itself stays ungranted
-    # (docs/evidence/m1-t8/02-ro-view-probe.log, docs/09 D24). The semantic
-    # layer must point at the view and only the view.
+    # created from the base table and granted to lingsight_ro while
+    # frame_predictions itself stays ungranted (docs/evidence/m1-t8/
+    # 02-ro-view-probe.log). The semantic layer must point at the view and
+    # only the view. Projection widened to 24 columns (12 trajectory + 12
+    # mask family) by the 2026-10-13 user decision (ADR-0007, ticket #15).
     layer = load()
     view = layer.tables["v_query_frame_predictions"]
     assert view.exposed
@@ -129,6 +147,18 @@ def test_frame_view_is_the_only_query_entry_point() -> None:
         "status",
         "head_tail_mode",
         "head_tail_corrected",
+        "mask_valid",
+        "mask_centroid_x",
+        "mask_centroid_y",
+        "mask_area_px",
+        "mask_bbox_x1",
+        "mask_bbox_y1",
+        "mask_bbox_x2",
+        "mask_bbox_y2",
+        "mask_rle_counts",
+        "mask_width",
+        "mask_height",
+        "rle_format",
     }
     # The AST whitelist has no second, ungrantable entry point to offer.
     assert "frame_predictions" not in layer.ast_whitelist().tables

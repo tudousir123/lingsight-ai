@@ -14,6 +14,7 @@
 | M1-T4 查询管线 tracer（工单 #5） | **已完成（2026-10-13，合并 778e906）** | POST /api/v1/research/query 全链路：语义上下文 → 薄 Model Gateway（env 配置，OpenAI 兼容）→ SQLGlot 校验（白名单/单 SELECT/禁跨库/强制 LIMIT）→ lingsight_ro 限时执行 → 口径声明结构化回答；演示题真库返回 6（≠26）；D21-23 类型化拒绝；凭据全 env（.env.example 占位）；无 LangGraph/LangChain，新增依赖仅 sqlglot。**真 LLM 直跑已通（2026-10-13）**：本地 Hermes/antigravity 代理（gemini-3.8-flash，key 在 .env 不入库）——演示题返回 6+口径声明；黄金题 Q3 命中基准（A3/79.69 px/s，LLM 自行锚定 trial_metrics+逐鼠-逐日口径）。智谱 key 余额不足（1113）暂弃用 |
 | M1-T5 SQL Repair 完整化（工单 #8） | **已完成（2026-10-13，合并收口）** | 重试预算 ≤2 次按错误分型：语法类回喂重试（markdown 围栏先剥离不耗预算）；权限类可改写重试但白名单+行数上限每 run 冻结（spy 断言同对象、提示词明示不放宽）；执行/超时零重试类型化失败；空结果走成功通道（SQL 逐字不变+empty 标记+建议文案）；attempts/trace 审计字段入响应。附带：sqlglot ParseError 的 ANSI 转义剥离 |
 | M1-T8 v_query_* 只读视图（工单 #7） | **已完成（2026-10-13，合并收口）** | `v_query_frame_predictions` 视图（幂等 DDL 单一事实源 `views.py` + 可重放脚本）：12 精选列；mask_rle_counts 视图层物理不可达（实测 Unknown column）；基表直查账户层拒绝（实测 1142）；语义层白名单/AST 切换指向视图（`view_of` 血缘 + 双入口拒绝校验）；证据 `docs/evidence/m1-t8/` |
+| mask 族列开放（工单 #15） | **已完成（2026-10-13）** | 用户决策「需要开放mask」反转 #3/#7 排除锁定（ADR-0007）：视图 12→24 列（RLE/解码参数/质心/面积/bbox/valid），白名单/AST/提示词同步、RLE 带长文本 caution；IoU 内部列维持物理不可达；D24 期望反转（经视图小范围读 RLE 为允许，行数上限兜底）；真库已重放 DDL 并实测（证据 m1-t8/03）；#9 评测按新事实编码 |
 
 | 科研 RAG | **未开始实现** | 先做文献来源与评测集 |
 | Agent 集成 | **未开始实现** | M3 |

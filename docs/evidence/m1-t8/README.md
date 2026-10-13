@@ -23,3 +23,7 @@ uv run python -m scripts.schema.apply_v_query_views   # 建视图 + GRANT + 校�
 ```
 
 lingsight_ro 探针：容器内 `mysql -ulingsight_ro`，密码从根 `.env` 读入 shell env 后 `docker exec -e RO_PW=...` 注入（见 `02-ro-view-probe.log` 头注）。
+
+## 03-mask-open-probe.log（2026-10-13，ADR-0007 / 工单 #15）
+
+用户决策开放 mask 族列后的复测：视图 24 列投影；RLE 经 lingsight_ro 小范围可读（316–391 字符样本，coco_counts_column_major，2560×1440，含面积）；`prev_mask_iou` 物理不可达（1054）；基表直查仍拒（1142）。原 02 探测记录中「mask_rle_counts Unknown column」为 #7 时点的历史事实，已被本决策反转。

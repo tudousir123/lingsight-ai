@@ -8,12 +8,14 @@ which only migrates the app's own schema (same pattern as
 the tested DDL is exactly what production runs.
 
 The view is the single query entry point for frame data: it projects
-exactly the 12 curated columns the semantic layer whitelists, straight
-from the base table (no computed columns). ``mask_rle_*`` and the other
-excluded columns physically do not exist in the view, so even a direct
-``SELECT mask_rle_counts FROM v_query_frame_predictions`` fails with
-"Unknown column" — the exclusion is enforced by the schema, not just by
-the AST whitelist (docs/08 risk 8, docs/09 D24).
+exactly the 24 curated columns the semantic layer whitelists, straight
+from the base table (no computed columns) — 12 trajectory columns plus
+the mask family (RLE encoding, decode parameters, derived columns) opened
+by the 2026-10-13 user decision (ADR-0007). Pipeline-internal quality
+columns (``prev_mask_iou`` / ``instant_static_by_iou``) physically do not
+exist in the view: even a direct ``SELECT prev_mask_iou FROM
+v_query_frame_predictions`` fails with "Unknown column" — that exclusion
+is enforced by the schema, not just by the AST whitelist.
 """
 
 from sqlalchemy import Connection
@@ -32,7 +34,19 @@ SELECT
   tail_y,
   status,
   head_tail_mode,
-  head_tail_corrected
+  head_tail_corrected,
+  mask_valid,
+  mask_centroid_x,
+  mask_centroid_y,
+  mask_area_px,
+  mask_bbox_x1,
+  mask_bbox_y1,
+  mask_bbox_x2,
+  mask_bbox_y2,
+  mask_rle_counts,
+  mask_width,
+  mask_height,
+  rle_format
 FROM frame_predictions
 """
 
