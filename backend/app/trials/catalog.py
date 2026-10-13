@@ -17,6 +17,42 @@ class CatalogUnavailable(Exception):
     """Research database could not serve a catalog request."""
 
 
+def read_rows(
+    settings: ResearchQuerySettings, sql: str, params: tuple[Any, ...]
+) -> list[dict[str, Any]]:
+    """One bounded read via the shared read-only account (lingsight_ro).
+
+    Raises CatalogUnavailable on any connection/execution error so routes
+    turn it into an explicit 503 instead of guessing.
+    """
+    try:
+        connection = pymysql.connect(
+            host=settings.RESEARCH_DB_HOST,
+            port=settings.RESEARCH_DB_PORT,
+            user=settings.RESEARCH_DB_USER,
+            password=settings.LINGSIGHT_RO_PASSWORD,
+            database=settings.RESEARCH_DB_NAME,
+            connect_timeout=5,
+            read_timeout=settings.read_timeout_seconds,
+            charset="utf8mb4",
+            cursorclass=pymysql.cursors.DictCursor,
+        )
+    except pymysql.MySQLError as error:
+        raise CatalogUnavailable from error
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SET SESSION MAX_EXECUTION_TIME = %s",
+                (settings.RESEARCH_QUERY_TIMEOUT_MS,),
+            )
+            cursor.execute(sql, params)
+            return list(cursor.fetchall())
+    except pymysql.MySQLError as error:
+        raise CatalogUnavailable from error
+    finally:
+        connection.close()
+
+
 TRIAL_SELECT = (
     "SELECT v.video_id, v.dataset_id, v.source_video_path, v.group_name, "
     "v.mouse_id, v.phase, v.date_dir, v.session_no, v.session_label, "
@@ -29,37 +65,8 @@ class TrialCatalog:
     def __init__(self, settings: ResearchQuerySettings) -> None:
         self.settings = settings
 
-    def _connect(self) -> Any:
-        settings = self.settings
-        try:
-            return pymysql.connect(
-                host=settings.RESEARCH_DB_HOST,
-                port=settings.RESEARCH_DB_PORT,
-                user=settings.RESEARCH_DB_USER,
-                password=settings.LINGSIGHT_RO_PASSWORD,
-                database=settings.RESEARCH_DB_NAME,
-                connect_timeout=5,
-                read_timeout=settings.read_timeout_seconds,
-                charset="utf8mb4",
-                cursorclass=pymysql.cursors.DictCursor,
-            )
-        except pymysql.MySQLError as error:
-            raise CatalogUnavailable from error
-
     def _read(self, sql: str, params: tuple[Any, ...]) -> list[dict[str, Any]]:
-        connection = self._connect()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SET SESSION MAX_EXECUTION_TIME = %s",
-                    (self.settings.RESEARCH_QUERY_TIMEOUT_MS,),
-                )
-                cursor.execute(sql, params)
-                return list(cursor.fetchall())
-        except pymysql.MySQLError as error:
-            raise CatalogUnavailable from error
-        finally:
-            connection.close()
+        return read_rows(self.settings, sql, params)
 
     def list_experiments(self, allowed_ids: set[str] | None) -> list[dict[str, Any]]:
         if allowed_ids is not None and not allowed_ids:
@@ -67,7 +74,9 @@ class TrialCatalog:
         restriction = ""
         params: tuple[Any, ...] = ()
         if allowed_ids is not None:
-            restriction = f"WHERE d.dataset_id IN ({','.join(['%s'] * len(allowed_ids))})"
+            restriction = (
+                f"WHERE d.dataset_id IN ({','.join(['%s'] * len(allowed_ids))})"
+            )
             params = tuple(sorted(allowed_ids))
         rows = self._read(
             "SELECT d.dataset_id, d.dataset_name, COUNT(v.video_id) AS trial_count "
@@ -76,7 +85,11 @@ class TrialCatalog:
             params,
         )
         return [
-            {"id": row["dataset_id"], "name": row["dataset_name"], "trial_count": row["trial_count"]}
+            {
+                "id": row["dataset_id"],
+                "name": row["dataset_name"],
+                "trial_count": row["trial_count"],
+            }
             for row in rows
         ]
 
@@ -126,12 +139,20 @@ class TrialCatalog:
         source_path = row["source_video_path"]
         date_dir = str(row["date_dir"])
         training_day = None
-        if row["phase"] == "training_day" and date_dir in {"0804", "0805", "0806", "0807", "0808"}:
+        if row["phase"] == "training_day" and date_dir in {
+            "0804",
+            "0805",
+            "0806",
+            "0807",
+            "0808",
+        }:
             training_day = int(date_dir[-2:]) - 3
         return {
             "id": row["video_id"],
             "experiment_id": row["dataset_id"],
-            "video_name": Path(source_path).name if source_path else str(row["video_id"]),
+            "video_name": Path(source_path).name
+            if source_path
+            else str(row["video_id"]),
             "group_name": row["group_name"],
             "mouse_id": row["mouse_id"],
             "phase": row["phase"],

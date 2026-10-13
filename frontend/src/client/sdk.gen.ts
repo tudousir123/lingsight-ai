@@ -2,7 +2,7 @@
 
 import { type Client, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { experimentsGetTrialData, experimentsGetTrialErrors, experimentsGetTrialResponses, experimentsListExperimentsData, experimentsListExperimentsResponses, experimentsListTrialsData, experimentsListTrialsErrors, experimentsListTrialsResponses, itemsCreateItemData, itemsCreateItemErrors, itemsCreateItemResponses, itemsDeleteItemData, itemsDeleteItemErrors, itemsDeleteItemResponses, itemsReadItemData, itemsReadItemErrors, itemsReadItemResponses, itemsReadItemsData, itemsReadItemsErrors, itemsReadItemsResponses, itemsUpdateItemData, itemsUpdateItemErrors, itemsUpdateItemResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, researchResearchQueryData, researchResearchQueryErrors, researchResearchQueryResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
+import type { experimentsGetPreparationData, experimentsGetPreparationErrors, experimentsGetPreparationResponses, experimentsGetResultData, experimentsGetResultErrors, experimentsGetResultResponses, experimentsGetTrialData, experimentsGetTrialErrors, experimentsGetTrialMediaData, experimentsGetTrialMediaErrors, experimentsGetTrialMediaResponses, experimentsGetTrialResponses, experimentsListExperimentsData, experimentsListExperimentsResponses, experimentsListTrialsData, experimentsListTrialsErrors, experimentsListTrialsResponses, experimentsPutReviewData, experimentsPutReviewErrors, experimentsPutReviewResponses, itemsCreateItemData, itemsCreateItemErrors, itemsCreateItemResponses, itemsDeleteItemData, itemsDeleteItemErrors, itemsDeleteItemResponses, itemsReadItemData, itemsReadItemErrors, itemsReadItemResponses, itemsReadItemsData, itemsReadItemsErrors, itemsReadItemsResponses, itemsUpdateItemData, itemsUpdateItemErrors, itemsUpdateItemResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, researchResearchQueryData, researchResearchQueryErrors, researchResearchQueryResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -399,7 +399,7 @@ export class ExperimentsService {
             ...options
         });
     }
-
+    
     /**
      * List Trials
      */
@@ -411,7 +411,7 @@ export class ExperimentsService {
             ...options
         });
     }
-
+    
     /**
      * Get Trial
      */
@@ -420,6 +420,58 @@ export class ExperimentsService {
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/experiments/{experiment_id}/trials/{trial_id}',
+            ...options
+        });
+    }
+    
+    /**
+     * Get Preparation
+     */
+    public static getPreparation<ThrowOnError extends boolean = true>(options: Options<experimentsGetPreparationData, ThrowOnError>) {
+        return (options.client ?? client).get<experimentsGetPreparationResponses, experimentsGetPreparationErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/experiments/{experiment_id}/trials/{trial_id}/preparation',
+            ...options
+        });
+    }
+    
+    /**
+     * Put Review
+     */
+    public static putReview<ThrowOnError extends boolean = true>(options: Options<experimentsPutReviewData, ThrowOnError>) {
+        return (options.client ?? client).put<experimentsPutReviewResponses, experimentsPutReviewErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/experiments/{experiment_id}/trials/{trial_id}/review',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Get Result
+     */
+    public static getResult<ThrowOnError extends boolean = true>(options: Options<experimentsGetResultData, ThrowOnError>) {
+        return (options.client ?? client).get<experimentsGetResultResponses, experimentsGetResultErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/experiments/{experiment_id}/trials/{trial_id}/result',
+            ...options
+        });
+    }
+    
+    /**
+     * Get Trial Media
+     */
+    public static getTrialMedia<ThrowOnError extends boolean = true>(options: Options<experimentsGetTrialMediaData, ThrowOnError>) {
+        return (options.client ?? client).get<experimentsGetTrialMediaResponses, experimentsGetTrialMediaErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/experiments/{experiment_id}/trials/{trial_id}/media/{kind}',
             ...options
         });
     }

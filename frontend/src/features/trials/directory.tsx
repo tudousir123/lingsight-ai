@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { AxiosError } from "axios"
 import { ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { useState } from "react"
 import { ExperimentsService, type TrialSummary } from "@/client"
@@ -25,7 +24,7 @@ import {
 } from "@/components/ui/table"
 
 const pageSize = 5
-const trainingDays = ["0804", "0805", "0806", "0807", "0808"] as const
+const trainingDays = ["0804", "0805", "0806", "0807", "0808", "0809"] as const
 
 function phaseLabel(phase: string) {
   if (phase === "training_day") return "训练期"
@@ -66,7 +65,7 @@ function TrialRow({ trial }: { trial: TrialSummary }) {
         <Link
           to="/experiments/$experimentId/trials/$trialId"
           params={{ experimentId: trial.experiment_id, trialId: trial.id }}
-          aria-label={`查看试次 ${trial.video_name}`}
+          aria-label={`打开分析准备 ${trial.video_name}`}
           className="font-medium text-blue-600 hover:underline"
         >
           查看试次
@@ -257,7 +256,9 @@ export function TrialDirectoryPage() {
                     <SelectItem value="all">全部日期</SelectItem>
                     {trainingDays.map((day, index) => (
                       <SelectItem key={day} value={day}>
-                        第 {index + 1} 训练日
+                        {day === "0809"
+                          ? "0809 · 探测日"
+                          : `第 ${index + 1} 训练日`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -334,117 +335,6 @@ export function TrialDirectoryPage() {
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </>
-      )}
-    </div>
-  )
-}
-
-function errorStatus(error: unknown): number | undefined {
-  return error instanceof AxiosError ? error.response?.status : undefined
-}
-
-export function TrialDetailPage({
-  experimentId,
-  trialId,
-}: {
-  experimentId: string
-  trialId: string
-}) {
-  const trial = useQuery({
-    queryKey: ["trial", experimentId, trialId],
-    queryFn: async () =>
-      (
-        await ExperimentsService.getTrial({
-          path: { experiment_id: experimentId, trial_id: trialId },
-        })
-      ).data,
-    retry: false,
-  })
-
-  return (
-    <div className="space-y-4">
-      <Link to="/" className="text-sm text-blue-600 hover:underline">
-        ← 返回试次列表
-      </Link>
-      {trial.isPending ? (
-        <Card>
-          <CardContent>正在加载试次…</CardContent>
-        </Card>
-      ) : trial.isError ? (
-        <Card>
-          <CardContent className="space-y-3">
-            <p>
-              {errorStatus(trial.error) === 403
-                ? "无权访问此实验"
-                : errorStatus(trial.error) === 404
-                  ? "试次不存在或不属于此实验"
-                  : "试次加载失败"}
-            </p>
-            <Button variant="outline" onClick={() => void trial.refetch()}>
-              重试
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div>
-            <p className="text-sm text-slate-500">
-              {experimentId} · 试次 {trial.data.id}
-            </p>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              {trial.data.video_name}
-            </h1>
-            <p className="text-sm text-slate-500">
-              {trial.data.group_name} · {trial.data.mouse_id}
-            </p>
-          </div>
-          <Card className="gap-3 py-4">
-            <CardHeader>
-              <CardTitle>试次信息</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <span className="text-slate-500">实验阶段</span>
-                <p>{phaseLabel(trial.data.phase)}</p>
-              </div>
-              <div>
-                <span className="text-slate-500">实验日期</span>
-                <p>
-                  {trial.data.date_dir}
-                  {trial.data.training_day
-                    ? ` · 第 ${trial.data.training_day} 训练日`
-                    : ""}
-                </p>
-              </div>
-              <div>
-                <span className="text-slate-500">区块</span>
-                <p>{trial.data.session_label}</p>
-              </div>
-              <div>
-                <span className="text-slate-500">试次序号</span>
-                <p>{trial.data.trial_no}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="gap-3 py-4">
-            <CardHeader>
-              <CardTitle>可用素材</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              <Badge variant="secondary">
-                {trial.data.media_available
-                  ? "视频文件可用"
-                  : "视频文件暂不可用"}
-              </Badge>
-              <Badge variant="secondary">
-                {trial.data.result_available ? "已有离线结果" : "尚无离线结果"}
-              </Badge>
-              <p className="w-full text-sm text-slate-500">
-                当前仅提供试次信息，视频核对暂不可用。
-              </p>
             </CardContent>
           </Card>
         </>

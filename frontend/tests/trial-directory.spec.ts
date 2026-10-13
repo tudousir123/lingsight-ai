@@ -42,6 +42,23 @@ test("researcher selects a trial and reloads its stable address", async ({
   await page.route("**/api/v1/experiments/fixture-e1/trials/trial-a", (route) =>
     route.fulfill({ json: trial }),
   )
+  await page.route(
+    "**/api/v1/experiments/fixture-e1/trials/trial-a/preparation",
+    (route) =>
+      route.fulfill({
+        json: {
+          trial,
+          video: { kind: "source", status: "missing", reason: "mock" },
+          geometry: {
+            pool: { status: "missing" },
+            markers: { status: "missing" },
+            platform: { status: "missing" },
+          },
+          tracking: { status: "missing", reason: "mock" },
+          source_version: "mock0000000000000",
+        },
+      }),
+  )
 
   await page.goto("/")
   await expect(
@@ -50,16 +67,18 @@ test("researcher selects a trial and reloads its stable address", async ({
   await expect(page.getByText("sample-a.mp4")).toBeVisible()
   await page.getByRole("textbox", { name: "搜索试次" }).fill("A2 2")
   await expect(page.getByText("sample-b.mp4")).toHaveCount(0)
-  await page.getByRole("link", { name: "查看试次 sample-a.mp4" }).click()
+  await page
+    .getByRole("link", { name: "打开分析准备 sample-a.mp4" })
+    .click()
 
   await expect(page).toHaveURL(/\/experiments\/fixture-e1\/trials\/trial-a$/)
   await expect(
-    page.getByRole("heading", { name: "sample-a.mp4" }),
+    page.getByRole("heading", { name: "分析准备 · sample-a.mp4" }),
   ).toBeVisible()
-  await expect(page.getByText("A2 · 2")).toBeVisible()
+  await expect(page.getByText("A2 · 鼠 2")).toBeVisible()
   await page.reload()
   await expect(
-    page.getByRole("heading", { name: "sample-a.mp4" }),
+    page.getByRole("heading", { name: "分析准备 · sample-a.mp4" }),
   ).toBeVisible()
 })
 
@@ -85,11 +104,13 @@ test("empty experiment list and retryable load failure are distinct", async ({
 })
 
 test("a trial in an ungranted experiment stays forbidden", async ({ page }) => {
-  await page.route("**/api/v1/experiments/fixture-e2/trials/trial-c", (route) =>
-    route.fulfill({
-      status: 403,
-      json: { detail: "Experiment access denied" },
-    }),
+  await page.route(
+    "**/api/v1/experiments/fixture-e2/trials/trial-c/preparation",
+    (route) =>
+      route.fulfill({
+        status: 403,
+        json: { detail: "Experiment access denied" },
+      }),
   )
   await page.goto("/experiments/fixture-e2/trials/trial-c")
   await expect(page.getByText("无权访问此实验")).toBeVisible()

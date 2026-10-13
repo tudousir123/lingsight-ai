@@ -60,3 +60,6 @@ docs/evidence/m1-t7/clips/
 docs/evidence/m1-t7/dispute-review.html
 docs/evidence/m1-t7/geometry/
 docs/evidence/m1-t7/geometry-check.html
+
+# Local research-derived scene annotation (not for version control)
+local-data/

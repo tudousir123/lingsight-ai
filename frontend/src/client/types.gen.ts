@@ -63,6 +63,15 @@ export type ExperimentsPublic = {
 };
 
 /**
+ * GeometryBundle
+ */
+export type GeometryBundle = {
+    pool: PoolGeometry;
+    markers: MarkersGeometry;
+    platform: PlatformGeometry;
+};
+
+/**
  * HTTPValidationError
  */
 export type HTTPValidationError = {
@@ -141,6 +150,72 @@ export type ItemsPublic = {
 };
 
 /**
+ * MarkerShape
+ */
+export type MarkerShape = {
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Points
+     */
+    points: Array<Array<number>>;
+};
+
+/**
+ * MarkersGeometry
+ */
+export type MarkersGeometry = {
+    /**
+     * Status
+     */
+    status: 'available' | 'missing';
+    /**
+     * Shapes
+     */
+    shapes?: Array<MarkerShape> | null;
+    /**
+     * Source
+     */
+    source?: string | null;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+};
+
+/**
+ * MediaInfo
+ *
+ * Playable video for a trial, resolved server-side (no direct DB access).
+ */
+export type MediaInfo = {
+    /**
+     * Kind
+     */
+    kind: 'source' | 'overlay';
+    /**
+     * Status
+     */
+    status: 'available' | 'missing';
+    /**
+     * Url
+     */
+    url?: string | null;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Fingerprint
+     *
+     * 内容指纹（字节数）；用于人工核对记录绑定素材版本
+     */
+    fingerprint?: string | null;
+};
+
+/**
  * Message
  */
 export type Message = {
@@ -148,6 +223,50 @@ export type Message = {
      * Message
      */
     message: string;
+};
+
+/**
+ * MetricValue
+ *
+ * One persisted trial-level metric row (never re-derived client-side).
+ */
+export type MetricValue = {
+    /**
+     * Metric
+     */
+    metric: string;
+    /**
+     * Value
+     */
+    value?: number | null;
+    /**
+     * Unit
+     */
+    unit?: string | null;
+    /**
+     * Algo Version
+     */
+    algo_version: string;
+    /**
+     * Calc Status
+     */
+    calc_status: string;
+    /**
+     * Ok Frames
+     */
+    ok_frames?: number | null;
+    /**
+     * Total Frames
+     */
+    total_frames?: number | null;
+    /**
+     * Duration S
+     */
+    duration_s?: number | null;
+    /**
+     * Calculated At
+     */
+    calculated_at?: string | null;
 };
 
 /**
@@ -162,6 +281,113 @@ export type NewPassword = {
      * New Password
      */
     new_password: string;
+};
+
+/**
+ * PlatformEntryCandidate
+ */
+export type PlatformEntryCandidate = {
+    /**
+     * Frame
+     */
+    frame: number;
+    /**
+     * Time S
+     */
+    time_s: number;
+    /**
+     * Note
+     */
+    note?: string;
+};
+
+/**
+ * PlatformGeometry
+ *
+ * Hidden-platform reference from experiment metadata, never pixels.
+ */
+export type PlatformGeometry = {
+    /**
+     * Status
+     */
+    status: 'available' | 'missing';
+    /**
+     * Cx
+     */
+    cx?: number | null;
+    /**
+     * Cy
+     */
+    cy?: number | null;
+    /**
+     * R
+     */
+    r?: number | null;
+    /**
+     * Day Label
+     */
+    day_label?: string | null;
+    /**
+     * Source
+     */
+    source?: string | null;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+};
+
+/**
+ * PoolGeometry
+ */
+export type PoolGeometry = {
+    /**
+     * Status
+     */
+    status: 'available' | 'missing';
+    /**
+     * Cx
+     */
+    cx?: number | null;
+    /**
+     * Cy
+     */
+    cy?: number | null;
+    /**
+     * R
+     */
+    r?: number | null;
+    /**
+     * Source
+     */
+    source?: string | null;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+};
+
+/**
+ * PreparationPublic
+ */
+export type PreparationPublic = {
+    trial: TrialSummary;
+    video: MediaInfo;
+    geometry: GeometryBundle;
+    tracking: TrackBundle;
+    /**
+     * Metrics
+     */
+    metrics?: Array<MetricValue>;
+    /**
+     * Metric Unavailable
+     */
+    metric_unavailable?: Array<UnavailableMetric>;
+    review?: ReviewPublic | null;
+    /**
+     * Source Version
+     */
+    source_version: string;
 };
 
 /**
@@ -197,6 +423,135 @@ export type ResearchQueryRequest = {
 };
 
 /**
+ * ResultPublic
+ */
+export type ResultPublic = {
+    trial: TrialSummary;
+    video: MediaInfo;
+    geometry: GeometryBundle;
+    track: TrackBundle;
+    /**
+     * Metrics
+     */
+    metrics?: Array<MetricValue>;
+    /**
+     * Metric Unavailable
+     */
+    metric_unavailable?: Array<UnavailableMetric>;
+    states: ResultStates;
+    platform_entry_candidate?: PlatformEntryCandidate | null;
+    /**
+     * Source Version
+     */
+    source_version: string;
+};
+
+/**
+ * ResultStates
+ *
+ * Three distinct states that must not be conflated (#18 决策).
+ */
+export type ResultStates = {
+    /**
+     * Inference Available
+     */
+    inference_available: boolean;
+    /**
+     * Artifact Mode
+     */
+    artifact_mode?: string | null;
+    /**
+     * Qc Status
+     *
+     * 推理质检标记（语义待确认，不代表人工通过）
+     */
+    qc_status?: string | null;
+    preparation_review?: ReviewPublic | null;
+    /**
+     * Result Quality
+     */
+    result_quality?: 'not_started';
+};
+
+/**
+ * ReviewPublic
+ *
+ * Persisted human preparation review of one trial (not inference QC).
+ */
+export type ReviewPublic = {
+    /**
+     * State
+     */
+    state: 'draft' | 'confirmed';
+    /**
+     * Boundary Ok
+     */
+    boundary_ok: boolean;
+    /**
+     * Markers Ok
+     */
+    markers_ok: boolean;
+    /**
+     * Platform Ok
+     */
+    platform_ok: boolean;
+    /**
+     * Tracking Ok
+     */
+    tracking_ok: boolean;
+    /**
+     * Reviewer Email
+     */
+    reviewer_email: string;
+    /**
+     * Source Version
+     */
+    source_version: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+    /**
+     * Confirmed At
+     */
+    confirmed_at?: string | null;
+};
+
+/**
+ * ReviewUpdate
+ */
+export type ReviewUpdate = {
+    /**
+     * Source Version
+     */
+    source_version: string;
+    /**
+     * Boundary Ok
+     */
+    boundary_ok?: boolean;
+    /**
+     * Markers Ok
+     */
+    markers_ok?: boolean;
+    /**
+     * Platform Ok
+     */
+    platform_ok?: boolean;
+    /**
+     * Tracking Ok
+     */
+    tracking_ok?: boolean;
+    /**
+     * State
+     */
+    state: 'draft' | 'confirmed';
+};
+
+/**
  * Token
  */
 export type Token = {
@@ -208,6 +563,88 @@ export type Token = {
      * Token Type
      */
     token_type?: string;
+};
+
+/**
+ * TrackBundle
+ *
+ * Offline tracking result of this trial (no interpolation of gaps).
+ */
+export type TrackBundle = {
+    /**
+     * Status
+     */
+    status: 'available' | 'missing';
+    /**
+     * Source
+     *
+     * 推理产出标记（videos.artifact_mode）
+     */
+    source?: string | null;
+    /**
+     * Fps
+     */
+    fps?: number | null;
+    /**
+     * Width
+     */
+    width?: number | null;
+    /**
+     * Height
+     */
+    height?: number | null;
+    /**
+     * Frames
+     */
+    frames?: Array<TrackFrame>;
+    /**
+     * Speed
+     *
+     * 逐帧速度 px/s；miss/端部窗口帧为 null
+     */
+    speed?: Array<number | null>;
+    /**
+     * Valid Frames
+     */
+    valid_frames?: number;
+    /**
+     * Kp Frames
+     */
+    kp_frames?: number;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+};
+
+/**
+ * TrackFrame
+ */
+export type TrackFrame = {
+    /**
+     * Frame
+     */
+    frame: number;
+    /**
+     * Time S
+     */
+    time_s?: number | null;
+    /**
+     * Status
+     */
+    status: 'ok' | 'miss' | 'coord';
+    /**
+     * Center
+     */
+    center?: Array<number> | null;
+    /**
+     * Head
+     */
+    head?: Array<number> | null;
+    /**
+     * Tail
+     */
+    tail?: Array<number> | null;
 };
 
 /**
@@ -280,6 +717,20 @@ export type TrialsPublic = {
      * Count
      */
     count: number;
+};
+
+/**
+ * UnavailableMetric
+ */
+export type UnavailableMetric = {
+    /**
+     * Metric
+     */
+    metric: string;
+    /**
+     * Reason
+     */
+    reason: string;
 };
 
 /**
@@ -1158,6 +1609,149 @@ export type experimentsGetTrialResponses = {
 };
 
 export type experimentsGetTrialResponse = experimentsGetTrialResponses[keyof experimentsGetTrialResponses];
+
+export type experimentsGetPreparationData = {
+    body?: never;
+    path: {
+        /**
+         * Experiment Id
+         */
+        experiment_id: string;
+        /**
+         * Trial Id
+         */
+        trial_id: string;
+    };
+    query?: never;
+    url: '/api/v1/experiments/{experiment_id}/trials/{trial_id}/preparation';
+};
+
+export type experimentsGetPreparationErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type experimentsGetPreparationError = experimentsGetPreparationErrors[keyof experimentsGetPreparationErrors];
+
+export type experimentsGetPreparationResponses = {
+    /**
+     * Successful Response
+     */
+    200: PreparationPublic;
+};
+
+export type experimentsGetPreparationResponse = experimentsGetPreparationResponses[keyof experimentsGetPreparationResponses];
+
+export type experimentsPutReviewData = {
+    body: ReviewUpdate;
+    path: {
+        /**
+         * Experiment Id
+         */
+        experiment_id: string;
+        /**
+         * Trial Id
+         */
+        trial_id: string;
+    };
+    query?: never;
+    url: '/api/v1/experiments/{experiment_id}/trials/{trial_id}/review';
+};
+
+export type experimentsPutReviewErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type experimentsPutReviewError = experimentsPutReviewErrors[keyof experimentsPutReviewErrors];
+
+export type experimentsPutReviewResponses = {
+    /**
+     * Successful Response
+     */
+    200: ReviewPublic;
+};
+
+export type experimentsPutReviewResponse = experimentsPutReviewResponses[keyof experimentsPutReviewResponses];
+
+export type experimentsGetResultData = {
+    body?: never;
+    path: {
+        /**
+         * Experiment Id
+         */
+        experiment_id: string;
+        /**
+         * Trial Id
+         */
+        trial_id: string;
+    };
+    query?: never;
+    url: '/api/v1/experiments/{experiment_id}/trials/{trial_id}/result';
+};
+
+export type experimentsGetResultErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type experimentsGetResultError = experimentsGetResultErrors[keyof experimentsGetResultErrors];
+
+export type experimentsGetResultResponses = {
+    /**
+     * Successful Response
+     */
+    200: ResultPublic;
+};
+
+export type experimentsGetResultResponse = experimentsGetResultResponses[keyof experimentsGetResultResponses];
+
+export type experimentsGetTrialMediaData = {
+    body?: never;
+    path: {
+        /**
+         * Experiment Id
+         */
+        experiment_id: string;
+        /**
+         * Trial Id
+         */
+        trial_id: string;
+        /**
+         * Kind
+         */
+        kind: 'source' | 'overlay';
+    };
+    query?: {
+        /**
+         * Token
+         */
+        token?: string | null;
+    };
+    url: '/api/v1/experiments/{experiment_id}/trials/{trial_id}/media/{kind}';
+};
+
+export type experimentsGetTrialMediaErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type experimentsGetTrialMediaError = experimentsGetTrialMediaErrors[keyof experimentsGetTrialMediaErrors];
+
+export type experimentsGetTrialMediaResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type privateCreateUserData = {
     body: PrivateUserCreate;

@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime
 
 from pydantic import EmailStr
-from sqlalchemy import CHAR, Dialect, TypeDecorator
+from sqlalchemy import CHAR, Dialect, TypeDecorator, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -96,6 +96,41 @@ class ExperimentAccess(SQLModel, table=True):
         sa_type=Char36UUID,
     )
     experiment_id: str = Field(primary_key=True, max_length=64)
+
+
+class TrialReview(SQLModel, table=True):
+    """Human preparation review of one trial, bound to the reviewed sources.
+
+    Separate from the inference ``qc_status``: this row only records what a
+    researcher manually acknowledged about pool boundary, markers, platform
+    reference and tracking. One row per (user, experiment, trial); drafts are
+    partial, ``confirmed`` requires all four acknowledgements server-side.
+    """
+
+    __tablename__ = "trial_review"
+    __table_args__ = (UniqueConstraint("user_id", "experiment_id", "trial_id"),)
+
+    id: uuid.UUID = Field(
+        default_factory=uuid.uuid4, primary_key=True, sa_type=Char36UUID
+    )
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+        sa_type=Char36UUID,
+    )
+    experiment_id: str = Field(nullable=False, max_length=64)
+    trial_id: str = Field(nullable=False, max_length=128)
+    source_version: str = Field(nullable=False, max_length=64)
+    boundary_ok: bool = False
+    markers_ok: bool = False
+    platform_ok: bool = False
+    tracking_ok: bool = False
+    state: str = Field(default="draft", max_length=16)
+    confirmed_at: datetime | None = None
+    created_at: datetime | None = Field(default_factory=get_datetime_utc)
+    updated_at: datetime | None = Field(default_factory=get_datetime_utc)
 
 
 # Properties to return via API, id is always required

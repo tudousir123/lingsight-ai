@@ -76,6 +76,8 @@ ignore = [
 # CLI demo scripts: printing the structured answer is their entire purpose.
 "scripts/demo_query.py" = ["T201"]
 "scripts/demo_rejection.py" = ["T201"]
+# Fixture generator: a standalone CLI reporting what it wrote.
+"scripts/trials/build_fixture.py" = ["T201"]
 
 [tool.ruff.lint.pyupgrade]
 # Preserve types, even if a file imports `from __future__ import annotations`.
