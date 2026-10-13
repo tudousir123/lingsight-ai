@@ -21,6 +21,7 @@ import { Route as LayoutPrepareRouteImport } from './routes/_layout/prepare'
 import { Route as LayoutReportsRouteImport } from './routes/_layout/reports'
 import { Route as LayoutResultsRouteImport } from './routes/_layout/results'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutExperimentsExperimentIdTrialsTrialIdRouteImport } from './routes/_layout/experiments.$experimentId.trials.$trialId'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -81,6 +82,12 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutExperimentsExperimentIdTrialsTrialIdRoute =
+  LayoutExperimentsExperimentIdTrialsTrialIdRouteImport.update({
+    id: '/experiments/$experimentId/trials/$trialId',
+    path: '/experiments/$experimentId/trials/$trialId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof LayoutReportsRoute
   '/results': typeof LayoutResultsRoute
   '/settings': typeof LayoutSettingsRoute
+  '/experiments/$experimentId/trials/$trialId': typeof LayoutExperimentsExperimentIdTrialsTrialIdRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -107,6 +115,7 @@ export interface FileRoutesByTo {
   '/results': typeof LayoutResultsRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
+  '/experiments/$experimentId/trials/$trialId': typeof LayoutExperimentsExperimentIdTrialsTrialIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/_layout/results': typeof LayoutResultsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/experiments/$experimentId/trials/$trialId': typeof LayoutExperimentsExperimentIdTrialsTrialIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/results'
     | '/settings'
+    | '/experiments/$experimentId/trials/$trialId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/results'
     | '/settings'
     | '/'
+    | '/experiments/$experimentId/trials/$trialId'
   id:
     | '__root__'
     | '/_layout'
@@ -164,6 +176,7 @@ export interface FileRouteTypes {
     | '/_layout/results'
     | '/_layout/settings'
     | '/_layout/'
+    | '/_layout/experiments/$experimentId/trials/$trialId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -260,6 +273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSettingsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/experiments/$experimentId/trials/$trialId': {
+      id: '/_layout/experiments/$experimentId/trials/$trialId'
+      path: '/experiments/$experimentId/trials/$trialId'
+      fullPath: '/experiments/$experimentId/trials/$trialId'
+      preLoaderRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
@@ -271,6 +291,7 @@ interface LayoutRouteChildren {
   LayoutResultsRoute: typeof LayoutResultsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
+  LayoutExperimentsExperimentIdTrialsTrialIdRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
@@ -281,6 +302,8 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutResultsRoute: LayoutResultsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
+  LayoutExperimentsExperimentIdTrialsTrialIdRoute:
+    LayoutExperimentsExperimentIdTrialsTrialIdRoute,
 }
 
 const LayoutRouteWithChildren =

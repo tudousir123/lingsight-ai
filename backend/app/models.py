@@ -84,6 +84,20 @@ class User(UserBase, table=True):
     items: list[Item] = Relationship(back_populates="owner", cascade_delete=True)
 
 
+class ExperimentAccess(SQLModel, table=True):
+    """Explicit permission to browse one research experiment/dataset."""
+
+    __tablename__ = "experiment_access"
+
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        primary_key=True,
+        ondelete="CASCADE",
+        sa_type=Char36UUID,
+    )
+    experiment_id: str = Field(primary_key=True, max_length=64)
+
+
 # Properties to return via API, id is always required
 class UserPublic(UserBase):
     id: uuid.UUID
