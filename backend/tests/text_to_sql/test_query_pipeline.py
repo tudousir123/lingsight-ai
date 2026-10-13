@@ -193,6 +193,7 @@ def test_d24_mask_rle_counts_rejected_before_execution(
         [
             "SELECT mask_rle_counts FROM v_query_frame_predictions LIMIT 1",
             "SELECT mask_rle_counts FROM v_query_frame_predictions LIMIT 1",
+            "SELECT mask_rle_counts FROM v_query_frame_predictions LIMIT 1",
         ]
     )
     response = ask(client, provider, headers=normal_user_token_headers)
@@ -200,6 +201,8 @@ def test_d24_mask_rle_counts_rejected_before_execution(
     body = response.json()
     assert body["reason_code"] == "whitelist_violation"
     assert "mask_rle_counts" in body["message"]
+    # Repair budget is 2 (ticket #8): initial attempt + 2 retries, then fail.
+    assert body["attempts"] == 3
 
 
 def test_base_table_frame_predictions_is_not_an_entry_point(
@@ -212,6 +215,7 @@ def test_base_table_frame_predictions_is_not_an_entry_point(
         [
             "SELECT COUNT(*) AS n FROM frame_predictions",
             "SELECT COUNT(*) AS n FROM frame_predictions",
+            "SELECT COUNT(*) AS n FROM frame_predictions",
         ]
     )
     response = ask(client, provider, headers=normal_user_token_headers)
@@ -219,6 +223,7 @@ def test_base_table_frame_predictions_is_not_an_entry_point(
     body = response.json()
     assert body["reason_code"] == "whitelist_violation"
     assert "frame_predictions" in body["message"]
+    assert body["attempts"] == 3
 
 
 def test_execution_error_is_typed_and_not_retried(

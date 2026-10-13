@@ -99,9 +99,7 @@ def test_view_projects_exactly_the_curated_columns(frame_view: Connection) -> No
     assert view_columns(frame_view) == CURATED_COLUMNS
 
 
-def test_view_ddl_matches_the_semantic_layer_whitelist(
-    frame_view: Connection,
-) -> None:
+def test_view_ddl_matches_the_semantic_layer_whitelist() -> None:
     # The YAML whitelist and the DDL projection are two renderings of one
     # curated column list — this pins them together so they cannot drift.
     layer = load()
