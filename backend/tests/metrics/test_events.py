@@ -74,6 +74,28 @@ def test_malformed_counts_are_rejected_not_guessed() -> None:
         mask_area_and_bbox(short, REAL_W, REAL_H)
 
 
+def test_mask_pixels_full_and_windowed_decode() -> None:
+    from app.metrics.events import mask_pixels
+
+    pixels = mask_pixels(REAL_COUNTS, REAL_W, REAL_H)
+    area, x1, y1, x2, y2 = mask_area_and_bbox(REAL_COUNTS, REAL_W, REAL_H)
+    assert len(pixels) == area  # every foreground pixel decodes exactly once
+    assert min(p[0] for p in pixels) == x1 and max(p[0] for p in pixels) == x2
+    assert min(p[1] for p in pixels) == y1 and max(p[1] for p in pixels) == y2
+    # window crop: same pixels, restricted to the rectangle
+    win = mask_pixels(REAL_COUNTS, REAL_W, REAL_H, window=(1050, 400, 1060, 420))
+    assert win == [p for p in pixels if 1050 <= p[0] <= 1060 and 400 <= p[1] <= 420]
+    assert win  # the fixture mask covers part of that rectangle
+
+
+def test_mask_pixels_round_trip_with_encoder() -> None:
+    from app.metrics.events import mask_pixels
+
+    pixels = {(2, 1), (2, 2), (3, 2), (3, 3), (3, 4)}
+    counts = encode_mask_counts(pixels, width=8, height=6)
+    assert mask_pixels(counts, 8, 6) == sorted(pixels)
+
+
 # --- synthetic mask helpers -------------------------------------------------------
 
 # Tiny 8x6 image (width=8, height=6), column-major: index = col*6 + row.

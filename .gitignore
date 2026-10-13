@@ -49,3 +49,8 @@ backend/app/frontend/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/launch.json
+
+# M1-T7 抽样核验审阅面：真实视频帧/段是科研数据，不入库（AGENTS.md §5）；
+# 由 scripts/metrics/render_sampling_review.py 确定性再生成
+docs/evidence/m1-t7/sampling-review.html
+docs/evidence/m1-t7/clips/

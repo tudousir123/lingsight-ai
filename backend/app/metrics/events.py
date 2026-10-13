@@ -172,6 +172,48 @@ def mask_touches_disk(
     return False
 
 
+def mask_pixels(
+    counts: str,
+    width: int,
+    height: int,
+    window: tuple[int, int, int, int] | None = None,
+) -> list[tuple[int, int]]:
+    """Decode mask foreground pixels as (x, y) pairs, in flattened order.
+
+    ``window`` = (x1, y1, x2, y2) crops to a pixel rectangle (inclusive):
+    the sampling-review renderer uses it to draw the mask near the
+    platform without materializing the other ~900 pixels. Masks average
+    ~938 px (2026-10-13), so full decode is also fine.
+    """
+    if window is not None:
+        wx1, wy1, wx2, wy2 = window
+        col_lo = max(0, wx1)
+        col_hi = min(width - 1, wx2)
+        window_start = col_lo * height
+        window_end = (col_hi + 1) * height
+    else:
+        window_start, window_end = 0, width * height
+    pixels: list[tuple[int, int]] = []
+    pos = 0
+    foreground = False
+    for count in (int(part) for part in counts.split(",")):
+        run_start, run_end = pos, pos + count
+        if run_end <= window_start:
+            pos = run_end
+            foreground = not foreground
+            continue
+        if run_start >= window_end:
+            break
+        if foreground:
+            for index in range(max(run_start, window_start), min(run_end, window_end)):
+                x, y = divmod(index, height)
+                if window is None or (wx1 <= x <= wx2 and wy1 <= y <= wy2):
+                    pixels.append((x, y))
+        pos = run_end
+        foreground = not foreground
+    return pixels
+
+
 def _usable(frame: EventFrame) -> bool:
     """An ok frame with the coordinates and timestamp events need."""
     return (

@@ -31,7 +31,7 @@
 
 ## 抽样人工核验（AC2，确认后执行）
 
-抽 N=10 试次（分层：各组×各日，10 试次覆盖全部四事件；含 no_mount 3 例验证诚实 NULL），生成事件帧号清单 + 对应视频时间段，交实验负责人人工比对；不一致项回到本文档修订口径，不改代码先改文档。清单由 `scripts/metrics/sample_event_verification.py` 确定性生成（固定 seed）。
+抽 N=10 试次（分层：各组×各日，10 试次覆盖全部四事件；含 no_mount 3 例验证诚实 NULL），交实验负责人人工比对；不一致项回到本文档修订口径，不改代码先改文档。**审阅面 = 交互式 HTML**（`docs/evidence/m1-t7/sampling-review.html`，含事件前后视频段可调速慢放、平台区原生分辨率放大静帧标 mask/接触像素、全程距离曲线；由 `scripts/metrics/render_sampling_review.py` 从 NAS 视频确定性生成，含真实视频数据故不入 git）；`sampling-verification.md`（`sample_event_verification.py` 生成）保留为事件帧号清单与结论存档。
 
 ## 评测接入（AC3，确认后执行）
 
