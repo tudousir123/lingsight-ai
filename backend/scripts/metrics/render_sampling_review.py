@@ -178,9 +178,44 @@ def local_path(source_path: str, videos_root: str) -> str:
     return videos_root + source_path[len(_PATH_PREFIX) :]
 
 
+def probe_duration(video: str) -> float | None:
+    """Container duration in seconds; None when ffprobe fails."""
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "csv=p=0",
+            video,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    try:
+        return float(result.stdout.strip()) if result.returncode == 0 else None
+    except ValueError:
+        return None
+
+
+def _wrote_nonempty(path: str, returncode: int) -> bool:
+    """ffmpeg exits 0 even when -ss lands past EOF and writes nothing
+    (several videos in the library are only 2–7 s long), so a clean exit
+    proves nothing: the output file must exist and be non-empty."""
+    return returncode == 0 and Path(path).exists() and Path(path).stat().st_size > 0
+
+
 def extract_clip(video: str, start: float, end: float, out_mp4: str) -> bool:
     """Encode a muted, down-scaled H.264 clip [start, end) for the page."""
     start = max(0.0, start)
+    duration = probe_duration(video)
+    if duration is not None and start >= duration - 0.05:
+        return False
+    if duration is not None:
+        end = min(end, duration - 0.05)
     cmd = [
         "ffmpeg",
         "-v",
@@ -207,7 +242,7 @@ def extract_clip(video: str, start: float, end: float, out_mp4: str) -> bool:
         out_mp4,
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-    return result.returncode == 0
+    return _wrote_nonempty(out_mp4, result.returncode)
 
 
 def extract_still(
@@ -219,6 +254,9 @@ def extract_still(
 ) -> bool:
     """Extract one still: native-res crop when ``crop`` is given."""
     t = max(0.0, t_seconds)
+    duration = probe_duration(video)
+    if duration is not None and t >= duration - 0.05:
+        return False  # beyond EOF: ffmpeg would exit 0 without writing
     vf = (
         f"crop={crop[0]}:{crop[1]}:{crop[2]}:{crop[3]}"
         if crop
@@ -243,7 +281,7 @@ def extract_still(
         out_jpg,
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-    return result.returncode == 0
+    return _wrote_nonempty(out_jpg, result.returncode)
 
 
 # --- SVG pieces -----------------------------------------------------------------

@@ -1,4 +1,6 @@
+import fcntl
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,17 +13,35 @@ from app.models import Item, User
 from tests.utils.user import authentication_token_from_email
 from tests.utils.utils import get_superuser_token_headers
 
+# Teardown below deletes every User/Item row, so two concurrent pytest
+# sessions on this shared DB corrupt each other (one session's teardown
+# wipes the other's users mid-run -> a wall of false "User not found").
+# The lock turns that silent corruption into an immediate, explained exit.
+_TEST_DB_LOCK = Path("/tmp/lingsight_backend_pytest.lock")
+
 
 @pytest.fixture(scope="session", autouse=True)
 def db() -> Generator[Session]:
-    with Session(engine) as session:
-        init_db(session)
-        yield session
-        statement = delete(Item)
-        session.execute(statement)
-        statement = delete(User)
-        session.execute(statement)
-        session.commit()
+    lock = _TEST_DB_LOCK.open("w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        pytest.exit(
+            "另一个 pytest 会话正持有测试库锁 ("
+            f"{_TEST_DB_LOCK})。共享测试库不支持并发运行：teardown 会互删"
+            "用户造成成片假失败。等它结束再跑，或先 `pkill -f pytest`。",
+            returncode=3,
+        )
+    try:
+        with Session(engine) as session:
+            init_db(session)
+            yield session
+            session.execute(delete(Item))
+            session.execute(delete(User))
+            session.commit()
+    finally:
+        fcntl.flock(lock, fcntl.LOCK_UN)
+        lock.close()
 
 
 @pytest.fixture(scope="module")
