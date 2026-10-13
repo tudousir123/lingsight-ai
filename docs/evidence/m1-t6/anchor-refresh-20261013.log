@@ -1,0 +1,18 @@
+# 工单 #17：锚点校验器首跑（漂移命中）与再生后复跑（全绿）
+# 运行：cd backend && uv run python -m scripts.metrics.validate_expected_cells
+
+## 2026-10-13 17:09 首跑 — 命中已知漂移（exit=1）
+```
+2026-10-13 17:10:31,411 ERROR FAIL Q10 frames       @ {'status': 'miss'} measured=3836 docs=4027 
+2026-10-13 17:10:36,582 ERROR FAIL Q13 frames       @ {'head_tail_mode': 'partial_rescue'} measured=3788 docs=3754 
+2026-10-13 17:10:36,690 INFO OVERALL: FAIL (94 cells, tolerance 0.5%)
+```
+
+## 2026-10-13 17:11 Q10/Q13 快照更新后 — 全绿（exit=0）
+```
+2026-10-13 17:11:39,160 INFO OVERALL: PASS (94 cells, tolerance 0.5%)
+```
+
+实测对账（ok+191，与 M1-T9 运维记录一致）：Q10 ok 784055→784246 / miss 4027→3836 / coord 6 不变；Q13 heatmap_peak 761397→761363 / viterbi_rescue 22937 不变 / partial_rescue 3754→3788。
+
+活库执行层验收：uv run pytest tests/text_to_sql/test_eval_execution.py -k 'Q10 or Q13' → 2 passed（2026-10-13）。

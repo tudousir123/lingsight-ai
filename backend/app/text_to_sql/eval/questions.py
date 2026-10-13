@@ -434,16 +434,18 @@ _QUESTIONS: list[EvalQuestion] = [
             ExpectedCell(
                 where=(("status", "ok"),),
                 column="frames",
-                value=784055.0,
+                value=784246.0,
                 aliases=("frame_count", "count", "frames_count"),
-                note="docs/09 783790 → 2026-10-11 修复刷新 +265 后快照",
+                note="docs/09 783790 → 两次刷新后快照（+265 于 10-11，"
+                "+191 于 10-13，工单 #17）",
             ),
             ExpectedCell(
                 where=(("status", "miss"),),
                 column="frames",
-                value=4027.0,
+                value=3836.0,
                 aliases=("frame_count", "count", "frames_count"),
-                note="docs/09 4292 → 同源刷新（265 帧 miss→ok）后快照",
+                note="docs/09 4292 → 两次刷新后快照（−265 于 10-11，"
+                "−191 于 10-13，工单 #17）",
             ),
             ExpectedCell(
                 where=(("status", "coord"),),
@@ -565,9 +567,10 @@ _QUESTIONS: list[EvalQuestion] = [
             ExpectedCell(
                 where=(("head_tail_mode", "heatmap_peak"),),
                 column="frames",
-                value=761397.0,
+                value=761363.0,
                 aliases=("frame_count", "count", "frames_count"),
-                note="docs/09 761402 → 刷新后快照（-5）",
+                note="docs/09 761402 → 两次刷新后快照（−5 于 10-11，"
+                "−34 于 10-13，工单 #17）",
             ),
             ExpectedCell(
                 where=(("head_tail_mode", "viterbi_rescue"),),
@@ -578,9 +581,10 @@ _QUESTIONS: list[EvalQuestion] = [
             ExpectedCell(
                 where=(("head_tail_mode", "partial_rescue"),),
                 column="frames",
-                value=3754.0,
+                value=3788.0,
                 aliases=("frame_count", "count", "frames_count"),
-                note="docs/09 3749 → 刷新后快照（+5）",
+                note="docs/09 3749 → 两次刷新后快照（+5 于 10-11，"
+                "+34 于 10-13，工单 #17）",
             ),
         ),
         note="docs/09 B13：三种关键点来源/修复方式（全库口径，含全部帧状态）",
