@@ -268,14 +268,30 @@ def test_relations_synonyms_and_aggregation_grain_reach_the_prompt() -> None:
 def test_trial_metrics_schema_matches_the_live_table() -> None:
     # Ticket #4 finalized the table: long format, PK (video_id, metric,
     # algo_version), every row self-describing its unit and calc_status
-    # (ADR-0003 recomputation is versioned). These facts anchor the
-    # Text-to-SQL prompts to the real water_maze.trial_metrics.
+    # (ADR-0003 recomputation is versioned). Ticket #6 added the event
+    # batch under its own algo_version (ADR-0006) — both batches and the
+    # honest-absence statuses anchor the prompts to the live table.
     layer = load()
     table = layer.tables["trial_metrics"]
     assert table.primary_key == ("video_id", "metric", "algo_version")
     metric = table.columns["metric"]
-    for name in ("dist_px", "speed_px", "valid_kp_ratio", "in_pool_ratio"):
+    for name in (
+        "dist_px",
+        "speed_px",
+        "valid_kp_ratio",
+        "in_pool_ratio",
+        "escape_latency_s",
+        "first_detection_s",
+        "water_entry_s",
+        "platform_contact_s",
+        "mount_s",
+    ):
         assert name in metric.domain
+    assert "v1-polyline-ok-frames" in table.columns["algo_version"].domain
+    assert "v1-platformzone-46px-maskcontact-mount500ms" in (
+        table.columns["algo_version"].domain
+    )
+    assert "no_mount" in table.columns["calc_status"].domain
     assert "calc_status" in table.columns
     assert "calculated_at" in table.columns
     # Aggregation guidance travels with the columns, not just the rules.
@@ -284,6 +300,7 @@ def test_trial_metrics_schema_matches_the_live_table() -> None:
     # Researcher vocabulary maps onto the metric names…
     assert "metric='dist_px'" in layer.synonyms["游泳距离"]
     assert "metric='speed_px'" in layer.synonyms["平均速度"]
+    assert "metric='escape_latency_s'" in layer.synonyms["逃逸潜伏期"]
 
 
 def test_loader_rejects_unknown_schema_version(tmp_path: Path) -> None:

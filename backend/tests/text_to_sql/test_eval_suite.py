@@ -29,6 +29,7 @@ from typing import Any
 
 import pytest
 
+from app.metrics.definitions import ALGO_VERSION, ALGO_VERSION_EVENTS
 from app.text_to_sql.eval.grading import (
     REL_TOL,
     check_expected_cells,
@@ -152,14 +153,15 @@ BY_ID = {q.id: q for q in QUESTIONS}
 
 
 def test_question_set_matches_docs09_shape() -> None:
-    # docs/09 v1 = ids 1–25; post-v1 attack cases append with a provenance
-    # note (26 = ticket #16 locking clause).
-    assert [q.id for q in QUESTIONS] == list(range(1, 27))
+    # docs/09 v1 = ids 1–25; post-v1 cases append with a provenance note
+    # (26 = ticket #16 locking clause; 27/28 = ticket #6 escape-latency
+    # questions from the docs/09 deferred list).
+    assert [q.id for q in QUESTIONS] == list(range(1, 29))
     counts = {"A": 0, "B": 0, "C": 0, "D": 0}
     for question in QUESTIONS:
         counts[question.category] += 1
         assert question.question.strip(), f"Q{question.id}: empty question text"
-    assert counts == {"A": 9, "B": 5, "C": 6, "D": 6}
+    assert counts == {"A": 11, "B": 5, "C": 6, "D": 6}
 
 
 def test_each_question_carries_its_class_fields() -> None:
@@ -178,8 +180,10 @@ def test_question_by_id_lookup() -> None:
     assert question_by_id(15).category == "C"
     assert question_by_id(24).behavior == "allowed_via_view"
     assert question_by_id(26).behavior == "typed_rejection"
+    assert question_by_id(27).category == "A"
+    assert question_by_id(28).behavior == "cells_match"
     with pytest.raises(KeyError):
-        question_by_id(27)
+        question_by_id(29)
 
 
 def test_group_day_matrix_is_the_docs09_appendix() -> None:
@@ -207,22 +211,28 @@ def test_a_class_goldens_anchor_on_trial_metrics_with_pinned_version() -> None:
     # A-class standard SQL re-anchors on trial_metrics with a frozen
     # algo_version and calc_status='ok' (golden values unchanged). This binds
     # the metric questions (distance/speed); the counting questions
-    # (Q5/Q6/Q7) legitimately count videos/qc rows instead.
+    # (Q5/Q6/Q7) legitimately count videos/qc rows instead. The latency
+    # questions (Q27/Q28) anchor on the ADR-0006 event batch version.
+    trajectory_cells = {"dist_px", "speed_px"}
+    event_cells = {"escape_latency_s"}
     for question in QUESTIONS:
         if question.category != "A":
             continue
-        metric_cells = {
-            "dist_px",
-            "speed_px",
-        } & {cell.column for cell in question.expected_cells}
-        if not metric_cells:
+        columns = {cell.column for cell in question.expected_cells}
+        if not (trajectory_cells & columns) and not (event_cells & columns):
             continue
         assert question.golden_sql
         low = question.golden_sql.lower()
         assert "trial_metrics" in low, (
             f"Q{question.id}: A golden must use trial_metrics"
         )
-        assert "algo_version" in low and "v1-polyline-ok-frames" in low
+        if trajectory_cells & columns:
+            expected_version = ALGO_VERSION
+        else:
+            expected_version = ALGO_VERSION_EVENTS
+        assert "algo_version" in low and expected_version in low, (
+            f"Q{question.id}: golden must pin {expected_version}"
+        )
         assert "calc_status" in low and "'ok'" in low
 
 

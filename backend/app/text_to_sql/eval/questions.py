@@ -2,8 +2,9 @@
 
 ``docs/09-golden-qa-draft.md`` (v1, 2026-10-12) is the single source of
 truth for the original 25 questions; this module is its executable
-rendering. Post-v1 attack cases are appended with their provenance note
-(D26: ticket #16). The structural facts are pinned by
+rendering. Post-v1 cases are appended with their provenance notes
+(D26: ticket #16; A27/A28: docs/09 延迟清单前两问, ticket #6/ADR-0006 —
+the escape-latency learning curve and its day-1-vs-5 improvement). The structural facts are pinned by
 ``tests/text_to_sql/test_eval_suite.py`` (completeness, whitelist legality,
 trap/caliber assertions); the behavioural facts are measured by
 ``backend/scripts/run_eval.py`` and the env-gated execution tests against
@@ -18,10 +19,13 @@ refresh carry a note with their docs/09 original value.
 
 Class semantics:
 
-* A (9) learning-curve questions — golden SQL re-anchored on ``trial_metrics``
+* A (11) learning-curve questions — golden SQL re-anchored on ``trial_metrics``
   per docs/09 v1 note + ADR-0003 (pinned ``algo_version`` and
   ``calc_status = 'ok'``); graded by result-set comparison against the live
   golden execution, with the docs/09 appendix matrix as value anchors.
+  Q27/Q28 (ticket #6) anchor on the ADR-0006 event-batch version instead —
+  escape-latency learning curve and day-1-vs-5 improvement, graded by
+  ``cells_match`` like Q4.
 * B (5) data-quality questions — golden SQL anchors
   ``v_query_frame_predictions`` / ``qc_summary`` / ``trial_metrics``.
 * C (6) caliber-trap questions — graded against golden scalars plus caliber
@@ -40,6 +44,9 @@ from typing import Literal
 
 from app.metrics.definitions import (
     ALGO_VERSION as ALGO_VERSION,  # single source (ADR-0003); re-exported via this package
+)
+from app.metrics.definitions import (
+    ALGO_VERSION_EVENTS as ALGO_VERSION_EVENTS,  # ADR-0006 event batch (ticket #6)
 )
 
 Category = Literal["A", "B", "C", "D"]
@@ -114,6 +121,15 @@ def _metric_join(metric: str) -> str:
     )
 
 
+def _event_metric_join(metric: str) -> str:
+    """A-class anchor for the ADR-0006 event batch (its own algo_version)."""
+    return (
+        "FROM trial_metrics m JOIN videos v ON v.video_id = m.video_id\n"
+        f"WHERE m.metric = '{metric}' AND m.algo_version = '{ALGO_VERSION_EVENTS}'\n"
+        "  AND m.calc_status = 'ok' AND v.phase = 'training_day'"
+    )
+
+
 # docs/09 appendix · 组×日 黄金矩阵（训练期）: (group, day) -> (dist_px, speed_px)
 GROUP_DAY_MATRIX: dict[tuple[str, str], tuple[float, float]] = {
     ("A+L1", "0804"): (8359.0, 129.0),
@@ -179,6 +195,81 @@ def _trial_count_cells() -> tuple[ExpectedCell, ...]:
                 )
             )
     return tuple(cells)
+
+
+#: docs/09 延迟清单① · 组×日 逃逸潜伏期黄金矩阵（秒，仅 calc_status='ok'
+#: 行=有效上台试次；2026-10-13 真库实算快照，工单 #6）。第二列 = 该格
+#: 上台试次数（no_mount 不计，随日递增本身是学习曲线）。
+GROUP_DAY_LATENCY: dict[tuple[str, str], float] = {
+    ("A+L1", "0804"): 34.60,
+    ("A+L1", "0805"): 25.67,
+    ("A+L1", "0806"): 40.79,
+    ("A+L1", "0807"): 27.57,
+    ("A+L1", "0808"): 20.91,
+    ("A+L3", "0804"): 33.77,
+    ("A+L3", "0805"): 20.64,
+    ("A+L3", "0806"): 25.10,
+    ("A+L3", "0807"): 19.54,
+    ("A+L3", "0808"): 20.01,
+    ("A2", "0804"): 14.90,
+    ("A2", "0805"): 31.23,
+    ("A2", "0806"): 30.01,
+    ("A2", "0807"): 20.77,
+    ("A2", "0808"): 22.49,
+    ("A3", "0804"): 26.17,
+    ("A3", "0805"): 42.23,
+    ("A3", "0806"): 17.24,
+    ("A3", "0807"): 9.84,
+    ("A3", "0808"): 20.88,
+    ("c1", "0804"): 34.33,
+    ("c1", "0805"): 16.85,
+    ("c1", "0806"): 27.06,
+    ("c1", "0807"): 24.54,
+    ("c1", "0808"): 25.59,
+    ("c2", "0804"): 37.97,
+    ("c2", "0805"): 27.54,
+    ("c2", "0806"): 31.74,
+    ("c2", "0807"): 26.84,
+    ("c2", "0808"): 29.73,
+}
+
+_LATENCY_ALIASES = ("latency_s", "avg_latency_s", "escape_latency", "潜伏期")
+
+#: docs/09 延迟清单② · 第 5 天 vs 第 1 天潜伏期变化率（%，2026-10-13 快照；
+#: A2 正值是真实反弹，见 Q28 note）。
+GROUP_LATENCY_PCT: dict[str, float] = {
+    "A+L1": -39.6,
+    "A+L3": -40.7,
+    "A2": 51.0,
+    "A3": -20.2,
+    "c1": -25.5,
+    "c2": -21.7,
+}
+
+
+def _LATENCY_MATRIX_CELLS() -> tuple[ExpectedCell, ...]:
+    return tuple(
+        ExpectedCell(
+            where=(("group_name", group), ("date_dir", day)),
+            column="escape_latency_s",
+            value=GROUP_DAY_LATENCY[(group, day)],
+            aliases=_LATENCY_ALIASES,
+        )
+        for group in GROUPS
+        for day in DAYS
+    )
+
+
+def _LATENCY_PCT_CELLS() -> tuple[ExpectedCell, ...]:
+    return tuple(
+        ExpectedCell(
+            where=(("group_name", group),),
+            column="pct_change",
+            value=GROUP_LATENCY_PCT[group],
+            aliases=_PCT_ALIASES,
+        )
+        for group in GROUPS
+    )
 
 
 #: Accepted spellings for a percent-change measure (models alias freely;
@@ -805,6 +896,55 @@ _QUESTIONS: list[EvalQuestion] = [
             "args['locks']，旧检查读 args['lock'] 从不触发，FOR UPDATE "
             "曾通过 AST 白名单；现 non_select 在 AST 层拒绝，不依赖 "
             "lingsight_ro 只读账户兜底"
+        ),
+    ),
+    # --- A · 第二批指标：逃逸潜伏期（docs/09 延迟清单，工单 #6/ADR-0006）--------
+    EvalQuestion(
+        id=27,
+        category="A",
+        question="训练期内各实验组每日的平均逃逸潜伏期是多少秒？",
+        golden_sql=(
+            "SELECT v.group_name, v.date_dir, AVG(m.value) AS escape_latency_s\n"
+            f"{_event_metric_join('escape_latency_s')}\n"
+            "GROUP BY v.group_name, v.date_dir"
+        ),
+        behavior="cells_match",
+        expected_cells=_LATENCY_MATRIX_CELLS(),
+        note=(
+            "docs/09 延迟清单①（Vorhees & Williams 2006，领域第一指标）；"
+            "ADR-0006/工单 #6 加入。口径：均值只含 calc_status='ok' 行"
+            "（有效上台试次），no_mount 不计——上台率随日递增本身是学习曲线"
+            "的一部分。黄金值 2026-10-13 对真库实算入库后快照"
+        ),
+    ),
+    EvalQuestion(
+        id=28,
+        category="A",
+        question="训练期内第 5 天相对第 1 天，各组逃逸潜伏期变化率（百分比）是多少？",
+        golden_sql=(
+            "SELECT a.group_name, ROUND(100 * (b.avg_l - a.avg_l) / a.avg_l, 1) "
+            "AS pct_change\n"
+            "FROM (SELECT v.group_name, AVG(m.value) AS avg_l\n"
+            "      FROM trial_metrics m JOIN videos v ON v.video_id = m.video_id\n"
+            "      WHERE m.metric = 'escape_latency_s' AND m.algo_version = "
+            f"'{ALGO_VERSION_EVENTS}'\n"
+            "        AND m.calc_status = 'ok' AND v.phase = 'training_day'\n"
+            "        AND v.date_dir = '0804'\n"
+            "      GROUP BY v.group_name) a\n"
+            "JOIN (SELECT v.group_name, AVG(m.value) AS avg_l\n"
+            "      FROM trial_metrics m JOIN videos v ON v.video_id = m.video_id\n"
+            "      WHERE m.metric = 'escape_latency_s' AND m.algo_version = "
+            f"'{ALGO_VERSION_EVENTS}'\n"
+            "        AND m.calc_status = 'ok' AND v.phase = 'training_day'\n"
+            "        AND v.date_dir = '0808'\n"
+            "      GROUP BY v.group_name) b ON b.group_name = a.group_name"
+        ),
+        behavior="cells_match",
+        expected_cells=_LATENCY_PCT_CELLS(),
+        note=(
+            "docs/09 延迟清单②：与 Q4 距离改善并列的潜伏期改善；A2 为真实"
+            "正值（第 1 天已快 14.9s，第 5 天 22.5s 反弹），不因符号异常而"
+            "修饰数据。黄金值 2026-10-13 快照"
         ),
     ),
 ]

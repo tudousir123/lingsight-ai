@@ -1,0 +1,152 @@
+2026-10-13 18:47:54,695 INFO RLE decoder self-check: 5969 frames, 0 mismatches (bbox within 1px, area ratio <= 1.3)
+2026-10-13 18:47:54,707 INFO loaded geometry: 549 pools, 7 platform days (549 videos)
+2026-10-13 18:47:59,307 INFO computed 100 videos
+2026-10-13 18:48:02,868 INFO computed 200 videos
+2026-10-13 18:48:05,917 INFO computed 300 videos
+2026-10-13 18:48:08,169 INFO computed 400 videos
+2026-10-13 18:48:10,740 INFO computed 500 videos
+2026-10-13 18:48:11,945 INFO computed 549 videos -> 4941 metric rows
+2026-10-13 18:48:11,946 INFO algo=v1-platformzone-46px-maskcontact-mount500ms metric=escape_latency_s calc_status=no_mount rows=239
+2026-10-13 18:48:11,946 INFO algo=v1-platformzone-46px-maskcontact-mount500ms metric=escape_latency_s calc_status=ok rows=310
+2026-10-13 18:48:11,946 INFO algo=v1-platformzone-46px-maskcontact-mount500ms metric=first_detection_s calc_status=ok rows=549
+2026-10-13 18:48:11,946 INFO algo=v1-platformzone-46px-maskcontact-mount500ms metric=mount_s calc_status=no_mount rows=239
+2026-10-13 18:48:11,946 INFO algo=v1-platformzone-46px-maskcontact-mount500ms metric=mount_s calc_status=ok rows=310
+2026-10-13 18:48:11,946 INFO algo=v1-platformzone-46px-maskcontact-mount500ms metric=platform_contact_s calc_status=no_contact rows=150
+2026-10-13 18:48:11,946 INFO algo=v1-platformzone-46px-maskcontact-mount500ms metric=platform_contact_s calc_status=ok rows=399
+2026-10-13 18:48:11,946 INFO algo=v1-platformzone-46px-maskcontact-mount500ms metric=water_entry_s calc_status=ok rows=549
+2026-10-13 18:48:11,946 INFO algo=v1-polyline-ok-frames metric=dist_px calc_status=ok rows=549
+2026-10-13 18:48:11,946 INFO algo=v1-polyline-ok-frames metric=in_pool_ratio calc_status=ok rows=549
+2026-10-13 18:48:11,946 INFO algo=v1-polyline-ok-frames metric=speed_px calc_status=ok rows=549
+2026-10-13 18:48:11,946 INFO algo=v1-polyline-ok-frames metric=valid_kp_ratio calc_status=ok rows=549
+2026-10-13 18:48:12,565 INFO wrote 4941 rows (versions v1-polyline-ok-frames + v1-platformzone-46px-maskcontact-mount500ms) — rerun replaces the same versions in place
+2026-10-13 18:48:12,592 INFO PASS Q4  pct_change   @ {'group_name': 'A+L1'} measured=-65.8 docs=-65.8 
+2026-10-13 18:48:12,592 INFO PASS Q4  pct_change   @ {'group_name': 'A3'} measured=-52.2 docs=-52.2 
+2026-10-13 18:48:12,592 INFO PASS Q4  pct_change   @ {'group_name': 'A2'} measured=-52 docs=-52 
+2026-10-13 18:48:12,592 INFO PASS Q4  pct_change   @ {'group_name': 'c1'} measured=-47.8 docs=-47.8 
+2026-10-13 18:48:12,592 INFO PASS Q4  pct_change   @ {'group_name': 'A+L3'} measured=-40.8 docs=-40.9 
+2026-10-13 18:48:12,592 INFO PASS Q4  pct_change   @ {'group_name': 'c2'} measured=-33.3 docs=-33.3 
+2026-10-13 18:48:12,600 INFO PASS Q5  trials       @ {'group_name': 'A+L1', 'date_dir': '0804'} measured=16 docs=16 
+2026-10-13 18:48:12,600 INFO PASS Q5  trials       @ {'group_name': 'A+L1', 'date_dir': '0805'} measured=16 docs=16 
+2026-10-13 18:48:12,600 INFO PASS Q5  trials       @ {'group_name': 'A+L1', 'date_dir': '0806'} measured=16 docs=16 
+2026-10-13 18:48:12,600 INFO PASS Q5  trials       @ {'group_name': 'A+L1', 'date_dir': '0807'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A+L1', 'date_dir': '0808'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A+L3', 'date_dir': '0804'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A+L3', 'date_dir': '0805'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A+L3', 'date_dir': '0806'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A+L3', 'date_dir': '0807'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A+L3', 'date_dir': '0808'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A2', 'date_dir': '0804'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A2', 'date_dir': '0805'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A2', 'date_dir': '0806'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A2', 'date_dir': '0807'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A2', 'date_dir': '0808'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A3', 'date_dir': '0804'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A3', 'date_dir': '0805'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A3', 'date_dir': '0806'} measured=15 docs=15 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A3', 'date_dir': '0807'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'A3', 'date_dir': '0808'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'c1', 'date_dir': '0804'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'c1', 'date_dir': '0805'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'c1', 'date_dir': '0806'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'c1', 'date_dir': '0807'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'c1', 'date_dir': '0808'} measured=16 docs=16 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'c2', 'date_dir': '0804'} measured=20 docs=20 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'c2', 'date_dir': '0805'} measured=20 docs=20 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'c2', 'date_dir': '0806'} measured=20 docs=20 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'c2', 'date_dir': '0807'} measured=20 docs=20 
+2026-10-13 18:48:12,601 INFO PASS Q5  trials       @ {'group_name': 'c2', 'date_dir': '0808'} measured=20 docs=20 
+2026-10-13 18:48:12,609 INFO PASS Q6  review_videos @ {'group_name': 'A+L1'} measured=87 docs=87 
+2026-10-13 18:48:12,610 INFO PASS Q6  review_videos @ {'group_name': 'A+L3'} measured=80 docs=80 
+2026-10-13 18:48:12,610 INFO PASS Q6  review_videos @ {'group_name': 'A2'} measured=84 docs=84 
+2026-10-13 18:48:12,610 INFO PASS Q6  review_videos @ {'group_name': 'A3'} measured=77 docs=77 
+2026-10-13 18:48:12,610 INFO PASS Q6  review_videos @ {'group_name': 'c1'} measured=84 docs=84 
+2026-10-13 18:48:12,610 INFO PASS Q6  review_videos @ {'group_name': 'c2'} measured=105 docs=105 
+2026-10-13 18:48:12,617 INFO PASS Q7  trials       @ {'group_name': 'A+L1', 'date_dir': '0804'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A+L1', 'date_dir': '0805'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A+L1', 'date_dir': '0806'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A+L1', 'date_dir': '0807'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A+L1', 'date_dir': '0808'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A+L3', 'date_dir': '0804'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A+L3', 'date_dir': '0805'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A+L3', 'date_dir': '0806'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A+L3', 'date_dir': '0807'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A+L3', 'date_dir': '0808'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A2', 'date_dir': '0804'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A2', 'date_dir': '0805'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A2', 'date_dir': '0806'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A2', 'date_dir': '0807'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A2', 'date_dir': '0808'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A3', 'date_dir': '0804'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A3', 'date_dir': '0805'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A3', 'date_dir': '0806'} measured=15 docs=15 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A3', 'date_dir': '0807'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'A3', 'date_dir': '0808'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'c1', 'date_dir': '0804'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'c1', 'date_dir': '0805'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'c1', 'date_dir': '0806'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'c1', 'date_dir': '0807'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'c1', 'date_dir': '0808'} measured=16 docs=16 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'c2', 'date_dir': '0804'} measured=20 docs=20 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'c2', 'date_dir': '0805'} measured=20 docs=20 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'c2', 'date_dir': '0806'} measured=20 docs=20 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'c2', 'date_dir': '0807'} measured=20 docs=20 
+2026-10-13 18:48:12,618 INFO PASS Q7  trials       @ {'group_name': 'c2', 'date_dir': '0808'} measured=20 docs=20 
+2026-10-13 18:48:13,721 INFO PASS Q10 frames       @ {'status': 'ok'} measured=784246 docs=784246 
+2026-10-13 18:48:13,721 INFO PASS Q10 frames       @ {'status': 'miss'} measured=3836 docs=3836 
+2026-10-13 18:48:13,722 INFO PASS Q10 frames       @ {'status': 'coord'} measured=6 docs=6 
+2026-10-13 18:48:13,745 INFO PASS Q11 avg_valid_kp_ratio @ {'qc_status': 'review'} measured=0.985739 docs=0.9857 
+2026-10-13 18:48:13,745 INFO PASS Q11 avg_valid_kp_ratio @ {'qc_status': 'ok'} measured=1 docs=1 
+2026-10-13 18:48:16,183 INFO PASS Q12 corrected_frames @ {'group_name': 'A+L1'} measured=2637 docs=2637 
+2026-10-13 18:48:16,184 INFO PASS Q12 corrected_frames @ {'group_name': 'A+L3'} measured=2215 docs=2215 
+2026-10-13 18:48:16,184 INFO PASS Q12 corrected_frames @ {'group_name': 'A2'} measured=2648 docs=2648 
+2026-10-13 18:48:16,184 INFO PASS Q12 corrected_frames @ {'group_name': 'A3'} measured=3041 docs=3041 
+2026-10-13 18:48:16,184 INFO PASS Q12 corrected_frames @ {'group_name': 'c1'} measured=3873 docs=3873 
+2026-10-13 18:48:16,184 INFO PASS Q12 corrected_frames @ {'group_name': 'c2'} measured=5976 docs=5976 
+2026-10-13 18:48:18,132 INFO PASS Q13 frames       @ {'head_tail_mode': 'heatmap_peak'} measured=761363 docs=761363 
+2026-10-13 18:48:18,132 INFO PASS Q13 frames       @ {'head_tail_mode': 'viterbi_rescue'} measured=22937 docs=22937 
+2026-10-13 18:48:18,132 INFO PASS Q13 frames       @ {'head_tail_mode': 'partial_rescue'} measured=3788 docs=3788 
+2026-10-13 18:48:18,136 INFO PASS Q14 fps_kinds    @ <scalar> measured=1 docs=1 
+2026-10-13 18:48:18,136 INFO PASS Q14 avg_duration_s @ <scalar> measured=47.8499 docs=47.8 
+2026-10-13 18:48:18,136 INFO PASS Q14 max_duration_s @ <scalar> measured=90.8 docs=90.8 
+2026-10-13 18:48:18,141 INFO PASS Q15 animal_count @ <scalar> measured=6 docs=6 
+2026-10-13 18:48:18,151 INFO PASS Q16 avg_speed_px @ <scalar> measured=101.74 docs=101.7 
+2026-10-13 18:48:18,171 INFO PASS Q17 avg_dist_px  @ <scalar> measured=5428.51 docs=5428 
+2026-10-13 18:48:18,177 INFO PASS Q18 avg_dist_px  @ <scalar> measured=5336.57 docs=5336.5 
+2026-10-13 18:48:18,183 INFO PASS Q20 avg_dist_px  @ <scalar> measured=6002.23 docs=6002 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A+L1', 'date_dir': '0804'} measured=34.6 docs=34.6 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A+L1', 'date_dir': '0805'} measured=25.6667 docs=25.67 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A+L1', 'date_dir': '0806'} measured=40.7933 docs=40.79 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A+L1', 'date_dir': '0807'} measured=27.575 docs=27.57 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A+L1', 'date_dir': '0808'} measured=20.9143 docs=20.91 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A+L3', 'date_dir': '0804'} measured=33.7667 docs=33.77 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A+L3', 'date_dir': '0805'} measured=20.6429 docs=20.64 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A+L3', 'date_dir': '0806'} measured=25.1033 docs=25.1 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A+L3', 'date_dir': '0807'} measured=19.541 docs=19.54 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A+L3', 'date_dir': '0808'} measured=20.0074 docs=20.01 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A2', 'date_dir': '0804'} measured=14.8952 docs=14.9 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A2', 'date_dir': '0805'} measured=31.2333 docs=31.23 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A2', 'date_dir': '0806'} measured=30.0051 docs=30.01 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A2', 'date_dir': '0807'} measured=20.7667 docs=20.77 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A2', 'date_dir': '0808'} measured=22.4905 docs=22.49 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A3', 'date_dir': '0804'} measured=26.1667 docs=26.17 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A3', 'date_dir': '0805'} measured=42.2333 docs=42.23 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A3', 'date_dir': '0806'} measured=17.2417 docs=17.24 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A3', 'date_dir': '0807'} measured=9.83667 docs=9.84 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'A3', 'date_dir': '0808'} measured=20.8795 docs=20.88 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'c1', 'date_dir': '0804'} measured=34.3333 docs=34.33 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'c1', 'date_dir': '0805'} measured=16.85 docs=16.85 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'c1', 'date_dir': '0806'} measured=27.0625 docs=27.06 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'c1', 'date_dir': '0807'} measured=24.541 docs=24.54 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'c1', 'date_dir': '0808'} measured=25.5939 docs=25.59 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'c2', 'date_dir': '0804'} measured=37.9667 docs=37.97 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'c2', 'date_dir': '0805'} measured=27.5417 docs=27.54 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'c2', 'date_dir': '0806'} measured=31.7444 docs=31.74 
+2026-10-13 18:48:18,192 INFO PASS Q27 escape_latency_s @ {'group_name': 'c2', 'date_dir': '0807'} measured=26.8392 docs=26.84 
+2026-10-13 18:48:18,193 INFO PASS Q27 escape_latency_s @ {'group_name': 'c2', 'date_dir': '0808'} measured=29.7308 docs=29.73 
+2026-10-13 18:48:18,199 INFO PASS Q28 pct_change   @ {'group_name': 'A+L1'} measured=-39.6 docs=-39.6 
+2026-10-13 18:48:18,200 INFO PASS Q28 pct_change   @ {'group_name': 'A+L3'} measured=-40.7 docs=-40.7 
+2026-10-13 18:48:18,200 INFO PASS Q28 pct_change   @ {'group_name': 'A2'} measured=51 docs=51 
+2026-10-13 18:48:18,200 INFO PASS Q28 pct_change   @ {'group_name': 'A3'} measured=-20.2 docs=-20.2 
+2026-10-13 18:48:18,200 INFO PASS Q28 pct_change   @ {'group_name': 'c1'} measured=-25.5 docs=-25.5 
+2026-10-13 18:48:18,200 INFO PASS Q28 pct_change   @ {'group_name': 'c2'} measured=-21.7 docs=-21.7 
+2026-10-13 18:48:18,200 INFO OVERALL: PASS (130 cells, tolerance 0.5%)

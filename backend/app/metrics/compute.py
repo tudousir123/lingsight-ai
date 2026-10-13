@@ -45,8 +45,9 @@ class FrameObservation:
 
 
 @dataclass(frozen=True)
-class PoolGeometry:
-    """Maze pool circle from videos.pool_cx/pool_cy/pool_r (pixels)."""
+class CircleGeometry:
+    """A circular zone in pixel space — the pool (videos.pool_*) or the
+    platform circle (day consensus position, radius 46 px, ADR-0006)."""
 
     cx: float
     cy: float
@@ -75,7 +76,7 @@ def _has_complete_keypoints(frame: FrameObservation) -> bool:
 def compute_trial_metrics(
     video_id: str,
     frames: Sequence[FrameObservation],
-    pool: PoolGeometry | None = None,
+    pool: CircleGeometry | None = None,
 ) -> list[MetricRow]:
     """Compute the four first-batch metrics for one trial (video).
 

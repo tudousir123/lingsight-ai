@@ -19,15 +19,15 @@ CREATE TABLE IF NOT EXISTS trial_metrics (
   video_id      VARCHAR(128) NOT NULL
     COMMENT '视频=试次标识，关联 videos.video_id（全库无外键，按约定 join）',
   metric        VARCHAR(32)  NOT NULL
-    COMMENT '指标名：dist_px|speed_px|valid_kp_ratio|in_pool_ratio（口径见 definition 列）',
+    COMMENT '指标名：dist_px|speed_px|valid_kp_ratio|in_pool_ratio | 事件批 escape_latency_s/first_detection_s/water_entry_s/platform_contact_s/mount_s（口径见 definition 列）',
   algo_version  VARCHAR(64)  NOT NULL
-    COMMENT '算法版本：重算发新版本不覆盖旧值（ADR-0003），当前 v1-polyline-ok-frames',
+    COMMENT '算法版本：重算发新版本不覆盖旧值（ADR-0003）。v1-polyline-ok-frames（轨迹 4 指标）| v1-platformzone-46px-maskcontact-mount500ms（事件 5 指标，ADR-0006）',
   value         DOUBLE       NULL
     COMMENT '指标值；calc_status != ok 时为 NULL',
   unit          VARCHAR(16)  NOT NULL
-    COMMENT '单位：px | px/s | ratio',
+    COMMENT '单位：px | px/s | ratio | s',
   calc_status   VARCHAR(24)  NOT NULL
-    COMMENT '计算状态：ok | no_frames | no_ok_frames | insufficient_ok_frames | missing_pool_params',
+    COMMENT '计算状态：ok | no_frames | no_ok_frames | insufficient_ok_frames | missing_pool_params | missing_platform_params | missing_mask_params | no_entry | no_contact | no_mount',
   ok_frames     INT          NOT NULL
     COMMENT '口径快照：该视频 status=ok 帧数',
   total_frames  INT          NOT NULL

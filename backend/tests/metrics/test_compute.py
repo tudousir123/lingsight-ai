@@ -10,7 +10,7 @@ import math
 
 from app.metrics.compute import (
     FrameObservation,
-    PoolGeometry,
+    CircleGeometry,
     compute_trial_metrics,
     polyline_length,
 )
@@ -35,10 +35,10 @@ TRIAL_FRAMES = [
     FrameObservation(30, 1.0, 3.0, 4.0, "ok", 5.0, 6.0, 7.0, 8.0),
     FrameObservation(60, 2.0, 3.0, 10.0, "ok", 9.0, 10.0, None, None),
 ]
-POOL = PoolGeometry(cx=0.0, cy=0.0, r=5.0)
+POOL = CircleGeometry(cx=0.0, cy=0.0, r=5.0)
 
 
-def rows_by_metric(video_id: str = "trial-x", pool: PoolGeometry | None = POOL):
+def rows_by_metric(video_id: str = "trial-x", pool: CircleGeometry | None = POOL):
     rows = compute_trial_metrics(video_id, TRIAL_FRAMES, pool=pool)
     return {row.metric: row for row in rows}
 
@@ -164,7 +164,7 @@ def test_missing_pool_geometry_only_affects_in_pool_ratio() -> None:
 def test_degenerate_pool_geometry_is_treated_as_missing() -> None:
     rows = {
         row.metric: row
-        for row in compute_trial_metrics("t", TRIAL_FRAMES, pool=PoolGeometry(1, 1, 0))
+        for row in compute_trial_metrics("t", TRIAL_FRAMES, pool=CircleGeometry(1, 1, 0))
     }
     assert rows[IN_POOL_RATIO].calc_status == "missing_pool_params"
 

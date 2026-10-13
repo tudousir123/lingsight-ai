@@ -1,0 +1,501 @@
+{
+  "generated_at": "2026-10-13T10:49:23.199101+00:00",
+  "model": "gemini-3.8-flash",
+  "database": {
+    "host": "127.0.0.1",
+    "name": "water_maze",
+    "user": "lingsight_ro"
+  },
+  "pipeline": {
+    "repair_attempts": 2,
+    "row_cap": 200,
+    "timeout_ms": 10000,
+    "llm_timeout_s": 280.0
+  },
+  "summary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "pass_rate": 1.0,
+    "by_category": {
+      "A": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      }
+    }
+  },
+  "questions": [
+    {
+      "id": 27,
+      "category": "A",
+      "behavior": "cells_match",
+      "passed": true,
+      "outcome": "ok",
+      "detail": "30 docs/09 cells within tolerance",
+      "sql": "SELECT group_name, date_dir, AVG(mouse_daily_latency) AS avg_escape_latency_s FROM (SELECT v.group_name, v.mouse_id, v.date_dir, AVG(tm.value) AS mouse_daily_latency FROM videos AS v JOIN trial_metrics AS tm ON v.video_id = tm.video_id WHERE v.phase = 'training_day' AND tm.metric = 'escape_latency_s' AND tm.algo_version = 'v1-platformzone-46px-maskcontact-mount500ms' AND tm.calc_status = 'ok' GROUP BY v.group_name, v.mouse_id, v.date_dir) AS sub GROUP BY group_name, date_dir ORDER BY group_name, date_dir LIMIT 200",
+      "attempts": 1,
+      "reason_code": null,
+      "row_count": 30,
+      "golden_drift": [
+        {
+          "where": {
+            "group_name": "A+L1",
+            "date_dir": "0804"
+          },
+          "column": "escape_latency_s",
+          "expected": 34.6,
+          "actual": 34.5999999995,
+          "rel_diff": 1.4450919587486268e-11,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A+L1",
+            "date_dir": "0805"
+          },
+          "column": "escape_latency_s",
+          "expected": 25.67,
+          "actual": 25.6666666662,
+          "rel_diff": 0.00012985328398911413,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A+L1",
+            "date_dir": "0806"
+          },
+          "column": "escape_latency_s",
+          "expected": 40.79,
+          "actual": 40.793333333,
+          "rel_diff": 8.171936749204447e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A+L1",
+            "date_dir": "0807"
+          },
+          "column": "escape_latency_s",
+          "expected": 27.57,
+          "actual": 27.5749999995,
+          "rel_diff": 0.00018135652883571781,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A+L1",
+            "date_dir": "0808"
+          },
+          "column": "escape_latency_s",
+          "expected": 20.91,
+          "actual": 20.914285714071433,
+          "rel_diff": 0.00020496002254579256,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A+L3",
+            "date_dir": "0804"
+          },
+          "column": "escape_latency_s",
+          "expected": 33.77,
+          "actual": 33.766666666333336,
+          "rel_diff": 9.870694896852872e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A+L3",
+            "date_dir": "0805"
+          },
+          "column": "escape_latency_s",
+          "expected": 20.64,
+          "actual": 20.64285714242857,
+          "rel_diff": 0.0001384274432447105,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A+L3",
+            "date_dir": "0806"
+          },
+          "column": "escape_latency_s",
+          "expected": 25.1,
+          "actual": 25.103333333,
+          "rel_diff": 0.00013280211155366296,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A+L3",
+            "date_dir": "0807"
+          },
+          "column": "escape_latency_s",
+          "expected": 19.54,
+          "actual": 19.54102564053846,
+          "rel_diff": 5.2489280371630425e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A+L3",
+            "date_dir": "0808"
+          },
+          "column": "escape_latency_s",
+          "expected": 20.01,
+          "actual": 20.00740740711111,
+          "rel_diff": 0.00012956486201357755,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A2",
+            "date_dir": "0804"
+          },
+          "column": "escape_latency_s",
+          "expected": 14.9,
+          "actual": 14.895238094999998,
+          "rel_diff": 0.0003195909395974689,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A2",
+            "date_dir": "0805"
+          },
+          "column": "escape_latency_s",
+          "expected": 31.23,
+          "actual": 31.233333333166666,
+          "rel_diff": 0.00010673497171519045,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A2",
+            "date_dir": "0806"
+          },
+          "column": "escape_latency_s",
+          "expected": 30.01,
+          "actual": 30.005128204692305,
+          "rel_diff": 0.00016233906390192128,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A2",
+            "date_dir": "0807"
+          },
+          "column": "escape_latency_s",
+          "expected": 20.77,
+          "actual": 20.766666666312503,
+          "rel_diff": 0.0001604879002165034,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A2",
+            "date_dir": "0808"
+          },
+          "column": "escape_latency_s",
+          "expected": 22.49,
+          "actual": 22.490476190214284,
+          "rel_diff": 2.117341993268212e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A3",
+            "date_dir": "0804"
+          },
+          "column": "escape_latency_s",
+          "expected": 26.17,
+          "actual": 26.16666666633333,
+          "rel_diff": 0.00012737232199735453,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A3",
+            "date_dir": "0805"
+          },
+          "column": "escape_latency_s",
+          "expected": 42.23,
+          "actual": 42.233333333000004,
+          "rel_diff": 7.893282027013022e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A3",
+            "date_dir": "0806"
+          },
+          "column": "escape_latency_s",
+          "expected": 17.24,
+          "actual": 17.241666666125,
+          "rel_diff": 9.667436919957425e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A3",
+            "date_dir": "0807"
+          },
+          "column": "escape_latency_s",
+          "expected": 9.84,
+          "actual": 9.836666666300001,
+          "rel_diff": 0.0003387534247966235,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A3",
+            "date_dir": "0808"
+          },
+          "column": "escape_latency_s",
+          "expected": 20.88,
+          "actual": 20.87948717915385,
+          "rel_diff": 2.4560385352043798e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "c1",
+            "date_dir": "0804"
+          },
+          "column": "escape_latency_s",
+          "expected": 34.33,
+          "actual": 34.333333333,
+          "rel_diff": 9.709679580543238e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "c1",
+            "date_dir": "0805"
+          },
+          "column": "escape_latency_s",
+          "expected": 16.85,
+          "actual": 16.849999999499996,
+          "rel_diff": 2.9673909224967575e-11,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "c1",
+            "date_dir": "0806"
+          },
+          "column": "escape_latency_s",
+          "expected": 27.06,
+          "actual": 27.062499999624997,
+          "rel_diff": 9.238727365107685e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "c1",
+            "date_dir": "0807"
+          },
+          "column": "escape_latency_s",
+          "expected": 24.54,
+          "actual": 24.541025640692308,
+          "rel_diff": 4.179464923831995e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "c1",
+            "date_dir": "0808"
+          },
+          "column": "escape_latency_s",
+          "expected": 25.59,
+          "actual": 25.593939393545455,
+          "rel_diff": 0.00015394269423426362,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "c2",
+            "date_dir": "0804"
+          },
+          "column": "escape_latency_s",
+          "expected": 37.97,
+          "actual": 37.96666666666667,
+          "rel_diff": 8.778860503898608e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "c2",
+            "date_dir": "0805"
+          },
+          "column": "escape_latency_s",
+          "expected": 27.54,
+          "actual": 27.541666666250002,
+          "rel_diff": 6.051801924483989e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "c2",
+            "date_dir": "0806"
+          },
+          "column": "escape_latency_s",
+          "expected": 31.74,
+          "actual": 31.74444444408334,
+          "rel_diff": 0.00014002659367801562,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "c2",
+            "date_dir": "0807"
+          },
+          "column": "escape_latency_s",
+          "expected": 26.84,
+          "actual": 26.83921568582353,
+          "rel_diff": 2.9221839659871726e-05,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "c2",
+            "date_dir": "0808"
+          },
+          "column": "escape_latency_s",
+          "expected": 29.73,
+          "actual": 29.730769230461537,
+          "rel_diff": 2.5873880307302278e-05,
+          "ok": true,
+          "note": ""
+        }
+      ],
+      "question": "训练期内各实验组每日的平均逃逸潜伏期是多少秒？",
+      "elapsed_s": 14.88,
+      "columns": [
+        "group_name",
+        "date_dir",
+        "avg_escape_latency_s"
+      ],
+      "caliber_note": "动物口径：动物 = (group_name, mouse_id)（标准表达 COUNT(DISTINCT CONCAT(group_name, '|', mouse_id))；animal_code 是组-鼠-试次编码，不能当动物数）\n聚合口径：组间统计的推荐聚合口径是逐鼠-逐日：先按 (group_name, mouse_id, date_dir) 聚合再组间比较；试次直均有伪重复风险（统计单位=动物，docs/09 Q17）\n阶段口径：统计与对比必须先声明 phase（训练期/探测期），两阶段不可混算"
+    },
+    {
+      "id": 28,
+      "category": "A",
+      "behavior": "cells_match",
+      "passed": true,
+      "outcome": "ok",
+      "detail": "6 docs/09 cells within tolerance",
+      "sql": "SELECT t.group_name, AVG(CASE WHEN t.date_dir = '0804' THEN t.mouse_avg_latency END) AS day1_latency_s, AVG(CASE WHEN t.date_dir = '0808' THEN t.mouse_avg_latency END) AS day5_latency_s, ROUND((AVG(CASE WHEN t.date_dir = '0808' THEN t.mouse_avg_latency END) - AVG(CASE WHEN t.date_dir = '0804' THEN t.mouse_avg_latency END)) / AVG(CASE WHEN t.date_dir = '0804' THEN t.mouse_avg_latency END) * 100, 2) AS latency_change_pct FROM (SELECT v.group_name, v.mouse_id, v.date_dir, AVG(m.value) AS mouse_avg_latency FROM videos AS v JOIN trial_metrics AS m ON v.video_id = m.video_id WHERE v.phase = 'training_day' AND v.date_dir IN ('0804', '0808') AND m.metric = 'escape_latency_s' AND m.algo_version = 'v1-platformzone-46px-maskcontact-mount500ms' AND m.calc_status = 'ok' GROUP BY v.group_name, v.mouse_id, v.date_dir) AS t GROUP BY t.group_name ORDER BY t.group_name LIMIT 200",
+      "attempts": 2,
+      "reason_code": null,
+      "row_count": 6,
+      "golden_drift": [
+        {
+          "where": {
+            "group_name": "A+L1"
+          },
+          "column": "pct_change",
+          "expected": -39.6,
+          "actual": -39.6,
+          "rel_diff": 0.0,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A+L3"
+          },
+          "column": "pct_change",
+          "expected": -40.7,
+          "actual": -40.7,
+          "rel_diff": 0.0,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A2"
+          },
+          "column": "pct_change",
+          "expected": 51.0,
+          "actual": 51.0,
+          "rel_diff": 0.0,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "A3"
+          },
+          "column": "pct_change",
+          "expected": -20.2,
+          "actual": -20.2,
+          "rel_diff": 0.0,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "c1"
+          },
+          "column": "pct_change",
+          "expected": -25.5,
+          "actual": -25.5,
+          "rel_diff": 0.0,
+          "ok": true,
+          "note": ""
+        },
+        {
+          "where": {
+            "group_name": "c2"
+          },
+          "column": "pct_change",
+          "expected": -21.7,
+          "actual": -21.7,
+          "rel_diff": 0.0,
+          "ok": true,
+          "note": ""
+        }
+      ],
+      "question": "训练期内第 5 天相对第 1 天，各组逃逸潜伏期变化率（百分比）是多少？",
+      "elapsed_s": 33.92,
+      "columns": [
+        "group_name",
+        "day1_latency_s",
+        "day5_latency_s",
+        "latency_change_pct"
+      ],
+      "caliber_note": "动物口径：动物 = (group_name, mouse_id)（标准表达 COUNT(DISTINCT CONCAT(group_name, '|', mouse_id))；animal_code 是组-鼠-试次编码，不能当动物数）\n聚合口径：组间统计的推荐聚合口径是逐鼠-逐日：先按 (group_name, mouse_id, date_dir) 聚合再组间比较；试次直均有伪重复风险（统计单位=动物，docs/09 Q17）\n阶段口径：统计与对比必须先声明 phase（训练期/探测期），两阶段不可混算"
+    }
+  ]
+}

@@ -80,13 +80,23 @@ GROUP BY video_id;
 
 ## 延迟问题清单（第二批指标/事件定义验证后加入）
 
-| 文献依据 | 问题方向 |
-|---|---|
-| Vorhees & Williams 2006（Nature Protocols）；全部 AD 模型研究 | 逃逸潜伏期学习曲线——领域第一指标（**事件定义验证已决策前置到 M1 中段**） |
-| "What is the most sensitive measure of water maze probe test performance?" 2009 | 探测期目标象限停留 vs 平台穿越次数敏感性 |
-| "Novel measures … vector field maps"（Hippocampus） | Gallagher 邻近度类指标 |
-| 2003/2015/2019 策略三部曲 | 搜索策略分类占比 |
-| "Effective identification of AD … motion analysis" | 转头/摆尾角度与潜伏期相关性 |
+| 文献依据 | 问题方向 | 状态 |
+|---|---|---|
+| Vorhees & Williams 2006（Nature Protocols）；全部 AD 模型研究 | 逃逸潜伏期学习曲线——领域第一指标（**事件定义验证已决策前置到 M1 中段**） | ✅ 已入套件（**Q27**，工单 #6/ADR-0006；均值只含有效上台试次） |
+| Vorhees & Williams 2006；学习曲线通用 | 第 1 vs 5 天潜伏期改善百分比（与 Q4 距离改善并列） | ✅ 已入套件（**Q28**，工单 #6；A2 正值=真实反弹） |
+| "What is the most sensitive measure of water maze probe test performance?" 2009 | 探测期目标象限停留 vs 平台穿越次数敏感性 | 待后续 |
+| "Novel measures … vector field maps"（Hippocampus） | Gallagher 邻近度类指标 | 待后续 |
+| 2003/2015/2019 策略三部曲 | 搜索策略分类占比 | 待后续 |
+| "Effective identification of AD … motion analysis" | 转头/摆尾角度与潜伏期相关性 | 待后续 |
+
+### 已入套件：逃逸潜伏期两问（Q27/Q28，2026-10-13，工单 #6）
+
+事件口径经实验负责人书面确认（docs/10，含碰台 mask 参与的用户裁决）后，逃逸潜伏期以独立
+`algo_version=v1-platformzone-46px-maskcontact-mount500ms` 入 `trial_metrics`（事件 5 指标：
+潜伏期 + 四个事件时刻）。Q27 = 组×日均值学习曲线（30 格黄金矩阵实算入库）；Q28 = 第 1 vs 5
+天改善百分比。口径要点：均值只聚合 `calc_status='ok'` 行（有效上台试次），`no_mount` 不计
+（310/549 上台，no_mount 是真实失败率）；两问已过活库锚点校验（130 格全绿）与真 LLM 管线评测（Q27 30/30、Q28 6/6
+cells PASS，证据 docs/evidence/m1-t7/）。
 
 平台位置数据已可查（`platform_positions` 表，2026-10-12 从 E1 报告 CSV 入库，逐日共识坐标+双方法交叉+Probe 靶区），为延迟问题的 crossing/象限计算提供输入。
 

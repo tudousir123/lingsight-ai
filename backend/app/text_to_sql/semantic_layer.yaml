@@ -32,13 +32,18 @@ synonyms:
   放鼠象限(探测期): session_label
   游泳距离: "trial_metrics（metric='dist_px'）"
   平均速度: "trial_metrics（metric='speed_px'）"
+  逃逸潜伏期: "trial_metrics（metric='escape_latency_s'，algo_version='v1-platformzone-46px-maskcontact-mount500ms'；均值只含 calc_status='ok' 行，no_mount 不计）"
+  首次出现: "trial_metrics（metric='first_detection_s'，事件版本）"
+  首次入水: "trial_metrics（metric='water_entry_s'，事件版本）"
+  碰台: "trial_metrics（metric='platform_contact_s'，事件版本；mask 判定，早于或等于上台）"
+  有效上台: "trial_metrics（metric='mount_s'，事件版本）"
 
 # 表关系：全库无外键，join 只能依据此声明（docs/08 风险 4）
 relations:
   - {from: videos.dataset_id, to: datasets.dataset_id, cardinality: many_to_one}
   - {from: qc_summary.video_id, to: videos.video_id, cardinality: one_to_one}
   - {from: v_query_frame_predictions.video_id, to: videos.video_id, cardinality: many_to_one}
-  - {from: trial_metrics.video_id, to: videos.video_id, cardinality: many_to_one, note: 长格式——每视频每指标一行（4 指标），join 前先按 metric（必要时加 algo_version）过滤}
+  - {from: trial_metrics.video_id, to: videos.video_id, cardinality: many_to_one, note: 长格式——每视频每指标一行（轨迹 4 指标 + 事件 5 指标，分属两个 algo_version），join 前先按 metric（必要时加 algo_version）过滤}
   - {from: videos.date_dir, to: platform_positions.day_label, cardinality: label_match, note: 软对应——仅训练日 0804–0808 匹配；platform_positions 另含 Probe 靶区行与 all 汇总行，join 前须按 day_label 过滤}
 
 # 聚合口径（docs/09 公共口径 + ADR-0003）
@@ -188,19 +193,19 @@ tables:
       instant_static_by_iou: {reason: 管线内部质量量（疑似静止标记），聚合已入 qc_summary}
 
   trial_metrics:
-    description: 试次级行为指标表（ADR-0003，M1-T3 已上线）：确定性 Python 从 frame_predictions 预计算，SQL/LLM 不推导指标；长格式每视频每指标一行
+    description: 试次级行为指标表（ADR-0003/M1-T3 + ADR-0006 事件批/工单 #6）：确定性 Python 从 frame_predictions 预计算，SQL/LLM 不推导指标；长格式每视频每指标一行，轨迹 4 指标与事件 5 指标分属两个 algo_version
     exposed: true
     primary_key: [video_id, metric, algo_version]
     columns:
       video_id: {type: varchar(128), meaning: 视频标识（视频=试次），关联 videos.video_id}
-      metric: {type: varchar(32), meaning: 指标名, domain: "dist_px=游泳距离 | speed_px=平均速度 | valid_kp_ratio=有效关键点帧占比 | in_pool_ratio=在池时间占比"}
-      algo_version: {type: varchar(64), meaning: 算法版本（重算发新版本，不覆盖旧值）, domain: "v1-polyline-ok-frames（当前）", caution: 聚合须固定 algo_version，避免新旧版本混算}
-      value: {type: double, meaning: 指标值, caution: 仅 calc_status='ok' 的行参与聚合}
-      unit: {type: varchar(16), meaning: 单位, domain: "px | px/s | ratio"}
-      calc_status: {type: varchar(24), meaning: 计算状态（失败行保留原因而非静默缺行）, domain: "ok=已算出 | no_frames/no_ok_frames/insufficient_ok_frames=帧不足 | missing_pool_params=缺池参数"}
+      metric: {type: varchar(32), meaning: 指标名, domain: "dist_px=游泳距离 | speed_px=平均速度 | valid_kp_ratio=有效关键点帧占比 | in_pool_ratio=在池时间占比 | escape_latency_s=逃逸潜伏期（首次出现→有效上台，秒） | first_detection_s=首次出现时刻 | water_entry_s=首次入水时刻 | platform_contact_s=碰台时刻（mask 判定） | mount_s=有效上台时刻"}
+      algo_version: {type: varchar(64), meaning: 算法版本（重算发新版本，不覆盖旧值）, domain: "v1-polyline-ok-frames=轨迹 4 指标 | v1-platformzone-46px-maskcontact-mount500ms=事件 5 指标（ADR-0006）", caution: 聚合须固定 algo_version；事件指标与轨迹指标版本不同，跨指标同查时按各自版本过滤}
+      value: {type: double, meaning: 指标值, caution: 仅 calc_status='ok' 的行参与聚合（如潜伏期均值只含有效上台试次，no_mount 是真实失败不计入）}
+      unit: {type: varchar(16), meaning: 单位, domain: "px | px/s | ratio | s"}
+      calc_status: {type: varchar(24), meaning: 计算状态（失败行保留原因而非静默缺行）, domain: "ok=已算出 | no_frames/no_ok_frames/insufficient_ok_frames=帧不足 | missing_pool_params=缺池参数 | missing_platform_params/missing_mask_params=缺平台/mask参数（事件批） | no_entry=从未入池 | no_contact=从未碰台 | no_mount=全程无有效上台（试次失败也是数据）"}
       ok_frames: {type: int, meaning: 口径快照：该视频 status='ok' 帧数}
       total_frames: {type: int, meaning: 口径快照：该视频全部帧数}
       duration_s: {type: double, meaning: 口径快照：ok 帧时间跨度（秒，speed_px 的分母）}
       calculated_at: {type: timestamp, meaning: 本行写入/更新时间（UTC）}
     excluded_columns:
-      definition: {reason: 行级口径文本快照（溯源用），结构化口径以本语义层与 ADR-0003 为准}
+      definition: {reason: 行级口径文本快照（溯源用），结构化口径以本语义层与 ADR-0003/0006 为准}
