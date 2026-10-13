@@ -9,6 +9,9 @@ export default defineConfig({
   build: {
     outDir: "../backend/app/frontend",
     emptyOutDir: true,
+    // Local HealthAD previews are served from public/ only by the dev server.
+    // Never copy private sample video, labels, or tracks into the backend bundle.
+    copyPublicDir: false,
   },
   resolve: {
     alias: {

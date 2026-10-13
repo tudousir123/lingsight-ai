@@ -37,6 +37,8 @@ logs/
 # Node / frontend build artifacts
 node_modules/
 backend/app/frontend/
+frontend/public/local-preview/
+docs/local-product-manual/
 /test-results/
 /playwright-report/
 /blob-report/

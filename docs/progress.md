@@ -5,6 +5,7 @@
 | 项目 | 状态 | 证据 / 待办 |
 |---|---|---|
 | 产品与选型 | **文档已确定** | 以 README 和 docs/01-product-spec.md 为准 |
+| 前端四页界面预览 | **已实现示例页面（2026-10-13）** | 现有 React 前端新增实验视频列表、分析准备、单次结果和统计报告路由；采用 shadcn/ui 官方 dashboard-01 页面组合并复用项目组件，Recharts 图表；构建与浏览器示例流程已验证。全部使用虚构数据与合成图片，导入/推理/保存/导出未接后端。 |
 | GitHub 仓库正式更名 | **待执行** | 当前连接器无重命名操作，需要在 GitHub Settings 手动完成 |
 | 脚手架选型 | **FastAPI 官方 full-stack-fastapi-template（已落地）** | ADR-0002；MIT、React+TS+Vite、SQLModel+Alembic、JWT、Docker/CI/Playwright |
 | M0 脚手架验收（工单 #2） | **已验收（2026-10-12）** | 一键 `docker compose up -d --wait` 全 healthy；MySQL 8.4 适配（pymysql/CHAR(36)/迁移重建，ADR-0005）；模板自带测试全绿：pytest 58/58（coverage 92%）、Playwright 62/62；证据 `docs/evidence/m0/`。偏离：asyncmy→pymysql（模板为同步数据层） |
