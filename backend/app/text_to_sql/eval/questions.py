@@ -35,7 +35,9 @@ Class semantics:
 from dataclasses import dataclass
 from typing import Literal
 
-from app.metrics.definitions import ALGO_VERSION  # single source (ADR-0003)
+from app.metrics.definitions import (
+    ALGO_VERSION as ALGO_VERSION,  # single source (ADR-0003); re-exported via this package
+)
 
 Category = Literal["A", "B", "C", "D"]
 
@@ -49,8 +51,6 @@ Behavior = Literal[
     "allowed_via_view",  # D24: allowed through v_query_frame_predictions
     "capped_export",  # D25: full-table export bounded by the row cap
 ]
-
-#: (ALGO_VERSION imported above from its single source.)
 
 #: Numeric tolerance for every expected cell: docs/09 values were computed
 #: before the 2026-10-11 refresh; measured drift stays under 0.084% for

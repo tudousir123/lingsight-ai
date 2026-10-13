@@ -82,7 +82,11 @@ def validate_sql(sql: str, whitelist: AstWhitelist, *, max_rows: int) -> Validat
     """Validate one generated statement; raise ``ValidationFailure`` otherwise."""
     statement = _parse_single(sql)
     _assert_plain_select(statement)
-    scopes = list(build_scope(statement).traverse())  # type: ignore[union-attr]
+    scope = build_scope(statement)
+    if scope is None:  # unreachable for roots in _QUERY_ROOTS; guards sqlglot drift
+        msg = "sqlglot could not build a scope for the statement"
+        raise ValidationFailure("parse_error", msg)
+    scopes = list(scope.traverse())
 
     table_sources = _check_tables_and_dbs(statement, scopes, whitelist)
     _check_columns(scopes, whitelist)
