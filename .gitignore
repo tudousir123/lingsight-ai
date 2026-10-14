@@ -36,6 +36,8 @@ logs/
 
 # Node / frontend build artifacts
 node_modules/
+# 前端锁 bun.lock；npm install 会产出这份漂移锁文件（docs/agents/local-e2e.md §3）
+package-lock.json
 frontend/.tanstack/
 backend/app/frontend/
 frontend/public/local-preview/
