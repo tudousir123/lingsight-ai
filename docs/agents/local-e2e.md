@@ -30,14 +30,14 @@ docker exec lingsight-ai-db-1 sh -c 'mysql -uapp -p"$MYSQL_PASSWORD" app -e "del
 docker compose build backend playwright
 ```
 
-## 4. 跑过后端 pytest 之后，dev 栈用户会全部消失
+## 4. 跑过后端 pytest 之后，app 库用户被清空（超管自动重建，手工账号会丢）
 
 `backend/tests/conftest.py` 的 autouse session fixture 在 teardown 执行
 `delete(Item)` + `delete(User)`（模板设计，CI 每 shard 全新库无害），而本地测试
-engine 指向的就是 compose 栈的 `app` 库——**任何一次 `uv run pytest` 结束都会
-清空 dev 栈的全部用户**，随后的 Playwright auth 会以 400 假失败（2026-10-14
-两次实锤，user 表 Update_time 与 pytest 会话结束时刻一致）。`scripts/e2e-local.sh`
-已把 prestart 重建串进流程；手动恢复：`docker compose run --rm backend bash scripts/prestart.sh`。
+engine 指向的就是 compose 栈的 `app` 库——**任何一次 `uv run pytest`（哪怕单
+文件）都会清空 dev 栈用户**。2026-10-14 retro 起 teardown 会紧接着用 `init_db`
+**自动重建 FIRST_SUPERUSER**，本地 admin 登录不再被悄悄废掉；但**其他手工创建
+的账号仍会丢失**。需要完整重建时：`docker compose run --rm backend bash scripts/prestart.sh`。
 注意 trial_review 不在 teardown 清单里，那是第 2 节的另一个坑。
 
 ## 3. 本机没有 bun 时别用 `npm run lint`
@@ -67,4 +67,14 @@ settings 加新 env 时**没有人会提醒你同步 compose**，这是隐形耦
 
 ```bash
 docker exec lingsight-ai-backend-1 sh -c 'tr "\0" "\n" < /proc/1/environ | grep LLM_'
+```
+
+## 7. curl 探 SPA 深链接 404 是正常行为，必须带 Accept: text/html
+
+FastAPI 的 `app.frontend()` 按 Accept 头分流：浏览器导航（`Accept: text/html`）
+才回退到 index.html；curl 默认 `Accept: */*` 会被当成资产请求返回 404。曾据此
+误判「页面坏了」（2026-10-14）。正确探活：
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -H "Accept: text/html" http://localhost/qa
 ```

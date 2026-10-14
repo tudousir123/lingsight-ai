@@ -39,6 +39,11 @@ def db() -> Generator[Session]:
             session.execute(delete(Item))
             session.execute(delete(User))
             session.commit()
+            # 本机 dev 栈与测试共享 app 库：清空后立刻用同一个 init_db 把
+            # FIRST_SUPERUSER 重建回来，任何一次 pytest（哪怕单文件）都不再
+            # 静默废掉本地登录（曾两次咬人，local-e2e §4 / retro 2026-10-14）。
+            # 其他手工账号仍会丢失；CI 每分片全新库，无感。
+            init_db(session)
     finally:
         fcntl.flock(lock, fcntl.LOCK_UN)
         lock.close()
