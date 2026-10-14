@@ -18,7 +18,12 @@ from fastapi.testclient import TestClient
 from app.api.routes.research import get_query_provider, get_research_settings
 from app.main import app
 from app.text_to_sql.executor import QueryExecutionError, ResearchQueryExecutor
-from app.text_to_sql.gateway import OpenAICompatProvider, ProviderError
+from app.text_to_sql.gateway import (
+    AnthropicCompatProvider,
+    OpenAICompatProvider,
+    ProviderError,
+    build_provider,
+)
 from app.text_to_sql.settings import ResearchQuerySettings
 
 DEMO_QUESTION = "一共有多少只动物"
@@ -561,3 +566,139 @@ def test_probe_treats_any_http_status_as_alive(
         model="m",
     )
     provider.probe()
+
+
+class TestAnthropicCompatProvider:
+    """Wire-protocol coverage for /v1/messages (GLM Coding Plan keys)."""
+
+    def _provider(self) -> AnthropicCompatProvider:
+        return AnthropicCompatProvider(
+            base_url="https://example.invalid/anthropic",
+            api_key="sub-key",
+            model="glm-4.7",
+            max_tokens=128,
+        )
+
+    def test_system_messages_move_to_top_level_system(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_post(_url: str, /, **kwargs: Any) -> httpx.Response:
+            captured.update(kwargs)
+            return httpx.Response(
+                200,
+                json={"content": [{"type": "text", "text": "ok"}]},
+            )
+
+        monkeypatch.setattr(httpx, "post", fake_post)
+        result = self._provider().chat(
+            [
+                {"role": "system", "content": "be a SQL engine"},
+                {"role": "user", "content": "q1"},
+                {"role": "system", "content": "extra rule"},
+                {"role": "assistant", "content": "a1"},
+                {"role": "user", "content": "q2"},
+            ]
+        )
+        assert result == "ok"
+        payload = captured["json"]
+        assert isinstance(payload, dict)
+        # Anthropic rejects system inside messages; both blocks are joined
+        # and lifted, turn order otherwise preserved.
+        assert payload["system"] == "be a SQL engine\n\nextra rule"
+        assert [m["role"] for m in payload["messages"]] == [
+            "user",
+            "assistant",
+            "user",
+        ]
+        assert payload["max_tokens"] == 128
+        headers = captured["headers"]
+        assert isinstance(headers, dict)
+        assert headers["x-api-key"] == "sub-key"
+        assert headers["anthropic-version"] == "2023-06-01"
+        assert "Authorization" not in headers
+
+    def test_thinking_blocks_are_skipped_and_text_blocks_joined(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_post(_url: str, /, **_kwargs: Any) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "content": [
+                        {"type": "thinking", "thinking": "internal", "signature": "s"},
+                        {"type": "text", "text": "SELECT 1"},
+                        {"type": "text", "text": " -- tail"},
+                    ]
+                },
+            )
+
+        monkeypatch.setattr(httpx, "post", fake_post)
+        assert self._provider().chat([{"role": "user", "content": "hi"}]) == (
+            "SELECT 1 -- tail"
+        )
+
+    def test_reasoning_only_response_is_empty_content(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_post(_url: str, /, **_kwargs: Any) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={"content": [{"type": "thinking", "thinking": "…"}]},
+            )
+
+        monkeypatch.setattr(httpx, "post", fake_post)
+        with pytest.raises(ProviderError, match="empty content"):
+            self._provider().chat([{"role": "user", "content": "hi"}])
+
+    def test_error_surfaces_vendor_reason(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_post(_url: str, /, **_kwargs: Any) -> httpx.Response:
+            return httpx.Response(
+                429,
+                json={"error": {"code": "1113", "message": "余额不足或无可用资源包"}},
+            )
+
+        monkeypatch.setattr(httpx, "post", fake_post)
+        with pytest.raises(ProviderError, match=r"HTTP 429.*1113"):
+            self._provider().chat([{"role": "user", "content": "hi"}])
+
+
+class TestBuildProvider:
+    def test_openai_protocol_by_default(self) -> None:
+        provider = build_provider(
+            ResearchQuerySettings(
+                _env_file=None,
+                LLM_BASE_URL="https://example.invalid/v1",
+                LLM_MODEL="gpt-4o-mini",
+            )
+        )
+        assert isinstance(provider, OpenAICompatProvider)
+
+    def test_anthropic_protocol_selected_by_config(self) -> None:
+        provider = build_provider(
+            ResearchQuerySettings(
+                _env_file=None,
+                LLM_BASE_URL="https://example.invalid/anthropic",
+                LLM_MODEL="glm-4.7",
+                LLM_PROTOCOL="anthropic",
+                LLM_MAX_TOKENS=77,
+            )
+        )
+        assert isinstance(provider, AnthropicCompatProvider)
+
+    def test_unknown_protocol_is_rejected(self) -> None:
+        with pytest.raises(ProviderError, match="LLM_PROTOCOL"):
+            build_provider(
+                ResearchQuerySettings(
+                    _env_file=None,
+                    LLM_BASE_URL="https://example.invalid",
+                    LLM_PROTOCOL="grpc",
+                )
+            )
+
+    def test_missing_base_url_is_rejected(self) -> None:
+        with pytest.raises(ProviderError, match="LLM_BASE_URL is not configured"):
+            build_provider(ResearchQuerySettings(_env_file=None))

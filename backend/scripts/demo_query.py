@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.text_to_sql.executor import ResearchQueryExecutor  # noqa: E402
-from app.text_to_sql.gateway import OpenAICompatProvider  # noqa: E402
+from app.text_to_sql.gateway import build_provider  # noqa: E402
 from app.text_to_sql.pipeline import ResearchQueryPipeline  # noqa: E402
 from app.text_to_sql.settings import get_research_settings  # noqa: E402
 
@@ -31,7 +31,7 @@ def main() -> int:
         return 2
     pipeline = ResearchQueryPipeline(
         settings=settings,
-        provider=OpenAICompatProvider.from_settings(settings),
+        provider=build_provider(settings),
         executor=ResearchQueryExecutor(settings),
     )
     outcome = pipeline.run(question)

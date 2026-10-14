@@ -27,6 +27,13 @@ class ResearchQuerySettings(BaseSettings):
     LLM_API_KEY: str | None = None
     LLM_MODEL: str = "gpt-4o-mini"
     LLM_TIMEOUT_SECONDS: float = 60.0
+    #: Wire protocol of the endpoint: "openai" (/chat/completions) or
+    #: "anthropic" (/v1/messages — GLM Coding Plan subscription keys and
+    #: Claude-compatible vendors). Swapping protocol stays a config change.
+    LLM_PROTOCOL: str = "openai"
+    #: Anthropic protocol requires max_tokens on every request; sized for
+    #: deterministic SQL generation (reasoning blocks share this budget).
+    LLM_MAX_TOKENS: int = 4096
 
     # --- Read-only research database (lingsight_ro on water_maze) ---
     RESEARCH_DB_HOST: str = "127.0.0.1"

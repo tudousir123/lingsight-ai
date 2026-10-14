@@ -38,6 +38,9 @@ class InjectedProvider:
     def __init__(self, sql: str) -> None:
         self._sql = sql
 
+    def probe(self) -> None:
+        """Scripted provider: nothing to reach, always alive."""
+
     def chat(self, messages: list[dict[str, str]]) -> str:
         return self._sql
 

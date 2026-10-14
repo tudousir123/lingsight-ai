@@ -49,6 +49,10 @@ def _unreachable(error: Exception) -> ProviderError:
 
 
 class Provider(Protocol):
+    def probe(self) -> None:
+        """Transport-level liveness check (any HTTP status counts as alive)."""
+        ...
+
     def chat(self, messages: list[Message]) -> str:
         """Return the assistant message content for the given conversation."""
         ...
@@ -69,21 +73,6 @@ class OpenAICompatProvider:
         self._api_key = api_key
         self._model = model
         self._timeout_seconds = timeout_seconds
-
-    @classmethod
-    def from_settings(cls, settings: ResearchQuerySettings) -> OpenAICompatProvider:
-        if not settings.LLM_BASE_URL:
-            msg = (
-                "LLM_BASE_URL is not configured; set LLM_BASE_URL/LLM_API_KEY/"
-                "LLM_MODEL in the environment to use a real provider"
-            )
-            raise ProviderError(msg)
-        return cls(
-            base_url=settings.LLM_BASE_URL,
-            api_key=settings.LLM_API_KEY,
-            model=settings.LLM_MODEL,
-            timeout_seconds=settings.LLM_TIMEOUT_SECONDS,
-        )
 
     def probe(self) -> None:
         """Transport-level liveness check; any HTTP status counts as alive.
@@ -128,3 +117,108 @@ class OpenAICompatProvider:
         if not isinstance(content, str) or not content.strip():
             raise ProviderError("LLM endpoint returned empty content")
         return content
+
+
+class AnthropicCompatProvider:
+    """/v1/messages (Anthropic wire protocol) over plain httpx.
+
+    Subscription keys (e.g. GLM Coding Plan) authenticate against the
+    Anthropic-compatible endpoint instead of /chat/completions. Two protocol
+    gaps are bridged here: system messages become the top-level ``system``
+    parameter (Anthropic rejects them inside ``messages``), and responses are
+    content-block arrays where only ``text`` blocks carry the answer —
+    reasoning blocks are skipped, and ``max_tokens`` is mandatory.
+    """
+
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        api_key: str | None,
+        model: str,
+        timeout_seconds: float = 60.0,
+        max_tokens: int = 4096,
+    ) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._api_key = api_key
+        self._model = model
+        self._timeout_seconds = timeout_seconds
+        self._max_tokens = max_tokens
+
+    def probe(self) -> None:
+        """Transport-level liveness check; any HTTP status counts as alive."""
+        try:
+            httpx.get(self._base_url, timeout=5.0)
+        except httpx.HTTPError as error:
+            raise _unreachable(error) from error
+
+    def chat(self, messages: list[Message]) -> str:
+        system_parts = [m["content"] for m in messages if m["role"] == "system"]
+        turns = [m for m in messages if m["role"] != "system"]
+        headers = {"anthropic-version": "2023-06-01"}
+        if self._api_key:
+            headers["x-api-key"] = self._api_key
+        payload: dict[str, object] = {
+            "model": self._model,
+            "messages": turns,
+            "max_tokens": self._max_tokens,
+            "temperature": 0,
+        }
+        if system_parts:
+            payload["system"] = "\n\n".join(system_parts)
+        try:
+            response = httpx.post(
+                f"{self._base_url}/v1/messages",
+                headers=headers,
+                json=payload,
+                timeout=self._timeout_seconds,
+            )
+        except httpx.HTTPError as error:
+            raise _unreachable(error) from error
+        if response.status_code != 200:
+            raise ProviderError(
+                f"LLM endpoint returned HTTP {response.status_code}"
+                f"{_error_detail(response)}"
+            )
+        try:
+            body = response.json()
+            blocks = body["content"]
+            content = "".join(
+                block["text"]
+                for block in blocks
+                if isinstance(block, dict) and block.get("type") == "text"
+            )
+        except (KeyError, TypeError, ValueError) as error:
+            msg = "LLM endpoint returned a malformed message response"
+            raise ProviderError(msg) from error
+        if not content.strip():
+            raise ProviderError("LLM endpoint returned empty content")
+        return content
+
+
+def build_provider(settings: ResearchQuerySettings) -> Provider:
+    """Wire the concrete provider from settings: protocol stays config."""
+    if not settings.LLM_BASE_URL:
+        msg = (
+            "LLM_BASE_URL is not configured; set LLM_BASE_URL/LLM_API_KEY/"
+            "LLM_MODEL in the environment to use a real provider"
+        )
+        raise ProviderError(msg)
+    if settings.LLM_PROTOCOL == "anthropic":
+        return AnthropicCompatProvider(
+            base_url=settings.LLM_BASE_URL,
+            api_key=settings.LLM_API_KEY,
+            model=settings.LLM_MODEL,
+            timeout_seconds=settings.LLM_TIMEOUT_SECONDS,
+            max_tokens=settings.LLM_MAX_TOKENS,
+        )
+    if settings.LLM_PROTOCOL == "openai":
+        return OpenAICompatProvider(
+            base_url=settings.LLM_BASE_URL,
+            api_key=settings.LLM_API_KEY,
+            model=settings.LLM_MODEL,
+            timeout_seconds=settings.LLM_TIMEOUT_SECONDS,
+        )
+    raise ProviderError(
+        f"LLM_PROTOCOL must be 'openai' or 'anthropic', got {settings.LLM_PROTOCOL!r}"
+    )

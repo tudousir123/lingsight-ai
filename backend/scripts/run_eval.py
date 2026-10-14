@@ -39,7 +39,7 @@ from app.text_to_sql.executor import (  # noqa: E402
     QueryExecutionError,
     ResearchQueryExecutor,
 )
-from app.text_to_sql.gateway import OpenAICompatProvider, ProviderError  # noqa: E402
+from app.text_to_sql.gateway import ProviderError, build_provider  # noqa: E402
 from app.text_to_sql.pipeline import (  # noqa: E402
     ResearchQueryAnswer,
     ResearchQueryPipeline,
@@ -183,7 +183,7 @@ def main(argv: list[str] | None = None) -> int:
         settings = settings.model_copy(update={"LLM_TIMEOUT_SECONDS": args.llm_timeout})
     questions = selected_questions(args.ids)
     try:
-        provider = OpenAICompatProvider.from_settings(settings)
+        provider = build_provider(settings)
         provider.probe()
         executor = ResearchQueryExecutor(settings)
         executor.run("SELECT 1")

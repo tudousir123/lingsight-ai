@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUser
-from app.text_to_sql.gateway import OpenAICompatProvider, Provider
+from app.text_to_sql.gateway import Provider, build_provider
 from app.text_to_sql.pipeline import (
     ResearchQueryAnswer,
     ResearchQueryPipeline,
@@ -45,7 +45,7 @@ class ResearchQueryRequest(BaseModel):
 
 def get_query_provider() -> Provider:
     """Model Gateway wired from env (LLM_BASE_URL/LLM_API_KEY/LLM_MODEL)."""
-    return OpenAICompatProvider.from_settings(get_research_settings())
+    return build_provider(get_research_settings())
 
 
 @router.post("/query", response_model=None)
