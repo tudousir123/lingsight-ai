@@ -72,6 +72,26 @@ services:
       # Synthetic trial fixture for the CI/dev stack (no research database
       # there); empty on hosts that mount the real research library instead.
       TRIALS_FIXTURE_DIR: ${TRIALS_FIXTURE_DIR:-}
+      # Text-to-SQL research query: pass the host .env LLM gateway + read-only
+      # research DB credentials through (settings prefer env vars over the
+      # unmounted ../.env). Without these POST /api/v1/research/query fails
+      # with ProviderError inside the container (verified 2026-10-14).
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_PROTOCOL: ${LLM_PROTOCOL:-openai}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-4096}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
+      LLM_THINKING: ${LLM_THINKING:-disabled}
+      LLM_THINKING_BUDGET_TOKENS: ${LLM_THINKING_BUDGET_TOKENS:-8192}
+      LINGSIGHT_RO_PASSWORD: ${LINGSIGHT_RO_PASSWORD:-}
+      # healthad-mysql publishes 3306 on the host; reach it via the Docker
+      # gateway instead of the 127.0.0.1 default (which is the container itself).
+      RESEARCH_DB_HOST: ${RESEARCH_DB_HOST:-host.docker.internal}
+      RESEARCH_DB_PORT: ${RESEARCH_DB_PORT:-3306}
+    extra_hosts:
+      # Linux: resolve host.docker.internal to the Docker bridge gateway
+      - "host.docker.internal:host-gateway"
 
   mailpit:
     image: axllent/mailpit
