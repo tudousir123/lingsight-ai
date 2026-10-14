@@ -18,6 +18,12 @@ fi
 echo "==> rebuilding the playwright image (tests are baked in, not mounted)"
 docker compose build playwright >/dev/null
 
+# The app under test (backend + built frontend) is baked into the backend
+# image too — without this rebuild, source changes silently test stale code
+# (bit twice on 2026-10-14: SSE endpoint and /qa page both 404'd).
+echo "==> rebuilding the backend image (app + frontend are baked in)"
+docker compose build backend >/dev/null
+
 echo "==> ensuring backend matches the current .env (fixture/research mode)"
 docker compose up -d --wait backend db mailpit >/dev/null
 

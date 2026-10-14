@@ -1,7 +1,11 @@
 services:
 
+  # Docker daemon restarts silently killed this stack once (2026-10-14):
+  # every lingsight container exited 255 while other projects' restart
+  # policies brought them back. unless-stopped keeps the dev stack alive.
   proxy:
     image: traefik:v3.7
+    restart: unless-stopped
     ports:
       - "80:80"
       - "8090:8080"
@@ -24,6 +28,7 @@ services:
       # Enable the Dashboard and API in insecure mode for local development
       - --api.insecure=true
   db:
+    restart: unless-stopped
     ports:
       # 3306/3307 are taken by the local MySQL containers (incl. water_maze)
       - "3308:3306"
@@ -34,6 +39,7 @@ services:
       - "8081:8080"
 
   backend:
+    restart: unless-stopped
     ports:
       - "8000:8000"
     build:
