@@ -9,7 +9,7 @@
 - **领域词汇**：[GLOSSARY.md](GLOSSARY.md)。评审、口径与命名以此为准（如：语义层不说 MDL；动物 = (group_name, mouse_id)）。
 - **语义层唯一事实来源**：`backend/app/text_to_sql/semantic_layer.yaml`。改 water_maze 表结构、暴露面或口径，先改这份 YAML，再同步库与测试——提示词上下文与 AST 白名单都从它渲染，禁止手写第二份。
 - **真实科研库**：本机容器 `healthad-mysql` 的 `water_maze` 库；root 凭据只存在于容器 env（`docker exec healthad-mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" …'`，不回显不入库）；应用侧只读账户 `lingsight_ro`（密码=根 `.env` 的 `LINGSIGHT_RO_PASSWORD`，仅汇总表权限如 videos/trial_metrics/platform_positions，帧级表如 frame_predictions 走容器 root）。
-- **检查命令**：静态检查 = `cd backend && uv run bash scripts/lint.sh`（mypy strict + ty + ruff，覆盖 `app/` 与 `scripts/`）；测试 = `uv run pytest`，`env_gated` 标记的执行层测试依赖真实研究库/LLM，门控探活失败自动 skip（CI 只跑结构层）。评审判断型规则见 [CODING_STANDARDS.md](CODING_STANDARDS.md)。前端本机无 bun 时用 `scripts/fe.sh`（build / regen-routes / check|fix <files>，docker 跑仓库锁定的 bun 工具链；别用 `npm run lint`，见 local-e2e §3）。
+- **检查命令**：静态检查 = `cd backend && uv run bash scripts/lint.sh`（mypy strict + ty + ruff，覆盖 `app/` 与 `scripts/`）；测试 = `uv run pytest`，`env_gated` 标记的执行层测试依赖真实研究库/LLM，门控探活失败自动 skip（CI 只跑结构层）。**任何一次 pytest（哪怕单文件）结束都会清空 dev 栈 app 库用户**，之后用 `docker compose run --rm backend bash scripts/prestart.sh` 恢复（local-e2e §4）。评审判断型规则见 [CODING_STANDARDS.md](CODING_STANDARDS.md)。前端本机无 bun 时用 `scripts/fe.sh`（build / regen-routes / check|fix <files>，docker 跑仓库锁定的 bun 工具链；别用 `npm run lint`，见 local-e2e §3）。
 - **进度事实**：[docs/progress.md](docs/progress.md)；决策依据在 [docs/adr/](docs/adr/)。
 
 ## 1. 当前目标与边界
