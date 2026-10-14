@@ -5,6 +5,7 @@
 ## 0. 导航指针
 
 - **工单与流程**：[docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)（GitHub issues + `gh` 用法、阻塞边查询）；并行开发两张工单时用 [docs/agents/parallel-tickets.md](docs/agents/parallel-tickets.md) 的 worktree 配方。
+- **本机跑全栈 Playwright**（trial-flow 等 compose spec）：用 `scripts/e2e-local.sh`；夹具 env、重跑清表与 bun/npm 漂移三个坑见 [docs/agents/local-e2e.md](docs/agents/local-e2e.md)。
 - **领域词汇**：[GLOSSARY.md](GLOSSARY.md)。评审、口径与命名以此为准（如：语义层不说 MDL；动物 = (group_name, mouse_id)）。
 - **语义层唯一事实来源**：`backend/app/text_to_sql/semantic_layer.yaml`。改 water_maze 表结构、暴露面或口径，先改这份 YAML，再同步库与测试——提示词上下文与 AST 白名单都从它渲染，禁止手写第二份。
 - **真实科研库**：本机容器 `healthad-mysql` 的 `water_maze` 库；root 凭据只存在于容器 env（`docker exec healthad-mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" …'`，不回显不入库）；应用侧只读账户 `lingsight_ro`（密码=根 `.env` 的 `LINGSIGHT_RO_PASSWORD`，仅汇总表权限如 videos/trial_metrics/platform_positions，帧级表如 frame_predictions 走容器 root）。

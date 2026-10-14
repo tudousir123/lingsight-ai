@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test"
+import { firstSuperuser, firstSuperuserPassword } from "./config"
+import { setCheckbox } from "./utils/checkbox"
 
 // Full-stack trial-flow spec (#18): the compose stack serves the synthetic
 // fixture (TRIALS_FIXTURE_DIR), so these run against the real backend —
@@ -25,6 +27,37 @@ function prepareUrl(trial: string) {
 function resultUrl(trial: string) {
   return `/experiments/${experiment}/trials/${trial}/result`
 }
+
+// Fail fast with a diagnosis instead of six per-test 503s: the most common
+// full-stack failure is the backend quietly running in research mode.
+// Root cause seen live: `docker compose run` re-evaluates the dependent
+// backend's `${TRIALS_FIXTURE_DIR:-}` interpolation with the *current* shell
+// env, so a value injected only as a command prefix is silently wiped — and
+// `compose exec`/`docker inspect` then still show it, because they re-evaluate
+// the compose file too. The fixture env must come from .env.
+test("backend is serving the synthetic fixture catalog", async ({
+  request,
+}) => {
+  // The request fixture does not inherit the app's localStorage token, so
+  // log in explicitly — the catalog endpoint requires authentication.
+  const login = await request.post("/api/v1/login/access-token", {
+    form: { username: firstSuperuser, password: firstSuperuserPassword },
+  })
+  expect(
+    login.status(),
+    "backend not reachable — is the compose stack up? (docker compose up -d backend db mailpit)",
+  ).toBe(200)
+  const token = ((await login.json()) as { access_token: string }).access_token
+  const response = await request.get("/api/v1/experiments", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const body = (await response.json()) as { data?: { id: string }[] }
+  const ids = (body.data ?? []).map((item) => item.id)
+  expect(
+    ids,
+    "backend answered but not in fixture mode — set TRIALS_FIXTURE_DIR in .env (see docs/agents/local-e2e.md), not as a shell prefix, then: docker compose up -d --force-recreate backend",
+  ).toContain(experiment)
+})
 
 test("select trial, review four checks, confirm, and open the same trial's results", async ({
   page,
@@ -68,12 +101,7 @@ test("select trial, review four checks, confirm, and open the same trial's resul
     "确认基准平台",
     "确认追踪质量",
   ]) {
-    await page
-      .locator(`button[role="checkbox"][aria-label="${label}"]`)
-      .dispatchEvent("click")
-    await expect(
-      page.locator(`button[role="checkbox"][aria-label="${label}"]`),
-    ).toHaveAttribute("aria-checked", "true")
+    await setCheckbox(page, label, true)
   }
   await expect(page.getByRole("button", { name: "最终确认" })).toBeEnabled()
 
@@ -182,12 +210,8 @@ test("a failed review save keeps the reviewer's selections", async ({
     page.getByRole("heading", { name: "分析准备 · 合成试次D.mp4" }),
   ).toBeVisible()
 
-  await page
-    .locator('button[role="checkbox"][aria-label="确认试次边界"]')
-    .dispatchEvent("click")
-  await page
-    .locator('button[role="checkbox"][aria-label="确认追踪质量"]')
-    .dispatchEvent("click")
+  await setCheckbox(page, "确认试次边界", true)
+  await setCheckbox(page, "确认追踪质量", true)
   await page.getByRole("button", { name: "保存草稿" }).click()
   await expect(page.getByText("保存失败，请重试")).toBeVisible()
 
