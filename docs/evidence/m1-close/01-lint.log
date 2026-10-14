@@ -1,0 +1,10 @@
+# lint.sh @ dddd52e 2026-10-14T14:07:39+08:00
++ mypy app scripts
+Success: no issues found in 60 source files
++ ty check app scripts
+All checks passed!
++ ruff check app scripts
+All checks passed!
++ ruff format app scripts --check
+60 files already formatted
+lint_exit=0
