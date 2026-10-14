@@ -18,6 +18,7 @@ import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutPrepareRouteImport } from './routes/_layout/prepare'
+import { Route as LayoutQaRouteImport } from './routes/_layout/qa'
 import { Route as LayoutReportsRouteImport } from './routes/_layout/reports'
 import { Route as LayoutResultsRouteImport } from './routes/_layout/results'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
@@ -69,6 +70,11 @@ const LayoutPrepareRoute = LayoutPrepareRouteImport.update({
   path: '/prepare',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutQaRoute = LayoutQaRouteImport.update({
+  id: '/qa',
+  path: '/qa',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutReportsRoute = LayoutReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof LayoutAdminRoute
   '/items': typeof LayoutItemsRoute
   '/prepare': typeof LayoutPrepareRoute
+  '/qa': typeof LayoutQaRoute
   '/reports': typeof LayoutReportsRoute
   '/results': typeof LayoutResultsRoute
   '/settings': typeof LayoutSettingsRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminRoute
   '/items': typeof LayoutItemsRoute
   '/prepare': typeof LayoutPrepareRoute
+  '/qa': typeof LayoutQaRoute
   '/reports': typeof LayoutReportsRoute
   '/results': typeof LayoutResultsRoute
   '/settings': typeof LayoutSettingsRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/prepare': typeof LayoutPrepareRoute
+  '/_layout/qa': typeof LayoutQaRoute
   '/_layout/reports': typeof LayoutReportsRoute
   '/_layout/results': typeof LayoutResultsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/items'
     | '/prepare'
+    | '/qa'
     | '/reports'
     | '/results'
     | '/settings'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/items'
     | '/prepare'
+    | '/qa'
     | '/reports'
     | '/results'
     | '/settings'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/_layout/admin'
     | '/_layout/items'
     | '/_layout/prepare'
+    | '/_layout/qa'
     | '/_layout/reports'
     | '/_layout/results'
     | '/_layout/settings'
@@ -276,6 +288,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutPrepareRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/qa': {
+      id: '/_layout/qa'
+      path: '/qa'
+      fullPath: '/qa'
+      preLoaderRoute: typeof LayoutQaRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/reports': {
       id: '/_layout/reports'
       path: '/reports'
@@ -343,6 +362,7 @@ interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutPrepareRoute: typeof LayoutPrepareRoute
+  LayoutQaRoute: typeof LayoutQaRoute
   LayoutReportsRoute: typeof LayoutReportsRoute
   LayoutResultsRoute: typeof LayoutResultsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
@@ -354,6 +374,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutPrepareRoute: LayoutPrepareRoute,
+  LayoutQaRoute: LayoutQaRoute,
   LayoutReportsRoute: LayoutReportsRoute,
   LayoutResultsRoute: LayoutResultsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,

@@ -1,0 +1,48 @@
+==> rebuilding the playwright image (tests are baked in, not mounted)
+ lingsight-ai-playwright  Built
+==> ensuring backend matches the current .env (fixture/research mode)
+ Container lingsight-ai-mailpit-1  Running
+ Container lingsight-ai-db-1  Running
+ Container lingsight-ai-backend-1  Running
+ Container lingsight-ai-db-1  Waiting
+ Container lingsight-ai-db-1  Healthy
+ Container lingsight-ai-backend-1  Waiting
+ Container lingsight-ai-mailpit-1  Waiting
+ Container lingsight-ai-db-1  Waiting
+ Container lingsight-ai-mailpit-1  Healthy
+ Container lingsight-ai-backend-1  Healthy
+ Container lingsight-ai-db-1  Healthy
+==> restoring first superuser (backend pytest teardown wipes all users)
+ Container lingsight-ai-db-1  Running
++ alembic upgrade head
+/app/backend/app/core/config.py:75: UserWarning: The value of FIRST_SUPERUSER_PASSWORD is "changethis", for security, please change it, at least for deployments.
+  warnings.warn(message, stacklevel=1)
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
++ python app/initial_data.py
+/app/backend/app/core/config.py:75: UserWarning: The value of FIRST_SUPERUSER_PASSWORD is "changethis", for security, please change it, at least for deployments.
+  warnings.warn(message, stacklevel=1)
+INFO:__main__:Creating initial data
+INFO:__main__:Initial data created
+==> clearing persisted trial reviews from the local stack
+mysql: [Warning] Using a password on the command line interface can be insecure.
+==> running playwright against the compose stack
+ Container lingsight-ai-mailpit-1  Running
+ Container lingsight-ai-db-1  Running
+ Container lingsight-ai-backend-1  Running
+ Container lingsight-ai-db-1  Waiting
+ Container lingsight-ai-db-1  Healthy
+◇ injected env (0) from ../.env
+
+Running 7 tests using 4 workers
+
+
+◇ injected env (0) from ../.env
+[1/7] [setup] › tests/auth.setup.ts:6:1 › authenticate
+[2/7] [chromium] › tests/qa-page.spec.ts:85:1 › example question streams stages, answer, caliber note and SQL details
+[3/7] [chromium] › tests/qa-page.spec.ts:127:1 › empty result is a success channel with suggestion, never a table
+[4/7] [chromium] › tests/qa-page.spec.ts:151:1 › typed rejection shows reason without a table and without a retry for 403 class
+[5/7] [chromium] › tests/qa-page.spec.ts:183:1 › provider failure offers one-click retry of the same question
+[6/7] [chromium] › tests/qa-page.spec.ts:217:1 › in-session history replays cached answers without re-sending
+[7/7] [chromium] › tests/qa-page.spec.ts:261:1 › loading state shows elapsed seconds and no fake progress
+  7 passed (13.1s)

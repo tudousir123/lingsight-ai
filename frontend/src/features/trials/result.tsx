@@ -159,13 +159,18 @@ export function TrialResultPage({
     <div className="flex h-[calc(100vh-7rem)] flex-col gap-3 overflow-hidden">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div>
-          <Link
-            to="/experiments/$experimentId/trials/$trialId"
-            params={{ experimentId, trialId }}
-            className="text-sm text-blue-600 hover:underline"
-          >
-            ← 返回分析准备
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/experiments/$experimentId/trials/$trialId"
+              params={{ experimentId, trialId }}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              ← 返回分析准备
+            </Link>
+            <Link to="/qa" className="text-sm text-blue-600 hover:underline">
+              去科研问答 →
+            </Link>
+          </div>
           <h1 className="mt-0.5 text-xl font-semibold text-slate-900">
             单次分析结果 · {data.trial.video_name}
           </h1>
