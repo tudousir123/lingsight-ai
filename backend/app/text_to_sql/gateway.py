@@ -138,12 +138,14 @@ class AnthropicCompatProvider:
         model: str,
         timeout_seconds: float = 60.0,
         max_tokens: int = 4096,
+        thinking_budget_tokens: int | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
         self._model = model
         self._timeout_seconds = timeout_seconds
         self._max_tokens = max_tokens
+        self._thinking_budget_tokens = thinking_budget_tokens
 
     def probe(self) -> None:
         """Transport-level liveness check; any HTTP status counts as alive."""
@@ -164,6 +166,11 @@ class AnthropicCompatProvider:
             "max_tokens": self._max_tokens,
             "temperature": 0,
         }
+        if self._thinking_budget_tokens is not None:
+            payload["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": self._thinking_budget_tokens,
+            }
         if system_parts:
             payload["system"] = "\n\n".join(system_parts)
         try:
@@ -205,12 +212,18 @@ def build_provider(settings: ResearchQuerySettings) -> Provider:
         )
         raise ProviderError(msg)
     if settings.LLM_PROTOCOL == "anthropic":
+        thinking_budget = (
+            settings.LLM_THINKING_BUDGET_TOKENS
+            if settings.LLM_THINKING == "enabled"
+            else None
+        )
         return AnthropicCompatProvider(
             base_url=settings.LLM_BASE_URL,
             api_key=settings.LLM_API_KEY,
             model=settings.LLM_MODEL,
             timeout_seconds=settings.LLM_TIMEOUT_SECONDS,
             max_tokens=settings.LLM_MAX_TOKENS,
+            thinking_budget_tokens=thinking_budget,
         )
     if settings.LLM_PROTOCOL == "openai":
         return OpenAICompatProvider(

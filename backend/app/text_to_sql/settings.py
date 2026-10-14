@@ -34,6 +34,12 @@ class ResearchQuerySettings(BaseSettings):
     #: Anthropic protocol requires max_tokens on every request; sized for
     #: deterministic SQL generation (reasoning blocks share this budget).
     LLM_MAX_TOKENS: int = 4096
+    #: Extended thinking on the Anthropic protocol (GLM reasoning models):
+    #: "enabled" adds a thinking budget to every request. The "effort level"
+    #: is expressed by LLM_THINKING_BUDGET_TOKENS; keep LLM_MAX_TOKENS above
+    #: budget + expected answer size.
+    LLM_THINKING: str = "disabled"
+    LLM_THINKING_BUDGET_TOKENS: int = 8192
 
     # --- Read-only research database (lingsight_ro on water_maze) ---
     RESEARCH_DB_HOST: str = "127.0.0.1"

@@ -689,6 +689,38 @@ class TestBuildProvider:
         )
         assert isinstance(provider, AnthropicCompatProvider)
 
+    def test_thinking_budget_injected_only_when_enabled(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        captured: list[dict[str, object]] = []
+
+        def fake_post(_url: str, /, **kwargs: Any) -> httpx.Response:
+            captured.append(kwargs["json"])
+            return httpx.Response(
+                200, json={"content": [{"type": "text", "text": "ok"}]}
+            )
+
+        monkeypatch.setattr(httpx, "post", fake_post)
+        for thinking, expected in [
+            ("enabled", {"type": "enabled", "budget_tokens": 16384}),
+            ("disabled", None),
+        ]:
+            provider = build_provider(
+                ResearchQuerySettings(
+                    _env_file=None,
+                    LLM_BASE_URL="https://example.invalid/anthropic",
+                    LLM_PROTOCOL="anthropic",
+                    LLM_THINKING=thinking,
+                    LLM_THINKING_BUDGET_TOKENS=16384,
+                )
+            )
+            provider.chat([{"role": "user", "content": "hi"}])
+        first, second = captured
+        assert isinstance(first, dict) and isinstance(second, dict)
+        # enabled -> budget injected; disabled -> no thinking key at all
+        assert first["thinking"] == {"type": "enabled", "budget_tokens": 16384}
+        assert "thinking" not in second
+
     def test_unknown_protocol_is_rejected(self) -> None:
         with pytest.raises(ProviderError, match="LLM_PROTOCOL"):
             build_provider(
