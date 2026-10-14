@@ -1,0 +1,67 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______________________ test_real_model_question[Q16-C] ________________________
+
+question = EvalQuestion(id=16, category='C', question='c1 组每只鼠的平均速度是多少？', golden_sql="SELECT AVG(m.value) AS avg_speed_px\nFROM t...where=(), column='avg_speed_px', value=101.7, note='', aliases=(), additive=False),), note='docs/09 C16：单鼠组，试次直均即每鼠均值')
+client = <starlette.testclient.TestClient object at 0x75bc05c5e510>
+normal_user_token_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3OTI2NTc2ODksInN1YiI6IjcxOTZmODMzLTBmMzgtNDFkYy1hMTA0LTc3N2FiZTc5ZGM0ZCJ9.oRwfYSTgVJ4rwSSwi95oQzGsvdOZB8UeTfMs6zBLh-E'}
+_llm_available = None
+db_available = <app.text_to_sql.executor.ResearchQueryExecutor object at 0x75bc05cf5590>
+
+    @pytest.mark.parametrize("question", QUESTIONS, ids=lambda q: f"Q{q.id}-{q.category}")
+    def test_real_model_question(
+        question: Any,
+        client: TestClient,
+        normal_user_token_headers: dict[str, str],
+        _llm_available: None,
+        db_available: ResearchQueryExecutor,
+    ) -> None:
+        outcome = _ask(client, normal_user_token_headers, question.question)
+        verdict = grade_question(question, outcome, _golden(db_available, question.id))
+        if not verdict.passed and verdict.reason_code in INFRA_REASON_CODES:
+            # One infrastructure retry, same policy as run_eval (single source:
+            # grading.INFRA_REASON_CODES) — a transport hiccup says nothing
+            # about the model's answer; Q21 once failed on a single
+            # provider_error (retro 2026-10-13).
+            outcome = _ask(client, normal_user_token_headers, question.question)
+            verdict = grade_question(question, outcome, _golden(db_available, question.id))
+>       assert verdict.passed, (
+            f"Q{question.id} [{question.category}] {question.question}\n"
+            f"verdict: {verdict.outcome} — {verdict.detail}\n"
+            f"sql: {verdict.sql}\nattempts: {verdict.attempts}"
+        )
+E       AssertionError: Q16 [C] c1 组每只鼠的平均速度是多少？
+E         verdict: ok — scalar off the docs/09 anchor: avg_speed_px expected 101.7, got None (expected a single row, got 2 (over-split caliber?))
+E         sql: SELECT v.group_name, v.mouse_id, v.phase, AVG(tm.value) AS speed_px FROM videos AS v JOIN trial_metrics AS tm ON tm.video_id = v.video_id WHERE v.group_name = 'c1' AND tm.metric = 'speed_px' AND tm.algo_version = 'v1-polyline-ok-frames' AND tm.calc_status = 'ok' GROUP BY v.group_name, v.mouse_id, v.phase ORDER BY v.mouse_id, v.phase LIMIT 200
+E         attempts: 1
+E       assert False
+E        +  where False = Verdict(qid=16, category='C', behavior='scalar_with_caliber', passed=False, outcome='ok', detail='scalar off the docs/..., note='', aliases=(), additive=False), actual=101.7402888081621, rel_diff=0.00039615347258704914, ok=True, note=''),)).passed
+
+tests/text_to_sql/test_eval_execution.py:166: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+INFO:httpx:HTTP Request: POST http://testserver/api/v1/login/access-token "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://open.bigmodel.cn/api/anthropic "HTTP/1.1 200 OK"
+------------------------------ Captured log setup ------------------------------
+INFO     httpx:_client.py:1025 HTTP Request: POST http://testserver/api/v1/login/access-token "HTTP/1.1 200 OK"
+INFO     httpx:_client.py:1025 HTTP Request: GET https://open.bigmodel.cn/api/anthropic "HTTP/1.1 200 OK"
+----------------------------- Captured stderr call -----------------------------
+INFO:httpx:HTTP Request: POST https://open.bigmodel.cn/api/anthropic/v1/messages "HTTP/1.1 200 OK"
+INFO:app.text_to_sql.pipeline:research_query answered rows=2 attempts=1 truncated=False
+INFO:httpx:HTTP Request: POST http://testserver/api/v1/research/query "HTTP/1.1 200 OK"
+------------------------------ Captured log call -------------------------------
+INFO     httpx:_client.py:1025 HTTP Request: POST https://open.bigmodel.cn/api/anthropic/v1/messages "HTTP/1.1 200 OK"
+INFO     app.text_to_sql.pipeline:pipeline.py:358 research_query answered rows=2 attempts=1 truncated=False
+INFO     httpx:_client.py:1025 HTTP Request: POST http://testserver/api/v1/research/query "HTTP/1.1 200 OK"
+=============================== warnings summary ===============================
+../.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /home/shuncheng/workspace/lingsight-ai/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+app/core/config.py:75
+  /home/shuncheng/workspace/lingsight-ai/backend/app/core/config.py:75: UserWarning: The value of FIRST_SUPERUSER_PASSWORD is "changethis", for security, please change it, at least for deployments.
+    warnings.warn(message, stacklevel=1)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/text_to_sql/test_eval_execution.py::test_real_model_question[Q16-C]
+1 failed, 2 warnings in 21.13s

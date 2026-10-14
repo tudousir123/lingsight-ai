@@ -7,6 +7,7 @@ double, but the SQL it returns is validated and executed against the real
 the pipeline, not the model.
 """
 
+import json
 import logging
 from collections.abc import Iterator
 from typing import Any
@@ -17,12 +18,21 @@ from fastapi.testclient import TestClient
 
 from app.api.routes.research import get_query_provider, get_research_settings
 from app.main import app
-from app.text_to_sql.executor import QueryExecutionError, ResearchQueryExecutor
+from app.text_to_sql.executor import (
+    ExecutionResult,
+    QueryExecutionError,
+    ResearchQueryExecutor,
+)
 from app.text_to_sql.gateway import (
     AnthropicCompatProvider,
     OpenAICompatProvider,
     ProviderError,
     build_provider,
+)
+from app.text_to_sql.pipeline import (
+    QueryProgress,
+    ResearchQueryAnswer,
+    ResearchQueryPipeline,
 )
 from app.text_to_sql.settings import ResearchQuerySettings
 
@@ -527,6 +537,129 @@ def test_provider_error_surfaces_vendor_reason(
     )
     with pytest.raises(ProviderError, match=r"HTTP 429.*1113: 余额不足"):
         provider.chat([{"role": "user", "content": "hi"}])
+
+
+# --- SSE streaming endpoint (ticket #24) ---------------------------------
+#
+# Real stage progress: the stream must surface the pipeline's actual
+# generation/validation/execution boundaries (including repair revisits with
+# attempt +1) and end with a result event whose payload is isomorphic to the
+# synchronous endpoint's answer/rejection bodies.
+
+
+def _parse_sse(lines: Iterator[str]) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    for line in lines:
+        if line.startswith("data: "):
+            events.append(json.loads(line[len("data: ") :]))
+    return events
+
+
+def stream_events(
+    client: TestClient,
+    provider: FakeProvider,
+    *,
+    question: str = DEMO_QUESTION,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, str, list[dict[str, Any]]]:
+    """POST to the stream endpoint and collect (status, content-type, events)."""
+    app.dependency_overrides[get_query_provider] = lambda: provider
+    with client.stream(
+        "POST",
+        "/api/v1/research/query/stream",
+        json={"question": question},
+        headers=headers,
+    ) as response:
+        content_type = response.headers.get("content-type", "")
+        events = _parse_sse(response.iter_lines())
+    return response.status_code, content_type, events
+
+
+def test_stream_stage_sequence_with_repair_then_rejected(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    """Three non-SELECT attempts: each retry revisits generation, attempt+1."""
+    provider = FakeProvider(["DELETE FROM videos"] * 3)
+    status, content_type, events = stream_events(
+        client, provider, headers=normal_user_token_headers
+    )
+    assert status == 200
+    assert content_type.startswith("text/event-stream")
+    assert [e for e in events if e["type"] == "stage"] == [
+        {"type": "stage", "attempt": 1, "stage": "generation"},
+        {"type": "stage", "attempt": 1, "stage": "validation"},
+        {"type": "stage", "attempt": 2, "stage": "generation"},
+        {"type": "stage", "attempt": 2, "stage": "validation"},
+        {"type": "stage", "attempt": 3, "stage": "generation"},
+        {"type": "stage", "attempt": 3, "stage": "validation"},
+    ]
+    result = events[-1]
+    assert result["type"] == "result"
+    assert result["status"] == "rejected"
+    assert result["reason_code"] == "non_select"
+    assert result["attempts"] == 3
+    assert len(result["trace"]) == 3
+
+
+@pytest.mark.env_gated
+def test_stream_ok_result_carries_answer_payload(
+    research_db: None,  # noqa: ARG001 — fixture gates research-DB reachability
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+) -> None:
+    provider = FakeProvider([CANONICAL_SQL])
+    status, _, events = stream_events(
+        client, provider, headers=normal_user_token_headers
+    )
+    assert status == 200
+    assert [e for e in events if e["type"] == "stage"] == [
+        {"type": "stage", "attempt": 1, "stage": "generation"},
+        {"type": "stage", "attempt": 1, "stage": "validation"},
+        {"type": "stage", "attempt": 1, "stage": "execution"},
+    ]
+    result = events[-1]
+    assert result["type"] == "result"
+    assert result["status"] == "ok"
+    assert result["rows"] == [[6]]
+    assert result["attempts"] == 1
+    assert result["caliber_note"]
+
+
+def test_stream_requires_authentication(client_no_auth: TestClient) -> None:
+    provider = FakeProvider([CANONICAL_SQL])
+    status, _, events = stream_events(client_no_auth, provider)
+    assert status == 401
+    assert events == []
+
+
+def test_pipeline_on_stage_sequence_locks_execution_event_without_db() -> None:
+    """Direct pipeline seam: stage events fire at real starts, incl. execution.
+
+    The HTTP stream tests above lock generation/validation ordering in CI,
+    but the execution event only reaches the wire behind the env-gated
+    research DB; a stub executor keeps that ordering asserted everywhere.
+    """
+
+    class StubExecutor(ResearchQueryExecutor):
+        def run(self, sql: str) -> ExecutionResult:
+            return ExecutionResult(
+                columns=("animal_count",), rows=((6,),), row_count=1, truncated=False
+            )
+
+    seen: list[QueryProgress] = []
+    pipeline = ResearchQueryPipeline(
+        settings=ResearchQuerySettings(_env_file=None),
+        provider=FakeProvider([CANONICAL_SQL]),
+        executor=StubExecutor(ResearchQuerySettings(_env_file=None)),
+    )
+    outcome = pipeline.run(DEMO_QUESTION, on_stage=seen.append)
+    assert [(p.attempt, p.stage) for p in seen] == [
+        (1, "generation"),
+        (1, "validation"),
+        (1, "execution"),
+    ]
+    assert isinstance(outcome, ResearchQueryAnswer)
+    assert outcome.rows == [[6]]
 
 
 def test_probe_reports_transport_failure_as_provider_error(

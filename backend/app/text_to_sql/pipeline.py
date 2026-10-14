@@ -28,6 +28,7 @@ in-response trace alone is not a log).
 
 import logging
 import re
+from collections.abc import Callable
 from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Literal
@@ -64,6 +65,19 @@ class AttemptTrace(BaseModel):
     stage: AttemptStage
     reason_code: ReasonCode
     message: str
+
+
+class QueryProgress(BaseModel):
+    """Stage-start event emitted as the pipeline advances (ticket #24).
+
+    Real boundaries only: generation/validation/execution as they begin,
+    with the 1-based attempt number — a repair retry revisits generation
+    with attempt +1. Consumers render progress from these; nothing here
+    is inferred or simulated.
+    """
+
+    attempt: int = Field(ge=1)
+    stage: AttemptStage
 
 
 class DataSource(BaseModel):
@@ -225,7 +239,16 @@ class ResearchQueryPipeline:
         self._semantic = semantic if semantic is not None else _cached_semantic_layer()
         self._executor = executor or ResearchQueryExecutor(settings)
 
-    def run(self, question: str) -> ResearchQueryAnswer | ResearchQueryRejection:
+    def run(
+        self,
+        question: str,
+        *,
+        on_stage: Callable[[QueryProgress], None] | None = None,
+    ) -> ResearchQueryAnswer | ResearchQueryRejection:
+        def entering(attempt: int, stage: AttemptStage) -> None:
+            if on_stage is not None:
+                on_stage(QueryProgress(attempt=attempt, stage=stage))
+
         messages: list[Message] = [
             {
                 "role": "system",
@@ -243,6 +266,7 @@ class ResearchQueryPipeline:
         last_sql: str | None = None
 
         for attempt in range(1, max_attempts + 1):
+            entering(attempt, "generation")
             try:
                 raw = self._provider.chat(messages)
             except ProviderError as error:
@@ -262,6 +286,7 @@ class ResearchQueryPipeline:
                 )
             candidate = extract_sql(raw)
             last_sql = candidate
+            entering(attempt, "validation")
             try:
                 validated = validate_sql(
                     candidate,
@@ -295,6 +320,7 @@ class ResearchQueryPipeline:
 
             # Execution failures are terminal: the budget is spent on
             # generation/validation only, never on re-running MySQL.
+            entering(attempt, "execution")
             try:
                 result = self._executor.run(validated.sql)
             except QueryExecutionError as error:
