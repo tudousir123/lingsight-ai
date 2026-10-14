@@ -116,6 +116,7 @@ SYSTEM_PROMPT_TEMPLATE = """你是一个 MySQL 分析型 SQL 生成器，只访�
 3. 严格遵守「陷阱纠正口径」：例如动物数必须用 COUNT(DISTINCT CONCAT(group_name, '|', mouse_id))，绝不用 animal_code。
 4. 需要限制行数时使用 LIMIT；服务端会强制行数上限。
 5. 聚合统计必须声明阶段（phase）口径，并优先采用「逐鼠-逐日」推荐口径。
+6. SELECT 输出列名必须与语义层白名单/标准表达式里的名称逐字一致（如 dist_px、speed_px、session_no、group_name），禁止自造同义别名（如 mean_speed_px、avg_dist_px）；除非用户明确要求，不要附加问题未问的额外列。
 """
 
 _FENCE_RE = re.compile(r"^```[a-zA-Z]*\s*|\s*```$")
