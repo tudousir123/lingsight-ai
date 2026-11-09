@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     FRONTEND_HOST: str = "http://localhost:5173"
     FASTAPI_ENV: Literal["development"] | None = None
 
+    # Personal Agent workspace. Never expose this service credential to the browser.
+    AGENT_BASE_URL: str = "http://127.0.0.1:19100"
+    AGENT_API_TOKEN: str = ""
+    AGENT_WORKSPACE_EMAIL: str = ""
+
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None
     DATABASE_URL: MySQLDsn

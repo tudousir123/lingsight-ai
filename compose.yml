@@ -73,6 +73,9 @@ services:
       EMAILS_FROM_EMAIL: ${EMAILS_FROM_EMAIL}
       DATABASE_URL: mysql+pymysql://app:${MYSQL_PASSWORD:?Variable not set}@db:3306/app?charset=utf8mb4
       SENTRY_DSN: ${SENTRY_DSN:-}
+      AGENT_BASE_URL: ${AGENT_BASE_URL:-http://127.0.0.1:19100}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:-}
+      AGENT_WORKSPACE_EMAIL: ${AGENT_WORKSPACE_EMAIL:-}
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/utils/health-check/"]
