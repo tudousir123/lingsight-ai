@@ -1,5 +1,5 @@
 import * as Tabs from '@radix-ui/react-tabs'
-import { ArrowRight, ArrowUpRight, CircleDot, FileJson, FileVideo, Play, Download, Layers3, Database, ChartNoAxesCombined, Crosshair, Terminal, ScanLine, Radio } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, CircleDot, FileJson, FileVideo, Play, Download, Database, ChartNoAxesCombined, Crosshair, Terminal, ScanLine, Radio } from 'lucide-react'
 import { HeatmapPreview, MazeScene, ResearchLog, TrendChart } from './ResearchVisuals'
 import { historicalSummary } from './historical'
 
