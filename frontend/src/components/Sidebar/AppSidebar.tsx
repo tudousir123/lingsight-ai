@@ -3,6 +3,7 @@ import {
   ClipboardList,
   FlaskConical,
   MessageCircleQuestion,
+  ScanLine,
   Users,
 } from "lucide-react"
 
@@ -26,30 +27,30 @@ const baseItems: Item[] = [
 
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
-
   const items = currentUser?.is_superuser
     ? [...baseItems, { icon: Users, title: "用户管理", path: "/admin" }]
     : baseItems
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="px-4 py-6 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:items-center">
-        <div className="flex items-center gap-2.5">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-blue-600 text-white">
-            <FlaskConical className="size-5" />
+    <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
+      <SidebarHeader className="px-3 pb-4 pt-6 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0">
+        <a href="/welcome" className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 focus-visible:outline-offset-2">
+          <span className="grid size-9 shrink-0 place-items-center rounded-[11px] border border-[#393939] bg-[#292929] text-foreground">
+            <ScanLine className="size-[18px]" strokeWidth={1.6} />
           </span>
-          <div className="group-data-[collapsible=icon]:hidden">
-            <strong className="text-base text-slate-900">LingSight AI</strong>
-            <div className="text-xs tracking-widest text-muted-foreground">
-              灵视科技
-            </div>
-          </div>
+          <span className="min-w-0 group-data-[collapsible=icon]:hidden">
+            <span className="block text-[16px] font-medium tracking-tight text-foreground">LingSight</span>
+            <span className="mt-0.5 block text-[10px] tracking-[.15em] text-muted-foreground">SCIENCE</span>
+          </span>
+        </a>
+        <div className="mx-2 mt-5 border-t border-border pt-4 text-[10px] tracking-[.13em] text-muted-foreground group-data-[collapsible=icon]:hidden">
+          RESEARCH WORKSPACE
         </div>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="px-2">
         <Main items={items} />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="gap-2 border-t border-border p-3">
         <SidebarAppearance />
         <User user={currentUser} />
       </SidebarFooter>

@@ -122,3 +122,68 @@
     cursor: pointer;
   }
 }
+
+/* LingSight Science / application-first monochrome tokens.
+   Default dark palette is painted before React mounts to prevent white flashes. */
+:root:not(.light), .dark {
+  color-scheme: dark;
+  --radius: 1.125rem;
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #171717;
+  --card-foreground: #fafafa;
+  --popover: #1f1f1f;
+  --popover-foreground: #fafafa;
+  --primary: #e5e5e5;
+  --primary-foreground: #151515;
+  --secondary: #252525;
+  --secondary-foreground: #e5e5e5;
+  --muted: #232323;
+  --muted-foreground: #929292;
+  --accent: #292929;
+  --accent-foreground: #fafafa;
+  --destructive: #fb6b5e;
+  --border: #262626;
+  --input: #333333;
+  --ring: #848484;
+  --chart-1: #d0d0d0;
+  --chart-2: #fa5f29;
+  --chart-3: #8fb5a4;
+  --chart-4: #a1a1a1;
+  --chart-5: #7f8c99;
+  --sidebar: #131313;
+  --sidebar-foreground: #cbcbcb;
+  --sidebar-primary: #e5e5e5;
+  --sidebar-primary-foreground: #151515;
+  --sidebar-accent: #292929;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #262626;
+  --sidebar-ring: #848484;
+}
+:root:not(.light), :root:not(.light) body, :root:not(.light) #root {
+  background-color: #0a0a0a;
+}
+.lingsight-app {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+.lingsight-app [data-slot="card"] {
+  border: 1px solid #262626;
+  box-shadow: none;
+}
+.lingsight-app .bg-slate-50 { background-color: var(--background); }
+.lingsight-app .text-slate-900 { color: var(--foreground); }
+.lingsight-app .text-slate-700 { color: #cbcbcb; }
+.lingsight-app .text-slate-500 { color: var(--muted-foreground); }
+.lingsight-app .text-blue-600 { color: #e5e5e5; }
+.lingsight-app .text-blue-600:hover { color: #fa5f29; }
+.lingsight-app .shadow-sm { box-shadow: none; }
+.lingsight-app a, .lingsight-app button { transition: background-color .16s ease, border-color .16s ease, color .16s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .lingsight-app *, .lingsight-app *::before, .lingsight-app *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

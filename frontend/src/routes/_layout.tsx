@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect, useLocation } from "@tanstack/react-router"
+import { CircleDot } from "lucide-react"
 
 import AppSidebar from "@/components/Sidebar/AppSidebar"
 import {
@@ -17,9 +18,7 @@ export const Route = createFileRoute("/_layout")({
       ["/", "/prepare", "/results", "/reports"].includes(location.pathname)
 
     if (!isLoggedIn() && !isDemoPreview) {
-      throw redirect({
-        to: "/login",
-      })
+      throw redirect({ to: "/login" })
     }
   },
 })
@@ -33,16 +32,27 @@ function Layout() {
     (pathname === "/prepare" || pathname === "/results")
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="lingsight-app">
       <AppSidebar />
-      <SidebarInset>
-        {!isLocalVideoFlow && <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
-          <SidebarTrigger className="-ml-1 text-muted-foreground" />
-          <span className="text-sm font-medium text-slate-700">LingSight AI · 水迷宫</span>
-          <span className="ml-auto text-xs text-muted-foreground">科研行为分析</span>
-        </header>}
-        <main className={isLocalVideoFlow ? "flex-1 bg-slate-50 px-4 py-3 md:px-7 md:py-4" : "flex-1 bg-slate-50 p-4 md:p-7"}>
-          <div className="mx-auto max-w-screen-2xl">
+      <SidebarInset className="h-full min-h-0 overflow-hidden">
+        {!isLocalVideoFlow && (
+          <header className="z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 lg:px-6">
+            <SidebarTrigger className="-ml-1 text-muted-foreground" />
+            <span className="h-5 w-px bg-border" aria-hidden="true" />
+            <span className="truncate text-[13px] font-normal tracking-tight text-foreground">
+              LingSight <span className="text-muted-foreground">/</span> 水迷宫分析
+            </span>
+            <span className="ml-auto hidden items-center gap-2 text-[11px] text-muted-foreground sm:inline-flex">
+              <CircleDot className="size-3 text-[#fa5f29]" />
+              科研工作台
+            </span>
+            <a href="/welcome" className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
+              产品主页
+            </a>
+          </header>
+        )}
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background px-4 py-4 lg:px-6 lg:py-5">
+          <div className="mx-auto w-full max-w-[1600px]">
             <Outlet />
           </div>
         </main>

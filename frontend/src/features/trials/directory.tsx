@@ -36,8 +36,8 @@ function TrialRow({ trial }: { trial: TrialSummary }) {
   return (
     <TableRow>
       <TableCell>
-        <div className="font-medium text-slate-900">{trial.video_name}</div>
-        <div className="text-xs text-muted-foreground">{trial.id}</div>
+        <div className="font-medium text-foreground tracking-tight">{trial.video_name}</div>
+        <div className="sr-only">{trial.id}</div>
       </TableCell>
       <TableCell>
         {trial.group_name} · {trial.mouse_id}
@@ -66,7 +66,7 @@ function TrialRow({ trial }: { trial: TrialSummary }) {
           to="/experiments/$experimentId/trials/$trialId"
           params={{ experimentId: trial.experiment_id, trialId: trial.id }}
           aria-label={`打开分析准备 ${trial.video_name}`}
-          className="font-medium text-blue-600 hover:underline"
+          className="font-medium text-foreground hover:underline"
         >
           查看试次
         </Link>
@@ -123,11 +123,11 @@ export function TrialDirectoryPage() {
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-sm text-slate-500">实验管理</p>
-        <h1 className="text-2xl font-semibold text-slate-900">
+        <p className="text-sm text-muted-foreground">实验管理</p>
+        <h1 className="text-[24px] font-normal tracking-tight text-foreground">
           实验与视频管理
         </h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           从已有实验中选择试次，查看对应视频及分析状态。
         </p>
       </div>
@@ -182,7 +182,7 @@ export function TrialDirectoryPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-sm text-slate-500">
+              <span className="text-sm text-muted-foreground">
                 {selected?.trial_count ?? 0} 条试次
               </span>
             </CardContent>
@@ -195,7 +195,7 @@ export function TrialDirectoryPage() {
             <CardContent>
               <div className="mb-4 flex flex-wrap gap-2">
                 <div className="relative min-w-48 flex-1">
-                  <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
+                  <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
                   <Input
                     aria-label="搜索试次"
                     placeholder="当前页搜索视频或动物"
@@ -266,7 +266,7 @@ export function TrialDirectoryPage() {
               </div>
 
               {trials.isPending ? (
-                <p className="py-10 text-center text-sm text-slate-500">
+                <p className="py-10 text-center text-sm text-muted-foreground">
                   正在加载试次…
                 </p>
               ) : trials.isError ? (
@@ -280,11 +280,11 @@ export function TrialDirectoryPage() {
                   </Button>
                 </div>
               ) : trials.data.count === 0 ? (
-                <p className="py-10 text-center text-sm text-slate-500">
+                <p className="py-10 text-center text-sm text-muted-foreground">
                   该实验没有符合条件的试次。
                 </p>
               ) : visible.length === 0 ? (
-                <p className="py-10 text-center text-sm text-slate-500">
+                <p className="py-10 text-center text-sm text-muted-foreground">
                   当前页没有匹配的试次，请调整搜索词。
                 </p>
               ) : (

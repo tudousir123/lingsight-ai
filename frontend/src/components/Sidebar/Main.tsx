@@ -32,9 +32,9 @@ export function Main({ items }: MainProps) {
   }
 
   return (
-    <SidebarGroup>
+    <SidebarGroup className="p-0">
       <SidebarGroupContent>
-        <SidebarMenu>
+        <SidebarMenu className="gap-1">
           {items.map((item) => {
             const isActive = currentPath === item.path
 
@@ -42,12 +42,14 @@ export function Main({ items }: MainProps) {
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   tooltip={item.title}
+                  className="h-10 gap-3 rounded-[10px] px-3 text-[13px] text-muted-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-foreground hover:bg-sidebar-accent hover:text-foreground"
                   isActive={isActive}
                   asChild
                 >
                   <RouterLink to={item.path} onClick={handleMenuClick}>
-                    <item.icon />
-                    <span>{item.title}</span>
+                    <item.icon className="size-[17px]" strokeWidth={1.65} />
+                    <span className="flex-1">{item.title}</span>
+                    {isActive && <span className="size-1.5 rounded-full bg-[#fa5f29]" aria-hidden="true" />}
                   </RouterLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
