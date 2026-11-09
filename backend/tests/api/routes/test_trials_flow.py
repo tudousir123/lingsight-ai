@@ -7,6 +7,10 @@ provenance. The fixture is the same synthetic, non-sensitive data the
 Playwright browser flow runs against.
 """
 
+import json
+import shutil
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -84,7 +88,8 @@ def _url(trial: str, suffix: str = "", experiment: str = E1) -> str:
     return f"{settings.API_V1_STR}/experiments/{experiment}/trials/{trial}{suffix}"
 
 
-def test_fixture_dependency_is_active(client: TestClient) -> None:
+@pytest.mark.usefixtures("client")
+def test_fixture_dependency_is_active() -> None:
     assert isinstance(app.dependency_overrides.get(get_trial_catalog), type(None))
     catalog = get_trial_catalog()
     assert catalog.get_trial(E1, TRIAL_A) is not None
@@ -94,7 +99,9 @@ class TestPreparation:
     def test_full_trial_carries_identity_and_provenance(
         self, client: TestClient, superuser_token_headers: dict[str, str]
     ) -> None:
-        response = client.get(_url(TRIAL_A, "/preparation"), headers=superuser_token_headers)
+        response = client.get(
+            _url(TRIAL_A, "/preparation"), headers=superuser_token_headers
+        )
         assert response.status_code == 200
         body = response.json()
         assert body["trial"]["id"] == TRIAL_A
@@ -121,10 +128,14 @@ class TestPreparation:
         assert body["tracking"]["speed"][10] is not None
         # persisted metrics with versions, plus calibration-gated ones
         assert {m["metric"] for m in body["metrics"]} >= {
-            "dist_px", "speed_px", "mount_s", "escape_latency_s"
+            "dist_px",
+            "speed_px",
+            "mount_s",
+            "escape_latency_s",
         }
         assert {m["metric"] for m in body["metric_unavailable"]} == {
-            "dist_cm", "speed_cm_s"
+            "dist_cm",
+            "speed_cm_s",
         }
         assert len(body["source_version"]) == 16
         assert body["review"] is None
@@ -132,12 +143,16 @@ class TestPreparation:
     def test_missing_materials_are_per_field_explicit(
         self, client: TestClient, superuser_token_headers: dict[str, str]
     ) -> None:
-        no_track = client.get(_url(TRIAL_B, "/preparation"), headers=superuser_token_headers).json()
+        no_track = client.get(
+            _url(TRIAL_B, "/preparation"), headers=superuser_token_headers
+        ).json()
         assert no_track["tracking"]["status"] == "missing"
         assert "尚无离线推理结果" in no_track["tracking"]["reason"]
         assert no_track["video"]["status"] == "available"
 
-        no_media = client.get(_url(TRIAL_C, "/preparation"), headers=superuser_token_headers).json()
+        no_media = client.get(
+            _url(TRIAL_C, "/preparation"), headers=superuser_token_headers
+        ).json()
         assert no_media["video"]["status"] == "missing"
         assert no_media["video"]["reason"]
         assert no_media["geometry"]["platform"]["status"] == "missing"
@@ -145,7 +160,8 @@ class TestPreparation:
         assert no_media["tracking"]["status"] == "available"
 
         no_markers = client.get(
-            _url(TRIAL_D, "/preparation", experiment=E2), headers=superuser_token_headers
+            _url(TRIAL_D, "/preparation", experiment=E2),
+            headers=superuser_token_headers,
         ).json()
         assert no_markers["geometry"]["markers"]["status"] == "missing"
         assert no_markers["geometry"]["markers"]["reason"]
@@ -380,6 +396,110 @@ class TestReviewPersistence:
         assert response.status_code == 404
 
 
+def test_changed_materials_require_new_review_and_preserve_history(
+    client: TestClient,
+    db: Session,
+    superuser_token_headers: dict[str, str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fixture_dir = tmp_path / "fixtures"
+    shutil.copytree(FIXTURE_DIR, fixture_dir)
+    monkeypatch.setenv("TRIALS_FIXTURE_DIR", str(fixture_dir))
+    get_trials_settings.cache_clear()
+    _fixture_store.cache_clear()
+    first = client.get(
+        _url(TRIAL_A, "/preparation"), headers=superuser_token_headers
+    ).json()
+    update = _update(
+        source_version=first["source_version"],
+        boundary_ok=True,
+        markers_ok=True,
+        platform_ok=True,
+        tracking_ok=True,
+        state="confirmed",
+    )
+    saved = client.put(
+        _url(TRIAL_A, "/review"), headers=superuser_token_headers, json=update
+    )
+    assert saved.status_code == 200
+
+    fixture_file = fixture_dir / "fixture.json"
+    data = json.loads(fixture_file.read_text())
+    row = next(row for row in data["trials"] if row["id"] == TRIAL_A)
+    frame = next(
+        frame for frame in row["track"]["frames"] if frame["center"] is not None
+    )
+    frame["center"][0] += 1
+    fixture_file.write_text(json.dumps(data))
+    _fixture_store.cache_clear()
+
+    second = client.get(
+        _url(TRIAL_A, "/preparation"), headers=superuser_token_headers
+    ).json()
+    assert second["source_version"] != first["source_version"]
+    assert second["review"] is None
+    result = client.get(
+        _url(TRIAL_A, "/result"), headers=superuser_token_headers
+    ).json()
+    assert result["states"]["preparation_review"] is None
+    assert (
+        client.put(
+            _url(TRIAL_A, "/review"), headers=superuser_token_headers, json=update
+        ).status_code
+        == 409
+    )
+
+    update["source_version"] = second["source_version"]
+    assert (
+        client.put(
+            _url(TRIAL_A, "/review"), headers=superuser_token_headers, json=update
+        ).status_code
+        == 200
+    )
+    reviews = db.exec(select(TrialReview).where(TrialReview.trial_id == TRIAL_A)).all()
+    assert {review.source_version for review in reviews} == {
+        first["source_version"],
+        second["source_version"],
+    }
+    assert all(review.state == "confirmed" for review in reviews)
+
+
+def test_concurrent_review_writes_preserve_confirmation(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    version = client.get(
+        _url(TRIAL_A, "/preparation"), headers=superuser_token_headers
+    ).json()["source_version"]
+    start = Barrier(2)
+
+    def save(state: str) -> int:
+        start.wait(timeout=10)
+        response = client.put(
+            _url(TRIAL_A, "/review"),
+            headers=superuser_token_headers,
+            json=_update(
+                source_version=version,
+                boundary_ok=True,
+                markers_ok=True,
+                platform_ok=True,
+                tracking_ok=True,
+                state=state,
+            ),
+        )
+        return response.status_code
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        draft = pool.submit(save, "draft")
+        final = pool.submit(save, "confirmed")
+        assert final.result(timeout=15) == 200
+        assert draft.result(timeout=15) in (200, 422)
+    reviews = db.exec(select(TrialReview).where(TrialReview.trial_id == TRIAL_A)).all()
+    assert len(reviews) == 1
+    assert reviews[0].state == "confirmed"
+    assert reviews[0].confirmed_at is not None
+
+
 class TestResult:
     def test_result_keeps_same_trial_identity_and_states(
         self, client: TestClient, superuser_token_headers: dict[str, str]
@@ -420,7 +540,9 @@ class TestResult:
         # metrics carry units and versions
         by_metric = {m["metric"]: m for m in body["metrics"]}
         assert by_metric["dist_px"]["unit"] == "px"
-        assert by_metric["escape_latency_s"]["algo_version"].startswith("v1-platformzone")
+        assert by_metric["escape_latency_s"]["algo_version"].startswith(
+            "v1-platformzone"
+        )
         # failure metrics keep their reason instead of a value
         assert by_metric["mount_s"]["value"] is not None
 
@@ -438,7 +560,9 @@ class TestResult:
     def test_result_with_missing_track_is_explicit_not_fabricated(
         self, client: TestClient, superuser_token_headers: dict[str, str]
     ) -> None:
-        body = client.get(_url(TRIAL_B, "/result"), headers=superuser_token_headers).json()
+        body = client.get(
+            _url(TRIAL_B, "/result"), headers=superuser_token_headers
+        ).json()
         assert body["trial"]["id"] == TRIAL_B
         assert body["track"]["status"] == "missing"
         assert "尚无离线推理结果" in body["track"]["reason"]
@@ -494,7 +618,9 @@ class TestMedia:
         self, client: TestClient, granted_user: dict[str, str]
     ) -> None:
         assert (
-            client.get(_url(TRIAL_D, "/media/source", experiment=E2), headers=granted_user).status_code
+            client.get(
+                _url(TRIAL_D, "/media/source", experiment=E2), headers=granted_user
+            ).status_code
             == 403
         )
 
@@ -502,16 +628,22 @@ class TestMedia:
         self, client: TestClient, superuser_token_headers: dict[str, str]
     ) -> None:
         assert (
-            client.get(_url(TRIAL_C, "/media/source"), headers=superuser_token_headers).status_code
+            client.get(
+                _url(TRIAL_C, "/media/source"), headers=superuser_token_headers
+            ).status_code
             == 404
         )
         # trial-b has no overlay file
         assert (
-            client.get(_url(TRIAL_B, "/media/overlay"), headers=superuser_token_headers).status_code
+            client.get(
+                _url(TRIAL_B, "/media/overlay"), headers=superuser_token_headers
+            ).status_code
             == 404
         )
         # invalid kind
         assert (
-            client.get(_url(TRIAL_A, "/media/other"), headers=superuser_token_headers).status_code
+            client.get(
+                _url(TRIAL_A, "/media/other"), headers=superuser_token_headers
+            ).status_code
             == 422
         )

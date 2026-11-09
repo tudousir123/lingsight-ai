@@ -12,11 +12,12 @@ import json
 from pathlib import Path
 from typing import Any, Literal, cast
 
+from app.core.research import ResearchDatabaseSettings
 from app.metrics.definitions import PLATFORM_RADIUS_PX
-from app.text_to_sql.settings import ResearchQuerySettings
 from app.trials import derive
 from app.trials.catalog import read_rows
 from app.trials.derive import build_track_bundle
+from app.trials.media import ResearchTrialMedia, describe_media
 from app.trials.schemas import (
     REASON_NO_POOL,
     REASON_NO_TRACK,
@@ -29,11 +30,8 @@ from app.trials.schemas import (
     PoolGeometry,
     TrackBundle,
     TrackFrame,
-    media_url,
 )
 from app.trials.settings import TrialsSettings
-
-_OVERLAY_SUFFIX = "_adaptive_overlay.mp4"
 
 VIDEO_ROW_SELECT = (
     "SELECT video_id, source_video_path, fps, width, height, "
@@ -47,11 +45,15 @@ class ResearchTrialAssets:
 
     def __init__(
         self,
-        research: ResearchQuerySettings,
+        research: ResearchDatabaseSettings,
         trials: TrialsSettings,
     ) -> None:
         self.research = research
         self.trials = trials
+        self.media = ResearchTrialMedia(trials)
+        # Instances are constructed by the request dependency, never cached.
+        # Media/geometry/track in one response use the same video metadata.
+        self._video_rows: dict[tuple[str, str], dict[str, Any]] = {}
 
     # --- helpers ---------------------------------------------------------------
 
@@ -59,50 +61,20 @@ class ResearchTrialAssets:
         return read_rows(self.research, sql, params)
 
     def _video_row(self, experiment_id: str, trial_id: str) -> dict[str, Any]:
-        rows = self._read(VIDEO_ROW_SELECT, (experiment_id, trial_id))
-        return rows[0] if rows else {}
-
-    def _local_source_path(self, source_path: str | None) -> Path | None:
-        if not source_path or self.trials.TRIALS_VIDEOS_ROOT is None:
-            return None
-        prefix = self.trials.TRIALS_SOURCE_PREFIX
-        if not source_path.startswith(prefix):
-            return None
-        local = Path(
-            source_path.replace(prefix, str(self.trials.TRIALS_VIDEOS_ROOT), 1)
-        )
-        return local if local.is_file() else None
-
-    def _overlay_path(self, trial_id: str) -> Path | None:
-        if self.trials.TRIALS_OVERLAY_DIR is None:
-            return None
-        path = self.trials.TRIALS_OVERLAY_DIR / f"{trial_id}{_OVERLAY_SUFFIX}"
-        return path if path.is_file() else None
-
-    # --- assets interface ------------------------------------------------------
+        key = (experiment_id, trial_id)
+        if key not in self._video_rows:
+            rows = self._read(VIDEO_ROW_SELECT, key)
+            self._video_rows[key] = rows[0] if rows else {}
+        return self._video_rows[key]
 
     def get_media(self, experiment_id: str, trial_id: str) -> MediaInfo:
         row = self._video_row(experiment_id, trial_id)
-        overlay = self._overlay_path(trial_id)
-        if overlay is not None:
-            return MediaInfo(
-                kind="overlay",
-                status="available",
-                url=media_url(experiment_id, trial_id, "overlay"),
-                fingerprint=f"bytes:{overlay.stat().st_size}",
-            )
-        source = self._local_source_path(row.get("source_video_path"))
-        if source is not None:
-            return MediaInfo(
-                kind="source",
-                status="available",
-                url=media_url(experiment_id, trial_id, "source"),
-                fingerprint=f"bytes:{source.stat().st_size}",
-            )
-        return MediaInfo(
-            kind="source",
-            status="missing",
-            reason="源视频文件在本机不可访问（未挂载或路径未配置）",
+        return describe_media(
+            experiment_id,
+            trial_id,
+            source=self.media.source_path(row.get("source_video_path")),
+            overlay=self.media.overlay_path(trial_id),
+            missing_reason="源视频文件在本机不可访问（未挂载或路径未配置）",
         )
 
     def get_geometry(self, experiment_id: str, trial_id: str) -> GeometryBundle:
@@ -217,10 +189,10 @@ class ResearchTrialAssets:
 
     def media_path(self, experiment_id: str, trial_id: str, kind: str) -> Path | None:
         if kind == "overlay":
-            return self._overlay_path(trial_id)
+            return self.media.overlay_path(trial_id)
         if kind == "source":
             row = self._video_row(experiment_id, trial_id)
-            return self._local_source_path(row.get("source_video_path"))
+            return self.media.source_path(row.get("source_video_path"))
         return None
 
 

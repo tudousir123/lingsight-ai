@@ -66,35 +66,46 @@ $ docker compose exec backend bash
 
 ## Backend Tests
 
-To test the backend from the `backend` directory, run:
-
-```console
-$ uv run bash scripts/test.sh
-```
-
-The tests run with Pytest. Modify existing tests or add new ones in `./backend/tests/`.
-
-If you use GitHub Actions, the tests will run automatically.
-
-### Test a Running Stack
-
-If your stack is already up and you just want to run the tests, you can use:
+Run the complete suite from `backend` with Docker available:
 
 ```bash
-docker compose exec backend bash scripts/tests-start.sh
+bash scripts/test-local.sh -q
 ```
 
-The `/app/backend/scripts/tests-start.sh` script calls `pytest`. If you need to pass extra arguments to `pytest`, you can pass them to that command and they will be forwarded.
+The runner creates a disposable MySQL 8.4 container, migrates its dedicated
+`lingsight_test_*` database, runs pytest and coverage, and removes only that
+container on exit. CI uses the same command. It does not restart the development
+stack or delete development accounts. `test.sh` and `tests-start.sh` forward to
+this runner; arguments are pytest arguments, not a coverage title.
 
-For example, to stop on first error:
+Tests without application persistence can run directly without Docker or `.env`:
 
 ```bash
-docker compose exec backend bash scripts/tests-start.sh -x
+uv run pytest tests/metrics/test_compute.py tests/trials/test_derive.py tests/api/routes/test_agent_gateway.py
 ```
 
-### Test Coverage
+Database tests require an explicit `TEST_DATABASE_URL` with a `lingsight_test_*`
+database name. Without it they fail with the runner command; they never use the
+development `DATABASE_URL`. If managing a test database manually, migrate it
+first. Application settings are synthetic; real research/LLM tests keep their
+separate `env_gated` probes and skip when those dependencies are unavailable.
 
-When the tests run, they generate `htmlcov/index.html`. Open it in your browser to inspect the test coverage.
+Coverage is written to `htmlcov/index.html`. `MYPY_CACHE_DIR`, `RUFF_CACHE_DIR`
+and `COVERAGE_FILE` can point to user-owned paths when earlier container runs
+left root-owned cache files.
+
+## Backend ownership
+
+- `core/settings.py` defines application settings; `core/config.py` assembles the shared instance.
+- `core/research.py` owns existing `water_maze` read-only connection settings. Legacy Q&A adds model/query settings in `text_to_sql/settings.py`; trial browsing does not depend on that package.
+- `trials/service.py` assembles trial materials and enforces version-bound review rules; `trials/media.py` owns mount mapping, playable-media selection and content fingerprints.
+- `api/routes/agent.py` authenticates/forwards personal research workspace requests. Tasks, execution, events and deliverables remain owned by the separate Agent repository.
+
+Review migration `d4e5f6a7b8c9` preserves prior records and permits one review per
+user, experiment, trial and material version. Stronger material fingerprints
+invalidate old count-only confirmations for current materials; they remain in
+history. Apply migrations before starting the updated backend. Downgrade refuses
+to discard multiple versions of review history.
 
 ## Migrations
 

@@ -1,0 +1,67 @@
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> da969c656440, initial schema for mysql
+INFO  [alembic.runtime.migration] Running upgrade da969c656440 -> b19a1e7c90a1, Store per-user experiment access for the trial catalog.
+INFO  [alembic.runtime.migration] Running upgrade b19a1e7c90a1 -> c3f8a1d204b7, Store human preparation reviews per trial (ticket #21).
+INFO  [alembic.runtime.migration] Running upgrade c3f8a1d204b7 -> d4e5f6a7b8c9, Keep preparation reviews for each version of trial materials.
+.                                                                        [100%]
+1 passed in 1.34s
+Name                                                            Stmts   Miss  Cover   Missing
+---------------------------------------------------------------------------------------------
+app/trials/__init__.py                                              0      0   100%
+app/text_to_sql/__init__.py                                         0      0   100%
+app/core/config.py                                                  3      0   100%
+app/core/__init__.py                                                0      0   100%
+app/api/routes/__init__.py                                          0      0   100%
+app/api/__init__.py                                                 0      0   100%
+app/__init__.py                                                     0      0   100%
+app/models.py                                                      91      7    92%   10, 27-29, 34-36
+app/alembic/versions/d4e5f6a7b8c9_review_source_versions.py        36      4    89%   33, 35, 68, 70
+app/core/settings.py                                               56      7    88%   47, 70, 78-85, 102
+app/alembic/env.py                                                 29      5    83%   49-55, 84
+app/alembic/versions/b19a1e7c90a1_experiment_access.py             11      2    82%   19, 29
+app/alembic/versions/c3f8a1d204b7_trial_review.py                  13      4    69%   19-38, 42-43
+app/core/security.py                                               18      6    67%   23-26, 32, 36
+app/alembic/versions/da969c656440_initial_schema_for_mysql.py      16      6    62%   24-35, 49-51
+app/core/db.py                                                     10      4    60%   30-39
+app/crud.py                                                        48     37    23%   11-17, 21-31, 35-37, 46-60, 64-68
+app/utils.py                                                       64     64     0%   1-125
+app/trials/settings.py                                             13     13     0%   9-48
+app/trials/service.py                                             109    109     0%   15-356
+app/trials/schemas.py                                              81     81     0%   8-217
+app/trials/media.py                                                56     56     0%   3-94
+app/trials/fixture_store.py                                        78     78     0%   10-201
+app/trials/derive.py                                               51     51     0%   9-144
+app/trials/catalog.py                                              59     59     0%   7-156
+app/trials/assets.py                                               97     97     0%   11-222
+app/text_to_sql/views.py                                            5      5     0%   21-62
+app/text_to_sql/validator.py                                      140    140     0%   23-301
+app/text_to_sql/settings.py                                        16     16     0%   10-49
+app/text_to_sql/semantic.py                                       119    119     0%   11-205
+app/text_to_sql/pipeline.py                                       130    130     0%   29-426
+app/text_to_sql/gateway.py                                        103    103     0%   9-235
+app/text_to_sql/executor.py                                        58     58     0%   11-133
+app/text_to_sql/eval/questions.py                                  53     53     0%   42-959
+app/text_to_sql/eval/grading.py                                   261    261     0%   20-680
+app/text_to_sql/eval/__init__.py                                    2      2     0%   8-19
+app/metrics/store.py                                               21     21     0%   10-101
+app/metrics/events.py                                             177    177     0%   19-359
+app/metrics/definitions.py                                         32     32     0%   10-159
+app/metrics/compute.py                                             51     51     0%   10-162
+app/metrics/__init__.py                                             5      5     0%   8-27
+app/main.py                                                        16     16     0%   1-36
+app/initial_data.py                                                14     14     0%   1-23
+app/core/research.py                                               16     16     0%   8-32
+app/api/routes/utils.py                                            14     14     0%   1-31
+app/api/routes/users.py                                           104    104     0%   1-232
+app/api/routes/trials.py                                          122    122     0%   3-291
+app/api/routes/research.py                                         50     50     0%   9-138
+app/api/routes/private.py                                          15     15     0%   1-38
+app/api/routes/login.py                                            53     53     0%   1-121
+app/api/routes/items.py                                            58     58     0%   1-113
+app/api/routes/agent.py                                            58     58     0%   3-103
+app/api/main.py                                                    13     13     0%   1-17
+app/api/deps.py                                                    37     37     0%   1-62
+---------------------------------------------------------------------------------------------
+TOTAL                                                            2682   2433     9%
+Wrote HTML report to htmlcov/index.html

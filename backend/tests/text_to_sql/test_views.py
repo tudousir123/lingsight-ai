@@ -83,7 +83,7 @@ CURATED_COLUMNS = {
 
 
 @pytest.fixture()
-def frame_view() -> Generator[Connection]:
+def frame_view(db: object) -> Generator[Connection]:
     with engine.connect() as conn:
         conn.exec_driver_sql("DROP VIEW IF EXISTS v_query_frame_predictions")
         conn.exec_driver_sql("DROP TABLE IF EXISTS frame_predictions")

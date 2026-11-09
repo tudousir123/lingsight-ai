@@ -13,6 +13,7 @@ safely prove (#18 测试决策):
 """
 
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol, cast
@@ -112,6 +113,34 @@ def load_trial(
     return row
 
 
+@dataclass(frozen=True)
+class _TrialMaterials:
+    trial: TrialSummary
+    video: MediaInfo
+    geometry: GeometryBundle
+    track: TrackBundle
+    source_version: str
+
+
+def _load_materials(
+    catalog: TrialCatalogProtocol,
+    assets: TrialAssetsProtocol,
+    experiment_id: str,
+    trial_id: str,
+) -> _TrialMaterials:
+    trial = TrialSummary.model_validate(load_trial(catalog, experiment_id, trial_id))
+    video = assets.get_media(experiment_id, trial_id)
+    geometry = assets.get_geometry(experiment_id, trial_id)
+    track = assets.get_track(experiment_id, trial_id)
+    return _TrialMaterials(
+        trial,
+        video,
+        geometry,
+        track,
+        derive.source_version(trial_id, video, geometry, track),
+    )
+
+
 def preparation_bundle(
     catalog: TrialCatalogProtocol,
     assets: TrialAssetsProtocol,
@@ -121,21 +150,20 @@ def preparation_bundle(
     trial_id: str,
 ) -> PreparationPublic:
     """Everything the preparation page needs, in one trial's context."""
-    trial = load_trial(catalog, experiment_id, trial_id)
-    video = assets.get_media(experiment_id, trial_id)
-    geometry = assets.get_geometry(experiment_id, trial_id)
-    track = assets.get_track(experiment_id, trial_id)
+    materials = _load_materials(catalog, assets, experiment_id, trial_id)
     metrics = assets.get_metrics(experiment_id, trial_id)
-    review = _find_review(session, current_user.id, experiment_id, trial_id)
+    review = _find_review(
+        session, current_user.id, experiment_id, trial_id, materials.source_version
+    )
     return PreparationPublic(
-        trial=TrialSummary.model_validate(trial),
-        video=video,
-        geometry=geometry,
-        tracking=track,
+        trial=materials.trial,
+        video=materials.video,
+        geometry=materials.geometry,
+        tracking=materials.track,
         metrics=metrics,
         metric_unavailable=CALIBRATION_GATED_METRICS,
         review=_review_public(review, current_user.email),
-        source_version=derive.source_version(trial_id, video, geometry, track),
+        source_version=materials.source_version,
     )
 
 
@@ -148,32 +176,31 @@ def result_bundle(
     trial_id: str,
 ) -> ResultPublic:
     """Offline result of the same trial; missing pieces stay explicit."""
-    trial = load_trial(catalog, experiment_id, trial_id)
-    video = assets.get_media(experiment_id, trial_id)
-    geometry = assets.get_geometry(experiment_id, trial_id)
-    track = assets.get_track(experiment_id, trial_id)
+    materials = _load_materials(catalog, assets, experiment_id, trial_id)
     metrics = assets.get_metrics(experiment_id, trial_id)
     qc_status = assets.get_qc_status(experiment_id, trial_id)
-    review = _find_review(session, current_user.id, experiment_id, trial_id)
-    frames = track.frames if track.status == "available" else []
-    candidate = derive.platform_entry_candidate(frames, geometry)
+    review = _find_review(
+        session, current_user.id, experiment_id, trial_id, materials.source_version
+    )
+    frames = materials.track.frames if materials.track.status == "available" else []
+    candidate = derive.platform_entry_candidate(frames, materials.geometry)
     states = ResultStates(
-        inference_available=track.status == "available",
-        artifact_mode=track.source,
+        inference_available=materials.track.status == "available",
+        artifact_mode=materials.track.source,
         qc_status=qc_status,
         preparation_review=_review_public(review, current_user.email),
         result_quality="not_started",
     )
     return ResultPublic(
-        trial=TrialSummary.model_validate(trial),
-        video=video,
-        geometry=geometry,
-        track=track,
+        trial=materials.trial,
+        video=materials.video,
+        geometry=materials.geometry,
+        track=materials.track,
         metrics=metrics,
         metric_unavailable=CALIBRATION_GATED_METRICS,
         states=states,
         platform_entry_candidate=candidate,
-        source_version=derive.source_version(trial_id, video, geometry, track),
+        source_version=materials.source_version,
     )
 
 
@@ -184,9 +211,8 @@ def save_review(
     trial_id: str,
     update: ReviewUpdate,
     *,
-    video: MediaInfo,
-    geometry: GeometryBundle,
-    track: TrackBundle,
+    catalog: TrialCatalogProtocol,
+    assets: TrialAssetsProtocol,
 ) -> ReviewPublic:
     """Persist a draft or final review, enforcing the server-side gates.
 
@@ -195,12 +221,21 @@ def save_review(
     - final gate: all four acknowledgements plus every required material
       (video, pool, markers, platform, tracking) must be available.
     """
-    current_version = derive.source_version(trial_id, video, geometry, track)
+    materials = _load_materials(catalog, assets, experiment_id, trial_id)
+    current_version = materials.source_version
     if update.source_version != current_version:
         raise SourceVersionConflict(
             "被核对的素材已更新，请刷新页面后按最新素材重新核对"
         )
-    existing = _find_review(session, current_user.id, experiment_id, trial_id)
+    # Lock a row that already exists even for a first review. Locking only a
+    # missing review cannot serialize inserts at MySQL READ COMMITTED. Keep
+    # read/check/write together so a concurrent draft cannot undo confirmation.
+    session.exec(
+        select(User.id).where(User.id == current_user.id).with_for_update()
+    ).one()
+    existing = _find_review(
+        session, current_user.id, experiment_id, trial_id, current_version
+    )
     if existing is not None and existing.state == "confirmed":
         # A final confirmation is a terminal record (reviewer + timestamp):
         # repeating the same confirmation is idempotent, anything else is
@@ -228,7 +263,9 @@ def save_review(
             raise ConfirmationRejected(
                 f"四项人工核对未全部通过（{sum(acked)}/4），不能完成最终确认"
             )
-        missing = _missing_materials(video, geometry, track)
+        missing = _missing_materials(
+            materials.video, materials.geometry, materials.track
+        )
         if missing:
             raise ConfirmationRejected(
                 "缺少必要素材，不能完成最终确认：" + "、".join(missing)
@@ -276,13 +313,18 @@ def _missing_materials(
 
 
 def _find_review(
-    session: Session, user_id: uuid.UUID, experiment_id: str, trial_id: str
+    session: Session,
+    user_id: uuid.UUID,
+    experiment_id: str,
+    trial_id: str,
+    source_version: str,
 ) -> TrialReview | None:
     return session.exec(
         select(TrialReview).where(
             TrialReview.user_id == user_id,
             TrialReview.experiment_id == experiment_id,
             TrialReview.trial_id == trial_id,
+            TrialReview.source_version == source_version,
         )
     ).first()
 
