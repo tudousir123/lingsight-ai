@@ -10,7 +10,7 @@ Playwright browser flow runs against.
 import json
 import shutil
 from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier
+from threading import Barrier, Event
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -463,6 +463,53 @@ def test_changed_materials_require_new_review_and_preserve_history(
         second["source_version"],
     }
     assert all(review.state == "confirmed" for review in reviews)
+
+
+def test_material_change_while_review_waits_for_lock_is_rejected(
+    client: TestClient,
+    db: Session,
+    superuser_token_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    version = client.get(
+        _url(TRIAL_A, "/preparation"), headers=superuser_token_headers
+    ).json()["source_version"]
+    user = db.exec(select(User).where(User.email == settings.FIRST_SUPERUSER)).one()
+    db.exec(select(User.id).where(User.id == user.id).with_for_update()).one()
+    reached_lock = Event()
+    original_exec = Session.exec
+
+    def observed_exec(self, statement, *args, **kwargs):
+        if "FOR UPDATE" in str(statement):
+            reached_lock.set()
+        return original_exec(self, statement, *args, **kwargs)
+
+    monkeypatch.setattr(Session, "exec", observed_exec)
+    store = _fixture_store(FIXTURE_DIR)
+    row = next(row for row in store.data["trials"] if row["id"] == TRIAL_A)
+    frame = next(
+        frame for frame in row["track"]["frames"] if frame["center"] is not None
+    )
+    original_x = frame["center"][0]
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(
+                client.put,
+                _url(TRIAL_A, "/review"),
+                headers=superuser_token_headers,
+                json=_update(source_version=version, state="draft"),
+            )
+            try:
+                assert reached_lock.wait(timeout=10)
+                frame["center"][0] += 1
+            finally:
+                db.commit()
+            assert pending.result(timeout=15).status_code == 409
+        assert not db.exec(
+            select(TrialReview).where(TrialReview.trial_id == TRIAL_A)
+        ).all()
+    finally:
+        frame["center"][0] = original_x
 
 
 def test_concurrent_review_writes_preserve_confirmation(

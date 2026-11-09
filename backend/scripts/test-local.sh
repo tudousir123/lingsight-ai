@@ -9,7 +9,7 @@ test_database="lingsight_test_${test_suffix}"
 test_container=""
 test_coverage_owned=""
 if [[ -z "${COVERAGE_FILE:-}" ]]; then
-  export COVERAGE_FILE="$PWD/.coverage.${test_suffix}"
+  export COVERAGE_FILE="${TMPDIR:-/tmp}/lingsight-coverage-${test_suffix}.sqlite"
   test_coverage_owned="$COVERAGE_FILE"
 fi
 cleanup() {

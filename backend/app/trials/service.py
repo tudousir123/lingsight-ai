@@ -221,18 +221,20 @@ def save_review(
     - final gate: all four acknowledgements plus every required material
       (video, pool, markers, platform, tracking) must be available.
     """
-    materials = _load_materials(catalog, assets, experiment_id, trial_id)
-    current_version = materials.source_version
-    if update.source_version != current_version:
-        raise SourceVersionConflict(
-            "被核对的素材已更新，请刷新页面后按最新素材重新核对"
-        )
     # Lock a row that already exists even for a first review. Locking only a
     # missing review cannot serialize inserts at MySQL READ COMMITTED. Keep
     # read/check/write together so a concurrent draft cannot undo confirmation.
     session.exec(
         select(User.id).where(User.id == current_user.id).with_for_update()
     ).one()
+    # A request may have waited for the lock while materials changed. Read and
+    # validate them after the wait rather than accepting a stale fingerprint.
+    materials = _load_materials(catalog, assets, experiment_id, trial_id)
+    current_version = materials.source_version
+    if update.source_version != current_version:
+        raise SourceVersionConflict(
+            "被核对的素材已更新，请刷新页面后按最新素材重新核对"
+        )
     existing = _find_review(
         session, current_user.id, experiment_id, trial_id, current_version
     )

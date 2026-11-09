@@ -1,5 +1,7 @@
 # LingSight AI · 灵视科技
 
+当前架构采用科研任务工作区及独立 Pi Agent 服务；本分支包含个人工作区的 FastAPI 网关和后端收口，任务与交付物由独立服务持有。设计依据见 [ADR-0009](docs/adr/0009-independent-research-agent-via-dbhub.md) 至 [ADR-0012](docs/adr/0012-agent-repository-owns-tasks-and-artifacts.md)，验收和部署边界见 [后端收敛记录](docs/evidence/backend-convergence/README.md)。
+
 > **Animal Behavior Intelligence Platform** — 面向动物行为科研的视频智能分析与科研 Agent 平台。
 
 **状态：V0.1 设计与工程初始化。** 当前仓库是 LingSight AI 的开发仓库；文档描述目标架构与验收标准，不代表所有能力已经在本仓库完成。原有 `animal_platform_v2` 仓库名称需在 GitHub Settings 中重命名为 `lingsight-ai`（当前集成没有仓库改名操作）。

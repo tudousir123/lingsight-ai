@@ -63,7 +63,7 @@
 ## 2026-11-10 独立评审与复核
 
 - 平台数据迁移改用单条 MySQL ALTER，同时识别旧实现可能留下的双索引中间态；临时库验证中断升级、降级续跑及禁止丢失多版本历史，见 [migration-review.log](migration-review.log)。
-- 测试数据库改用 MySQL advisory lock，按数据库实体加锁，不依赖 URL 用户名、密码或主机别名；完整结构测试 262 passed、45 deselected、coverage 87%，见 [pytest-review.log](pytest-review.log)。
+- 测试数据库改用 MySQL advisory lock，按数据库实体加锁，不依赖 URL 用户名、密码或主机别名；主工作区结构测试 263 passed、45 deselected、coverage 86%（当时已出现并行开发的推理模块），见 [pytest-final.log](pytest-final.log)；评审分支另行独立测试。
 - `test-local.sh` 的 coverage 文件每次独立，公共 HTML 生成在锁内串行化。两个独立 MySQL runner 并行运行，各 9 passed；见 [parallel-coverage.log](parallel-coverage.log)。
 - 独立 Agent 对此前合成行验收存在真实 Schema/Skill 出站的事实作更正；新验收使用虚构系统提示、Skill、表列和不含科研模块的单独镜像。真实科研数据出站默认关闭，除非另行明确配置授权。
 
@@ -71,3 +71,7 @@
 主站浏览器验收：在独立临时 MySQL 上执行当前 Alembic 迁移，以真实浏览器访问复制出的当前前端、临时 FastAPI 和独立 Pi Agent；通过登录、任务创建、澄清及答复、Pi 和隔离 Python 分析、报告编辑、ZIP 下载、刷新，并逐项核对虚构 CSV，见 [workspace-e2e.log](workspace-e2e.log)。该测试连接虚构 MCP 和不含科研模块的合成镜像，不连接真实科研库或已有平台库。
 
 复现前先在独立 Agent 仓库构建 `docker build --network none -f runner/Dockerfile.synthetic -t lingsight-synthetic-acceptance:local .`，该仓库需已配置可使用的 Pi 模型凭据；然后在平台 `backend` 执行 `bash scripts/test-local.sh ../docs/evidence/backend-convergence/workspace_e2e.py -q -s -p no:cacheprovider`。独立仓库默认位于平台仓库同级；可用 `LINGSIGHT_AGENT_REPO` 指定其它路径。验收只对合成数据启用临时模型传输授权，不改真实服务的配置。
+
+固定点需求复审还发现素材在等待用户行锁期间可能更新；已在取得锁后加载并校验当前素材。真实 MySQL 行锁回归验证请求获得 409，并恢复测试夹具；见 [review-race-final.log](review-race-final.log)。
+
+干净开发环境未构建 SPA 时，FastAPI 仅提供 API 且未匹配路径返回 404；正式环境仍在启动时要求已构建前端。独立评审分支的结构测试为 263 passed、45 deselected、coverage 87%，见 [branch-tests.log](branch-tests.log)。

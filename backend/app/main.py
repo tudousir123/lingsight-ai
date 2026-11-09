@@ -33,4 +33,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
-app.frontend("/", directory=FRONTEND_DIR)
+# Production must ship the built SPA. Development and backend-only tests may
+# use the separate Vite server and do not need a placeholder directory.
+if FRONTEND_DIR.is_dir() or settings.FASTAPI_ENV != "development":
+    app.frontend("/", directory=FRONTEND_DIR)
