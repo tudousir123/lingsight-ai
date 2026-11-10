@@ -65,5 +65,3 @@ repos:
         pass_filenames: false
         language: unsupported
         files: ^backend/app/.*\.py$|^backend/pyproject\.toml$|^uv\.lock$|^frontend/openapi-ts\.config\.ts$|^scripts/generate-client\.sh$
-
-
