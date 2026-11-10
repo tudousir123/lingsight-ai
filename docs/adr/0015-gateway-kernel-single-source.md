@@ -22,6 +22,14 @@ date: 2026-11-10
 - **继续复印**（现状）：一处修 bug 另一处静默保留旧行为，无测试能发现分叉——本 ADR 的动因。
 - **跨仓 codegen**（OpenAPI/typebox 管线连到 lingsight-agent / lingsight-inference）：两个上游服务尚无稳定 schema 产物，管线成本大于两张操作表的维护成本。记录为演进位：上游契约正式化后再评估。前端字段契约现阶段为各功能域单一手写模块（`features/agent/api.ts`、`features/inference/contract.ts`），头注释指向真源。
 
+# 与工单字段的对应
+
+工单 Implementation Decisions 列出的 policy 字段名是会诊草稿；实现保留其语义，落点有两处刻意偏离，记录在此免得被「改回规格」：
+
+- **`allow_range_headers` 并入 `range_streaming`**：两个布尔在两个现有服务上恒等（推理皆真、Agent 皆假），拆成两个开关只会造出一个永远联动的旋钮。`range_streaming` 同时决定 Range 请求头透传与 content-range/accept-ranges/content-length 响应头透传（非流式服务改透传 etag）。
+- **`artifact_names` 住在 `OperationTable.params`（`LiteralSet`）而非 `GatewayPolicy`**：导出脚本要从同一张表渲染前端 TS 字面量联合（`InferenceArtifactName`），文件名白名单属于操作面的一部分，放 policy 会把一个声明拆到两个对象。
+- 工单未列名的两个显式特例位 **`forward_client_accept`**（推理原样转发调用方 Accept）与 **`forward_path_query_routes`**（`videos` 目录列举的 `?path=` 转发）是行为逐字节不变所必需的最小补集，同为声明式参数、非回调钩子。
+
 # 保留的差异（不要好心统一）
 
 - **128K vs 512K 体量上限**：Agent 是任务/对话 JSON；推理确认载荷含四个标志物的 polygon 坐标数组。

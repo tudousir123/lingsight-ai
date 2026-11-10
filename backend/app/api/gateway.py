@@ -4,19 +4,20 @@ Both upstream gateways (research Agent, video inference) forward through
 ``forward()``. A gateway adapter is nothing but its operation table
 (``OperationTable``), its service endpoint and copy (``UpstreamService``) and
 its policy knobs (``GatewayPolicy``) — differences between the services are
-explicit fields, never divergent copies of the forwarding skeleton:
+explicit fields, never divergent copies of the forwarding skeleton. The
+concrete knob values per service and the reasons they must stay different
+live in the adapters and ADR-0015, not here:
 
-- ``body_cap_bytes``: 128_000 for the Agent (JSON task/chat payloads) vs
-  512_000 for inference (polygon confirmation payloads).
-- ``read_timeout_s``: 60 vs 120 (inference streams overlay video).
-- ``sse_cursor``: validates the Agent event-log cursor on ``*/events`` and
-  disables response buffering for event streams.
+- ``body_cap_bytes`` / ``read_timeout_s``: request-body ceiling and upstream
+  read timeout.
+- ``sse_cursor``: validates the event-log cursor on ``*/events`` and disables
+  response buffering for event streams.
 - ``range_streaming``: Range request passthrough plus content-range /
   accept-ranges / content-length response passthrough for video streaming;
   non-streaming services get ETag passthrough instead.
 - ``forward_client_accept``: honor the caller's Accept header verbatim.
-- ``forward_query_routes``: routes whose ``path`` query parameter is
-  forwarded upstream (the inference directory listing).
+- ``forward_path_query_routes``: routes whose ``path`` query parameter is
+  forwarded upstream.
 
 Adapters run their own workspace gate and operation-whitelist check in their
 historical order before calling ``forward()``; ``forward()`` owns everything
@@ -116,7 +117,7 @@ class GatewayPolicy:
     sse_cursor: bool = False
     range_streaming: bool = False
     forward_client_accept: bool = False
-    forward_query_routes: frozenset[str] = frozenset()
+    forward_path_query_routes: frozenset[str] = frozenset()
 
 
 async def forward(
@@ -149,7 +150,7 @@ async def forward(
             headers["Accept"] = "text/event-stream"
     if policy.range_streaming and (value := request.headers.get("range")):
         headers["Range"] = value
-    if path in policy.forward_query_routes:
+    if path in policy.forward_path_query_routes:
         params["path"] = request.query_params.get("path", "")
 
     client = httpx.AsyncClient(

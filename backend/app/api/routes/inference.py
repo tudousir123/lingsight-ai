@@ -56,7 +56,7 @@ POLICY = GatewayPolicy(
     read_timeout_s=120,
     range_streaming=True,
     forward_client_accept=True,
-    forward_query_routes=frozenset({"videos"}),
+    forward_path_query_routes=frozenset({"videos"}),
 )
 
 UNKNOWN_OPERATION = "Unknown inference operation"
