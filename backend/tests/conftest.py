@@ -18,7 +18,7 @@ def db() -> Generator[Session]:
             "Database test requires an isolated database: bash scripts/test-local.sh"
         )
     from app.core.db import engine, init_db
-    from app.models import Item, User
+    from app.models import User
 
     # MySQL owns this lock, so credentials, hostname aliases and URL options
     # cannot make two sessions on the same server/database miss each other.
@@ -39,7 +39,6 @@ def db() -> Generator[Session]:
             with Session(engine) as session:
                 init_db(session)
                 yield session
-                session.execute(delete(Item))
                 session.execute(delete(User))
                 session.commit()
         finally:

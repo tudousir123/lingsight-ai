@@ -19,13 +19,8 @@ import "@/features/agent/workspace.css"
 
 export const Route = createFileRoute("/_layout")({
   component: Layout,
-  beforeLoad: async ({ location }) => {
-    const isDemoPreview =
-      import.meta.env.DEV &&
-      import.meta.env.VITE_DEMO_PREVIEW === "true" &&
-      ["/", "/prepare", "/results", "/reports"].includes(location.pathname)
-
-    if (!isLoggedIn() && !isDemoPreview) {
+  beforeLoad: async () => {
+    if (!isLoggedIn()) {
       throw redirect({ to: "/login" })
     }
   },
@@ -34,11 +29,6 @@ export const Route = createFileRoute("/_layout")({
 function Layout() {
   const pathname = useLocation().pathname
   const isAgentWorkspace = pathname === "/" || pathname.startsWith("/tasks/")
-  const isLocalVideoFlow =
-    import.meta.env.DEV &&
-    import.meta.env.VITE_DEMO_PREVIEW === "true" &&
-    import.meta.env.VITE_HEALTHAD_SAMPLE === "true" &&
-    (pathname === "/prepare" || pathname === "/results")
 
   return (
     <SidebarProvider
@@ -63,7 +53,7 @@ function Layout() {
             </Link>
           </header>
         )}
-        {!isLocalVideoFlow && !isAgentWorkspace && (
+        {!isAgentWorkspace && (
           <header className="z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 lg:px-6">
             <SidebarTrigger className="-ml-1 text-muted-foreground" />
             <span className="h-5 w-px bg-border" aria-hidden="true" />

@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query"
-import { Link } from "@tanstack/react-router"
 import { ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { useState } from "react"
 import { ExperimentsService, type TrialSummary } from "@/client"
@@ -65,14 +64,12 @@ function TrialRow({ trial }: { trial: TrialSummary }) {
         </div>
       </TableCell>
       <TableCell className="text-right">
-        <Link
-          to="/experiments/$experimentId/trials/$trialId"
-          params={{ experimentId: trial.experiment_id, trialId: trial.id }}
-          aria-label={`打开分析准备 ${trial.video_name}`}
-          className="inline-flex rounded-lg border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+        <span
+          className="inline-flex rounded-lg border px-3 py-1.5 text-xs font-medium text-muted-foreground"
+          title={`试次详情页已随旧分析闭环下线：${trial.video_name}`}
         >
-          查看试次
-        </Link>
+          {trial.id}
+        </span>
       </TableCell>
     </TableRow>
   )

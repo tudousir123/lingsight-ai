@@ -3,10 +3,8 @@ from fastapi import APIRouter
 from app.api.routes import (
     agent,
     inference,
-    items,
     login,
     private,
-    research,
     trials,
     users,
     utils,
@@ -17,8 +15,6 @@ api_router = APIRouter()
 api_router.include_router(login.router)
 api_router.include_router(users.router)
 api_router.include_router(utils.router)
-api_router.include_router(items.router)
-api_router.include_router(research.router)
 api_router.include_router(trials.router)
 api_router.include_router(agent.router)
 api_router.include_router(inference.router)

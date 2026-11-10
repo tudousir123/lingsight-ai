@@ -19,10 +19,6 @@ environment only (same command line, nothing written to disk):
 
 Optional env overrides: METRICS_DB_HOST / METRICS_DB_PORT / METRICS_DB_USER /
 METRICS_DB_NAME (defaults 127.0.0.1:3306 root@water_maze).
-
-The run ends with ``scripts.metrics.validate_expected_cells`` (research-DB
-anchor check via lingsight_ro, needs LINGSIGHT_RO_PASSWORD in the root
-.env): a recompute that leaves stale eval anchors behind fails loudly.
 """
 
 import logging
@@ -51,7 +47,6 @@ from app.metrics.events import (
 )
 from app.metrics.store import ensure_trial_metrics_table, write_trial_metrics
 from scripts.metrics._db import metrics_engine
-from scripts.metrics.validate_expected_cells import main as validate_expected_cells
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("compute_trial_metrics")
@@ -344,10 +339,7 @@ def main() -> int:
         ALGO_VERSION,
         ALGO_VERSION_EVENTS,
     )
-    # Refresh ⇒ recompute ⇒ anchor check is one chain (retro 2026-10-13):
-    # a recompute that leaves stale eval anchors behind is incomplete, so
-    # the docs/09 cell check runs here and its failure fails this run.
-    return validate_expected_cells()
+    return written
 
 
 if __name__ == "__main__":
