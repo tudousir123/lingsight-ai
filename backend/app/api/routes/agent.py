@@ -1,108 +1,71 @@
 """Authenticated gateway to the personal research service; state remains in Agent."""
 
-import re
-from collections.abc import AsyncIterator
+from fastapi import APIRouter, Request, Response
 
-import httpx
-from fastapi import APIRouter, HTTPException, Request
-from starlette.background import BackgroundTask
-from starlette.responses import Response, StreamingResponse
-
-from app.api.deps import CurrentUser
+from app.api.deps import CurrentUser, ensure_workspace_user
+from app.api.gateway import (
+    UUID_PATTERN,
+    GatewayPolicy,
+    OperationTable,
+    UpstreamService,
+    forward,
+)
 from app.core.config import settings
 
 router = APIRouter(prefix="/agent", tags=["agent"])
-_ID = r"[0-9a-fA-F-]{36}"
-_ROUTES = {
-    "GET": rf"(?:tasks|tasks/{_ID}(?:/events|/bundle)?|runs/{_ID}|artifacts/{_ID})",
-    "POST": rf"(?:tasks|tasks/{_ID}/messages|runs/{_ID}/(?:cancel|resume|clarifications/{_ID}/answer))",
-    "PATCH": rf"artifacts/{_ID}",
-}
+
+# Declared operation surface. The platform whitelist and the generated
+# frontend route templates (frontend/src/lib/upstreamRoutes.gen.ts) render
+# from this one table; scripts/export_frontend_routes.py keeps them in sync.
+OPERATIONS = OperationTable(
+    operations={
+        "GET": (
+            "tasks",
+            "tasks/{task_id}",
+            "tasks/{task_id}/events",
+            "tasks/{task_id}/bundle",
+            "runs/{run_id}",
+            "artifacts/{artifact_id}",
+        ),
+        "POST": (
+            "tasks",
+            "tasks/{task_id}/messages",
+            "runs/{run_id}/cancel",
+            "runs/{run_id}/resume",
+            "runs/{run_id}/clarifications/{clarification_id}/answer",
+        ),
+        "PATCH": ("artifacts/{artifact_id}",),
+    },
+    params={
+        "task_id": UUID_PATTERN,
+        "run_id": UUID_PATTERN,
+        "artifact_id": UUID_PATTERN,
+        "clarification_id": UUID_PATTERN,
+    },
+)
+
+# 128_000 covers task/chat JSON payloads; 60 s covers JSON responses (this
+# service streams events, not media).
+POLICY = GatewayPolicy(body_cap_bytes=128_000, read_timeout_s=60, sse_cursor=True)
+
+UNKNOWN_OPERATION = "Unknown Agent operation"
+
+
+def _service() -> UpstreamService:
+    return UpstreamService(
+        base_url=settings.AGENT_BASE_URL,
+        api_token=settings.AGENT_API_TOKEN,
+        unconfigured_detail="科研 Agent 尚未配置，请联系管理员",
+        connect_error_detail="暂时无法连接科研 Agent，请稍后重试",
+        upstream_error_detail="科研 Agent 服务暂时不可用，请联系管理员",
+        redirect_detail="Unexpected Agent redirect",
+    )
 
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PATCH"])
 async def agent_gateway(
     path: str, request: Request, current_user: CurrentUser
 ) -> Response:
-    # This is one personal workspace, not per-user isolation. Explicitly opt in
-    # one ordinary account; unrelated registered accounts must not see its data.
-    if not current_user.is_superuser and (
-        not settings.AGENT_WORKSPACE_EMAIL
-        or current_user.email.casefold() != settings.AGENT_WORKSPACE_EMAIL.casefold()
-    ):
-        raise HTTPException(403, "此账号尚未开通个人科研工作区")
-    if not re.fullmatch(_ROUTES.get(request.method, r"(?!)"), path):
-        raise HTTPException(404, "Unknown Agent operation")
-    if not settings.AGENT_API_TOKEN:
-        raise HTTPException(503, "科研 Agent 尚未配置，请联系管理员")
-
-    payload = bytearray()
-    async for chunk in request.stream():
-        payload.extend(chunk)
-        if len(payload) > 128000:
-            raise HTTPException(413, "Request body too large")
-    headers = {
-        "Authorization": f"Bearer {settings.AGENT_API_TOKEN}",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
-    params: dict[str, str] = {}
-    if path.endswith("/events"):
-        cursor = request.query_params.get(
-            "after", request.headers.get("last-event-id", "0")
-        )
-        if not cursor.isdecimal() or int(cursor) > 9007199254740991:
-            raise HTTPException(422, "Invalid event cursor")
-        params["after"] = cursor
-        if "text/event-stream" in request.headers.get("accept", ""):
-            headers["Accept"] = "text/event-stream"
-
-    client = httpx.AsyncClient(timeout=httpx.Timeout(30, read=60), trust_env=False)
-    try:
-        upstream = await client.send(
-            client.build_request(
-                request.method,
-                f"{settings.AGENT_BASE_URL.rstrip('/')}/v1/{path}",
-                headers=headers,
-                params=params,
-                content=bytes(payload),
-            ),
-            stream=True,
-        )
-    except httpx.HTTPError:
-        await client.aclose()
-        raise HTTPException(503, "暂时无法连接科研 Agent，请稍后重试")
-
-    async def close() -> None:
-        await upstream.aclose()
-        await client.aclose()
-
-    if upstream.status_code in (401, 403) or upstream.status_code >= 500:
-        await close()
-        raise HTTPException(502, "科研 Agent 服务暂时不可用，请联系管理员")
-    if 300 <= upstream.status_code < 400:
-        await close()
-        raise HTTPException(502, "Unexpected Agent redirect")
-
-    async def chunks() -> AsyncIterator[bytes]:
-        try:
-            async for data in upstream.aiter_bytes():
-                yield data
-        finally:
-            await close()
-
-    response_headers = {
-        "Cache-Control": "no-store",
-        "X-Content-Type-Options": "nosniff",
-        "X-Accel-Buffering": "no",
-        "Content-Security-Policy": "sandbox; default-src 'none'",
-    }
-    for key in ("content-type", "content-disposition", "etag"):
-        if value := upstream.headers.get(key):
-            response_headers[key] = value
-    return StreamingResponse(
-        chunks(),
-        status_code=upstream.status_code,
-        headers=response_headers,
-        background=BackgroundTask(close),
-    )
+    ensure_workspace_user(current_user)
+    OPERATIONS.check(request.method, path, UNKNOWN_OPERATION)
+    return await forward(request, path, _service(), POLICY)
