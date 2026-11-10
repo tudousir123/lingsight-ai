@@ -1,37 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import type { Entry, Mark, Task } from "@/features/inference/contract"
+import { authHeaders, withTokenQuery } from "@/lib/credentials"
 import {
   type InferenceArtifactName,
   inferenceGatewayBase,
   inferenceRoutes,
 } from "@/lib/upstreamRoutes.gen"
 
-type Entry = {
-  type: "directory" | "video"
-  name: string
-  path?: string
-  id?: string
-}
-type Point = [number, number]
-type Mark = { label: string; polygon: Point[] | null; confidence?: number }
-type Candidate = {
-  width: number
-  height: number
-  frame_count: number
-  seed: { frame: number; x: number; y: number } | null
-  pool: { cx: number; cy: number; radius: number } | null
-  marks: Mark[]
-  evidence: { review_reasons: string[] }
-}
-type Task = {
-  id: string
-  video_id: string
-  status: string
-  stage: string
-  error: string | null
-  candidate: Candidate | null
-  confirmed: unknown
-  review: { tracking_ok: boolean; note: string } | null
-}
 const labels: Record<string, string> = {
   queued: "排队中",
   running: "运行中",
@@ -49,12 +24,11 @@ const stageLabels: Record<string, string> = {
 }
 
 async function request<T>(path: string, data?: unknown): Promise<T> {
-  const token = localStorage.getItem("access_token")
   const response = await fetch(`${inferenceGatewayBase}/${path}`, {
     method: data === undefined ? "GET" : "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...authHeaders(),
     },
     ...(data === undefined ? {} : { body: JSON.stringify(data) }),
   })
@@ -69,9 +43,8 @@ async function request<T>(path: string, data?: unknown): Promise<T> {
   return response.json() as Promise<T>
 }
 function artifact(id: string, name: InferenceArtifactName): string {
-  const token = localStorage.getItem("access_token")
   const path = inferenceRoutes.tasksByTaskIdArtifactsByArtifactName(id, name)
-  return `${inferenceGatewayBase}/${path}${token ? `?token=${encodeURIComponent(token)}` : ""}`
+  return withTokenQuery(`${inferenceGatewayBase}/${path}`)
 }
 
 export function InferencePage() {
