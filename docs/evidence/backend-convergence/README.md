@@ -74,4 +74,4 @@
 
 固定点需求复审还发现素材在等待用户行锁期间可能更新；已在取得锁后加载并校验当前素材。真实 MySQL 行锁回归验证请求获得 409，并恢复测试夹具；见 [review-race-final.log](review-race-final.log)。
 
-干净开发环境未构建 SPA 时，FastAPI 仅提供 API 且未匹配路径返回 404；正式环境仍在启动时要求已构建前端。独立评审分支的结构测试见 [branch-tests.log](branch-tests.log)。
+干净开发环境未构建 SPA 时，FastAPI 仅提供 API 且未匹配路径返回 404；正式环境仍在启动时要求已构建前端。独立评审分支的结构测试为 263 passed、45 deselected、coverage 87%，见 [branch-tests.log](branch-tests.log)。

@@ -15,7 +15,7 @@
 ## 1. 当前目标与边界
 
 - 2026-11-09 用户确认新目标：**科研任务工作区 + 独立仓库的科研 Agent 服务**，前期使用 Pi SDK，经 DBHub 查询 v3 数据，在本机独立分析环境完成统计绘图与可编辑报告。常规步骤自主执行，关键科研口径不清时提问，任务可后台运行并保留恢复依据。ADR-0001 的自建专用 Text-to-SQL 目标已由 ADR-0009 取代。
-- 当前代码和运行镜像仍包含已实现的旧 M1/试次服务。独立私有仓库 `tudousir123/lingsight-agent` 已创建，SQLite、容器执行和任务 API 方案经用户整体确认后已实现，首个真实视频级闭环经人工复核与修正后验收；本仓库 React/FastAPI 已完成个人工作区首轮本机接入，真实账号验证任务创建、澄清等待、刷新和取消；完整科研闭环联验与正式部署仍待完成，见 `docs/evidence/agent-workspace/README.md`。新服务的实际验证见其源码及验收记录，不能将本仓库旧 M1 测试当作新能力证据。
+- 当前代码和运行镜像仍包含已实现的旧 M1/试次服务。独立私有仓库 `tudousir123/lingsight-agent` 已创建，SQLite、容器执行和任务 API 方案经用户整体确认后已实现，首个真实视频级闭环经人工复核与修正后验收；本仓库 React/FastAPI 已完成个人工作区首轮本机接入（含 FastAPI 网关与前端工作区合并入 main），真实账号验证任务创建、澄清等待、刷新和取消；完整科研闭环联验与正式部署仍待完成，见 `docs/evidence/agent-workspace/README.md` 与 `docs/evidence/backend-convergence/README.md`。新服务的实际验证见其源码及验收记录，不能将本仓库旧 M1 测试当作新能力证据。
 - 平台基座保持 React+TS+Vite / FastAPI / MySQL；科研任务、步骤、Pi 会话关联和交付物由独立 Agent 服务拥有。首期个人使用；论文 RAG、自动 GPU 推理、多租户和 PDF/Word 排版不计入首个闭环。
 - 优先小型可验收闭环，不因拆分新增不必要的基础设施；不把任务运行等同于单次模型回复。不同批次默认分开，未核验动物映射时只做注明状态的视频级探索，正式动物统计先核验映射。
 - 目标架构不代表代码已实现。查阅 [README](README.md)、[产品规格](docs/01-product-spec.md)、[开发路线](docs/03-learning-roadmap.md) 和 [进度](docs/progress.md)，以实际源码和测试结果为准。
