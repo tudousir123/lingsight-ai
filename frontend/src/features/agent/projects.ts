@@ -2,7 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { AxiosError } from "axios"
 import { useEffect } from "react"
 import { z } from "zod"
-import { type ProjectPublic, ProjectsService } from "@/client"
+import {
+  type ProjectPublic,
+  ProjectsService,
+  type PublishedFramesPublic,
+  type PublishedResultPublic,
+  ResultsService,
+} from "@/client"
 import useAuth from "@/hooks/useAuth"
 
 export type WorkspaceProject = ProjectPublic
@@ -193,6 +199,70 @@ export function useSaveProjectTasks() {
     },
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: projectsKey })
+    },
+  })
+}
+
+// --- published inference results (#43) ---------------------------------------
+
+export const projectResultsKey = (projectId: string) =>
+  ["project-results", projectId] as const
+
+export function useProjectResults(projectId: string) {
+  return useQuery({
+    queryKey: projectResultsKey(projectId),
+    queryFn: async () => {
+      const { data } = await ResultsService.listResults({
+        path: { project_id: projectId },
+      })
+      return data.data as PublishedResultPublic[]
+    },
+    retry: false,
+  })
+}
+
+export function useResultFrames(
+  projectId: string,
+  taskId: string,
+  offset: number,
+  limit: number,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: ["project-results", projectId, taskId, "frames", offset, limit],
+    queryFn: async () => {
+      const { data } = await ResultsService.listResultFrames({
+        path: { project_id: projectId, task_id: taskId },
+        query: { offset, limit },
+      })
+      return data as PublishedFramesPublic
+    },
+    enabled,
+    retry: false,
+  })
+}
+
+/** Publish a reviewed inference task into a project (idempotent replay ok). */
+export function usePublishResult() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      taskId,
+    }: {
+      projectId: string
+      taskId: string
+    }) => {
+      const { data } = await ResultsService.publishResult({
+        path: { project_id: projectId },
+        body: { task_id: taskId },
+      })
+      return data
+    },
+    onSuccess: (_result, variables) => {
+      void client.invalidateQueries({
+        queryKey: projectResultsKey(variables.projectId),
+      })
     },
   })
 }

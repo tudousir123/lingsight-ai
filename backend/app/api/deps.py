@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Generator
 from typing import Annotated
 
@@ -8,10 +9,11 @@ from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 from sqlmodel import Session
 
+from app import crud
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
-from app.models import TokenPayload, User
+from app.models import Project, TokenPayload, User
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -76,6 +78,18 @@ def ensure_workspace_user(user: User) -> User:
     ):
         raise HTTPException(403, "此账号尚未开通个人科研工作区")
     return user
+
+
+def owned_project(
+    session: Session, current_user: User, project_id: uuid.UUID
+) -> Project:
+    """Resolve one of the caller's projects or 404 (shared by both routers)."""
+    project = crud.get_project(
+        session=session, user_id=current_user.id, project_id=project_id
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="项目不存在")
+    return project
 
 
 # --- media auth ---------------------------------------------------------------

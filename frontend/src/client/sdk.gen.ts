@@ -2,7 +2,7 @@
 
 import { type Client, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { agentAgentGateway2Data, agentAgentGateway2Errors, agentAgentGateway2Responses, agentAgentGateway3Data, agentAgentGateway3Errors, agentAgentGateway3Responses, agentAgentGatewayData, agentAgentGatewayErrors, agentAgentGatewayResponses, experimentsGetPreparationData, experimentsGetPreparationErrors, experimentsGetPreparationResponses, experimentsGetResultData, experimentsGetResultErrors, experimentsGetResultResponses, experimentsGetTrialData, experimentsGetTrialErrors, experimentsGetTrialMediaData, experimentsGetTrialMediaErrors, experimentsGetTrialMediaResponses, experimentsGetTrialResponses, experimentsListExperimentsData, experimentsListExperimentsResponses, experimentsListTrialsData, experimentsListTrialsErrors, experimentsListTrialsResponses, experimentsPutReviewData, experimentsPutReviewErrors, experimentsPutReviewResponses, inferenceInferenceArtifactData, inferenceInferenceArtifactErrors, inferenceInferenceArtifactResponses, inferenceInferenceGateway2Data, inferenceInferenceGateway2Errors, inferenceInferenceGateway2Responses, inferenceInferenceGatewayData, inferenceInferenceGatewayErrors, inferenceInferenceGatewayResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, projectsAddProjectMemberData, projectsAddProjectMemberErrors, projectsAddProjectMemberResponses, projectsCreateProjectData, projectsCreateProjectErrors, projectsCreateProjectResponses, projectsDeleteProjectData, projectsDeleteProjectErrors, projectsDeleteProjectResponses, projectsImportProjectsData, projectsImportProjectsErrors, projectsImportProjectsResponses, projectsListProjectsData, projectsListProjectsResponses, projectsRemoveProjectMemberData, projectsRemoveProjectMemberErrors, projectsRemoveProjectMemberResponses, projectsRenameProjectData, projectsRenameProjectErrors, projectsRenameProjectResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
+import type { agentAgentGateway2Data, agentAgentGateway2Errors, agentAgentGateway2Responses, agentAgentGateway3Data, agentAgentGateway3Errors, agentAgentGateway3Responses, agentAgentGatewayData, agentAgentGatewayErrors, agentAgentGatewayResponses, experimentsGetPreparationData, experimentsGetPreparationErrors, experimentsGetPreparationResponses, experimentsGetResultData, experimentsGetResultErrors, experimentsGetResultResponses, experimentsGetTrialData, experimentsGetTrialErrors, experimentsGetTrialMediaData, experimentsGetTrialMediaErrors, experimentsGetTrialMediaResponses, experimentsGetTrialResponses, experimentsListExperimentsData, experimentsListExperimentsResponses, experimentsListTrialsData, experimentsListTrialsErrors, experimentsListTrialsResponses, experimentsPutReviewData, experimentsPutReviewErrors, experimentsPutReviewResponses, inferenceInferenceArtifactData, inferenceInferenceArtifactErrors, inferenceInferenceArtifactResponses, inferenceInferenceGateway2Data, inferenceInferenceGateway2Errors, inferenceInferenceGateway2Responses, inferenceInferenceGatewayData, inferenceInferenceGatewayErrors, inferenceInferenceGatewayResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, projectsAddProjectMemberData, projectsAddProjectMemberErrors, projectsAddProjectMemberResponses, projectsCreateProjectData, projectsCreateProjectErrors, projectsCreateProjectResponses, projectsDeleteProjectData, projectsDeleteProjectErrors, projectsDeleteProjectResponses, projectsImportProjectsData, projectsImportProjectsErrors, projectsImportProjectsResponses, projectsListProjectsData, projectsListProjectsResponses, projectsRemoveProjectMemberData, projectsRemoveProjectMemberErrors, projectsRemoveProjectMemberResponses, projectsRenameProjectData, projectsRenameProjectErrors, projectsRenameProjectResponses, resultsListResultFramesData, resultsListResultFramesErrors, resultsListResultFramesResponses, resultsListResultsData, resultsListResultsErrors, resultsListResultsResponses, resultsPublishResultData, resultsPublishResultErrors, resultsPublishResultResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -488,6 +488,54 @@ export class ProjectsService {
                 'Content-Type': 'application/json',
                 ...options.headers
             }
+        });
+    }
+}
+
+export class ResultsService {
+    /**
+     * List Results
+     *
+     * List this project's published inference results (task summaries).
+     */
+    public static listResults<ThrowOnError extends boolean = true>(options: Options<resultsListResultsData, ThrowOnError>) {
+        return (options.client ?? client).get<resultsListResultsResponses, resultsListResultsErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/results',
+            ...options
+        });
+    }
+    
+    /**
+     * Publish Result
+     *
+     * Publish one reviewed inference task's results into this project.
+     */
+    public static publishResult<ThrowOnError extends boolean = true>(options: Options<resultsPublishResultData, ThrowOnError>) {
+        return (options.client ?? client).post<resultsPublishResultResponses, resultsPublishResultErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/results',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * List Result Frames
+     *
+     * One published result's per-frame rows, paginated (no mask RLE).
+     */
+    public static listResultFrames<ThrowOnError extends boolean = true>(options: Options<resultsListResultFramesData, ThrowOnError>) {
+        return (options.client ?? client).get<resultsListResultFramesResponses, resultsListResultFramesErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/results/{task_id}/frames',
+            ...options
         });
     }
 }

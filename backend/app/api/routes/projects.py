@@ -10,10 +10,9 @@ from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, HTTPException, Path, Response, status
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session
 
 from app import crud
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, owned_project
 from app.models import (
     Message,
     Project,
@@ -53,17 +52,6 @@ def _public(project: Project, members: list[ProjectMember]) -> ProjectPublic:
     )
 
 
-def _owned_project(
-    session: Session, current_user: CurrentUser, project_id: uuid.UUID
-) -> Project:
-    project = crud.get_project(
-        session=session, user_id=current_user.id, project_id=project_id
-    )
-    if not project:
-        raise HTTPException(status_code=404, detail="项目不存在")
-    return project
-
-
 @router.get("/", response_model=ProjectsPublic)
 def list_projects(session: SessionDep, current_user: CurrentUser) -> Any:
     """List the current user's projects with their member references."""
@@ -97,7 +85,7 @@ def rename_project(
     project_in: ProjectRename,
 ) -> Any:
     """Rename one of the current user's projects."""
-    project = _owned_project(session, current_user, project_id)
+    project = owned_project(session, current_user, project_id)
     try:
         project = crud.rename_project(
             session=session, project=project, name=project_in.name
@@ -113,7 +101,7 @@ def delete_project(
     session: SessionDep, current_user: CurrentUser, project_id: uuid.UUID
 ) -> Any:
     """Delete one of the current user's projects; member references cascade."""
-    project = _owned_project(session, current_user, project_id)
+    project = owned_project(session, current_user, project_id)
     crud.delete_project(session=session, project=project)
     return Message(message="项目已删除")
 
@@ -127,7 +115,7 @@ def add_project_member(
     response: Response,
 ) -> Any:
     """Add (or refresh the label of) one member reference; idempotent."""
-    project = _owned_project(session, current_user, project_id)
+    project = owned_project(session, current_user, project_id)
     member, created = crud.add_project_member(
         session=session,
         project=project,
@@ -152,7 +140,7 @@ def remove_project_member(
     member_id: Annotated[str, Path(min_length=1, max_length=128)],
 ) -> None:
     """Remove one member reference; the referenced item itself is untouched."""
-    project = _owned_project(session, current_user, project_id)
+    project = owned_project(session, current_user, project_id)
     removed = crud.remove_project_member(
         session=session,
         project=project,

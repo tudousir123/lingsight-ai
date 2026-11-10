@@ -562,3 +562,77 @@ test("localStorage 旧项目一次性迁移导入且重放幂等", async ({ page
   ).toBeVisible()
   expect(state.imports.length).toBe(1)
 })
+
+test("项目页查看已发布推理结果的逐帧行摘要", async ({ page }) => {
+  const taskId = "77777777-7777-4777-8777-777777777777"
+  const frames = (offset: number, count: number, total: number) => ({
+    data: Array.from({ length: count }, (_, i) => ({
+      frame_idx: offset + i,
+      mask_valid: true,
+      centroid_x: 101.5 + offset + i,
+      centroid_y: 202.25,
+      contour_area: 320.5,
+      head_x: 90,
+      head_y: 80,
+      tail_x: 110,
+      tail_y: 120,
+      heading_angle_deg: 10.25 + offset + i,
+      is_proposal: offset + i === 2,
+      keypoint_correction: offset + i === 1 ? "head_tail_swapped" : "",
+    })),
+    count: total,
+    offset,
+    limit: 50,
+  })
+  await page.route("**/api/v1/projects/learning-memory/results", (route) =>
+    route.fulfill({
+      json: {
+        data: [
+          {
+            task_id: taskId,
+            project_id: "learning-memory",
+            video_id: "day01/maze.mp4",
+            fps: 30,
+            total_frames: 600,
+            valid_frames: 580,
+            frames_with_heading: 570,
+            proposal_frames: 12,
+            heading_algorithm: "frozen-ball-chord-7px-v1",
+            keypoint_protocol: "fixed-mask-centroid-crop256-fp32-v9",
+            video_sha256: "a".repeat(64),
+            content_fingerprint: "f".repeat(64),
+            review_note: "看过叠加视频",
+            published_at: "2026-11-10T10:00:00Z",
+            replayed: false,
+          },
+        ],
+        count: 1,
+      },
+    }),
+  )
+  await page.route(
+    "**/api/v1/projects/learning-memory/results/*/frames**",
+    async (route) => {
+      const url = new URL(route.request().url())
+      const offset = Number(url.searchParams.get("offset") ?? "0")
+      expect(url.pathname.endsWith(`${taskId}/frames`)).toBe(true)
+      return route.fulfill({ json: frames(offset, 3, 53) })
+    },
+  )
+  await page.goto("/projects/learning-memory")
+  await expect(
+    page.getByRole("heading", { name: "已发布推理结果" }),
+  ).toBeVisible()
+  await expect(
+    page.getByText("30 fps · 总帧 600 · 有效帧 580 · 带朝向 570（提案 12）"),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "查看逐帧行" }).click()
+  await expect(
+    page.getByRole("cell", { name: "10.25", exact: true }),
+  ).toBeVisible()
+  await expect(page.getByText("头尾已换")).toBeVisible()
+  await expect(page.getByText("提案").first()).toBeVisible()
+  await expect(page.getByText("第 1–3 行，共 53 行")).toBeVisible()
+  await page.getByRole("button", { name: "下一页" }).click()
+  await expect(page.getByText("第 51–53 行，共 53 行")).toBeVisible()
+})

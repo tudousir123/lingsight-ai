@@ -11,6 +11,8 @@ from app.models import (
     ProjectImportItem,
     ProjectImportResult,
     ProjectMember,
+    PublishedFrame,
+    PublishedResult,
     User,
     UserCreate,
     UserUpdate,
@@ -200,3 +202,55 @@ def import_local_projects(
         session.commit()
         created += 1
     return ProjectImportResult(created=created, skipped=skipped)
+
+
+# --- published inference results (#43) ----------------------------------------
+# Read side only; the publish pipeline (gate, validation, whole-version
+# write, read-back) lives in app/publishing.py.
+
+
+def list_published_results(
+    session: Session, *, project_id: uuid.UUID
+) -> list[PublishedResult]:
+    return list(
+        session.exec(
+            select(PublishedResult)
+            .where(col(PublishedResult.project_id) == project_id)
+            .order_by(
+                col(PublishedResult.published_at).desc(), col(PublishedResult.task_id)
+            )
+        ).all()
+    )
+
+
+def get_published_result(
+    session: Session, *, project_id: uuid.UUID, task_id: str
+) -> PublishedResult | None:
+    return session.exec(
+        select(PublishedResult).where(
+            col(PublishedResult.project_id) == project_id,
+            col(PublishedResult.task_id) == task_id,
+        )
+    ).first()
+
+
+def count_published_frames(session: Session, *, task_id: str) -> int:
+    return session.exec(
+        select(func.count())
+        .select_from(PublishedFrame)
+        .where(col(PublishedFrame.task_id) == task_id)
+    ).one()
+
+
+def list_published_frames(
+    session: Session, *, task_id: str, offset: int, limit: int
+) -> list[PublishedFrame]:
+    return list(
+        session.exec(
+            select(PublishedFrame)
+            .where(col(PublishedFrame.task_id) == task_id)
+            .order_by(col(PublishedFrame.frame_idx))
+            .offset(offset)
+            .limit(limit)
+        ).all()
+    )

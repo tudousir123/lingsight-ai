@@ -8,6 +8,7 @@ import {
 import {
   projectErrorText,
   useAddProjectMember,
+  usePublishResult,
   useWorkspaceProjects,
 } from "@/features/agent/projects"
 import type { Entry, Mark, Task } from "@/features/inference/contract"
@@ -74,6 +75,10 @@ export function InferencePage() {
   const addProjectMember = useAddProjectMember()
   const [groupNote, setGroupNote] = useState("")
   const [groupError, setGroupError] = useState("")
+  const [publishingTask, setPublishingTask] = useState<Task | null>(null)
+  const publishResult = usePublishResult()
+  const [publishNote, setPublishNote] = useState("")
+  const [publishError, setPublishError] = useState("")
 
   const initializedTask = useRef<string | null>(null)
   const loadTasks = useCallback(async () => {
@@ -458,10 +463,26 @@ export function InferencePage() {
               </div>
               <p>隐藏平台未标定时，上台事件与相关指标不可用。</p>
               {current.review ? (
-                <p>
-                  结果已核对：{current.review.tracking_ok ? "通过" : "需复查"}{" "}
-                  {current.review.note}
-                </p>
+                <div className="space-y-2">
+                  <p>
+                    结果已核对：{current.review.tracking_ok ? "通过" : "需复查"}{" "}
+                    {current.review.note}
+                  </p>
+                  {current.review.tracking_ok && (
+                    <button
+                      type="button"
+                      className="rounded bg-primary px-4 py-2 text-primary-foreground"
+                      disabled={busy}
+                      onClick={() => {
+                        setPublishError("")
+                        setPublishNote("")
+                        setPublishingTask(current)
+                      }}
+                    >
+                      发布到项目
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div>
                   <label>
@@ -575,6 +596,68 @@ export function InferencePage() {
               !projects.error &&
               !(projects.data ?? []).length && (
                 <p>还没有项目。先在左侧栏“新建项目”，再回来归入视频。</p>
+              )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={publishingTask !== null}
+        onOpenChange={(open) => {
+          if (!open) setPublishingTask(null)
+        }}
+      >
+        <DialogContent className="project-dialog">
+          <DialogTitle>发布到项目</DialogTitle>
+          <DialogDescription>
+            将通过复核的推理结果发布进项目：平台后端会拉取该任务的追踪、
+            关键点与来源产物，校验一致后写入应用库（逐帧行 + 汇总），
+            归属所选项目。未复核或产物不一致会被拒绝。
+          </DialogDescription>
+          {publishError && (
+            <p role="alert" className="agent-error">
+              {publishError}
+            </p>
+          )}
+          {publishNote && (
+            <p className="research-history-note">{publishNote}</p>
+          )}
+          <div className="project-task-options">
+            {projects.isPending && <p>正在加载项目…</p>}
+            {projects.error && <p role="alert">无法加载项目，请稍后重试。</p>}
+            {(projects.data ?? []).map((project) => (
+              <button
+                type="button"
+                key={project.id}
+                className="project-action"
+                disabled={publishResult.isPending || !publishingTask}
+                onClick={() => {
+                  if (!publishingTask) return
+                  setPublishError("")
+                  publishResult.mutate(
+                    { projectId: project.id, taskId: publishingTask.id },
+                    {
+                      onSuccess: (result) => {
+                        setPublishNote(
+                          result.replayed
+                            ? `该结果已发布过，本次为幂等重放（项目“${project.name}”未改动）。`
+                            : `已发布到“${project.name}”：${result.frames_with_heading} 帧带朝向（提案 ${result.proposal_frames}），可在项目页查看逐帧行。`,
+                        )
+                      },
+                      onError: (mutationError) =>
+                        setPublishError(
+                          projectErrorText(mutationError, "发布失败，请重试。"),
+                        ),
+                    },
+                  )
+                }}
+              >
+                {project.name}
+              </button>
+            ))}
+            {!projects.isPending &&
+              !projects.error &&
+              !(projects.data ?? []).length && (
+                <p>还没有项目。先在左侧栏“新建项目”，再回来发布。</p>
               )}
           </div>
         </DialogContent>

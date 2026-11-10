@@ -100,6 +100,27 @@ export function stubProjectsApi(
     if (!project)
       return route.fulfill({ status: 404, json: { detail: "项目不存在" } })
 
+    // Published-results read surface defaults to empty; per-test routes can
+    // override with concrete published rows (registered later = matched first).
+    if (
+      segments[1] === "results" &&
+      segments.length === 2 &&
+      method === "GET"
+    ) {
+      return route.fulfill({ json: { data: [], count: 0 } })
+    }
+    if (
+      segments[1] === "results" &&
+      segments[2] &&
+      segments[3] === "frames" &&
+      method === "GET"
+    ) {
+      return route.fulfill({
+        status: 404,
+        json: { detail: "该项目没有该任务的已发布结果" },
+      })
+    }
+
     if (segments.length === 1 && method === "PATCH") {
       const { name } = request.postDataJSON() as { name: string }
       if (

@@ -485,6 +485,176 @@ export type ProjectsPublic = {
 };
 
 /**
+ * PublishRequest
+ *
+ * Publish one reviewed inference task's results into a project.
+ */
+export type PublishRequest = {
+    /**
+     * Task Id
+     */
+    task_id: string;
+};
+
+/**
+ * PublishedFramePublic
+ *
+ * One frame row of a published result (no mask RLE — too large to list).
+ */
+export type PublishedFramePublic = {
+    /**
+     * Frame Idx
+     */
+    frame_idx: number;
+    /**
+     * Mask Valid
+     */
+    mask_valid: boolean;
+    /**
+     * Centroid X
+     */
+    centroid_x?: number | null;
+    /**
+     * Centroid Y
+     */
+    centroid_y?: number | null;
+    /**
+     * Contour Area
+     */
+    contour_area?: number | null;
+    /**
+     * Head X
+     */
+    head_x?: number | null;
+    /**
+     * Head Y
+     */
+    head_y?: number | null;
+    /**
+     * Tail X
+     */
+    tail_x?: number | null;
+    /**
+     * Tail Y
+     */
+    tail_y?: number | null;
+    /**
+     * Heading Angle Deg
+     */
+    heading_angle_deg: number;
+    /**
+     * Is Proposal
+     */
+    is_proposal: boolean;
+    /**
+     * Keypoint Correction
+     */
+    keypoint_correction: string;
+};
+
+/**
+ * PublishedFramesPublic
+ */
+export type PublishedFramesPublic = {
+    /**
+     * Data
+     */
+    data: Array<PublishedFramePublic>;
+    /**
+     * Count
+     */
+    count: number;
+    /**
+     * Offset
+     */
+    offset: number;
+    /**
+     * Limit
+     */
+    limit: number;
+};
+
+/**
+ * PublishedResultPublic
+ */
+export type PublishedResultPublic = {
+    /**
+     * Task Id
+     */
+    task_id: string;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    /**
+     * Video Id
+     */
+    video_id: string;
+    /**
+     * Fps
+     */
+    fps: number;
+    /**
+     * Total Frames
+     */
+    total_frames: number;
+    /**
+     * Valid Frames
+     */
+    valid_frames: number;
+    /**
+     * Frames With Heading
+     */
+    frames_with_heading: number;
+    /**
+     * Proposal Frames
+     */
+    proposal_frames: number;
+    /**
+     * Heading Algorithm
+     */
+    heading_algorithm: string;
+    /**
+     * Keypoint Protocol
+     */
+    keypoint_protocol: string;
+    /**
+     * Video Sha256
+     */
+    video_sha256: string;
+    /**
+     * Content Fingerprint
+     */
+    content_fingerprint: string;
+    /**
+     * Review Note
+     */
+    review_note?: string | null;
+    /**
+     * Published At
+     */
+    published_at?: string | null;
+    /**
+     * Replayed
+     */
+    replayed?: boolean;
+};
+
+/**
+ * PublishedResultsPublic
+ */
+export type PublishedResultsPublic = {
+    /**
+     * Data
+     */
+    data: Array<PublishedResultPublic>;
+    /**
+     * Count
+     */
+    count: number;
+};
+
+/**
  * ResultPublic
  */
 export type ResultPublic = {
@@ -1836,6 +2006,109 @@ export type projectsImportProjectsResponses = {
 };
 
 export type projectsImportProjectsResponse = projectsImportProjectsResponses[keyof projectsImportProjectsResponses];
+
+export type resultsListResultsData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/results';
+};
+
+export type resultsListResultsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type resultsListResultsError = resultsListResultsErrors[keyof resultsListResultsErrors];
+
+export type resultsListResultsResponses = {
+    /**
+     * Successful Response
+     */
+    200: PublishedResultsPublic;
+};
+
+export type resultsListResultsResponse = resultsListResultsResponses[keyof resultsListResultsResponses];
+
+export type resultsPublishResultData = {
+    body: PublishRequest;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/results';
+};
+
+export type resultsPublishResultErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type resultsPublishResultError = resultsPublishResultErrors[keyof resultsPublishResultErrors];
+
+export type resultsPublishResultResponses = {
+    /**
+     * Successful Response
+     */
+    200: PublishedResultPublic;
+};
+
+export type resultsPublishResultResponse = resultsPublishResultResponses[keyof resultsPublishResultResponses];
+
+export type resultsListResultFramesData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Task Id
+         */
+        task_id: string;
+    };
+    query?: {
+        /**
+         * Offset
+         */
+        offset?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/projects/{project_id}/results/{task_id}/frames';
+};
+
+export type resultsListResultFramesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type resultsListResultFramesError = resultsListResultFramesErrors[keyof resultsListResultFramesErrors];
+
+export type resultsListResultFramesResponses = {
+    /**
+     * Successful Response
+     */
+    200: PublishedFramesPublic;
+};
+
+export type resultsListResultFramesResponse = resultsListResultFramesResponses[keyof resultsListResultFramesResponses];
 
 export type agentAgentGatewayData = {
     body?: never;
