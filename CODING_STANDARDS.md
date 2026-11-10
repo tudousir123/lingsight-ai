@@ -2,6 +2,10 @@
 
 双轴 code-review 的 Standards 轴以此为准。只收录自动化检查（`backend/scripts/lint.sh` 的 mypy/ty/ruff、pre-commit、CI）无法机械判定的规则；机械规则一律做成检查，不写在这里。规则来源是双轴评审与 retro 实际执行过的裁决（docs/evidence/m1-t9/、工单 #16 会话）。
 
+## 退役同步
+
+删除或退役模块的变更，导航层引用必须同时清零：AGENTS.md（含 §0 指针与约束章节）、根 README、backend/README 中指向被删模块的行全部同步改写；progress.md 与 docs/evidence/ 是历史记录，不在清理范围。评审动作：对 diff 里每个被删路径名 grep 三个导航文件，命中即 blocker（2026-11-10 实测两次漏网：semantic_layer.yaml 指针、§3 管线约束在删除提交后仍指向已删代码）。
+
 ## 单一来源
 
 常量、口径、黄金基准值只允许存在一处，跨模块 `import` 引用。同一事实的第二份字面量拷贝——即使值相同——即违规（实例：permission reason-code 家族、`ALGO_VERSION`、`REL_TOL`、黄金 group×day 矩阵）。

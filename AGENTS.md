@@ -4,7 +4,7 @@
 
 ## 0. 导航指针
 
-- **工单与流程**：[docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)（GitHub issues + `gh` 用法、阻塞边查询）；并行开发两张工单时用 [docs/agents/parallel-tickets.md](docs/agents/parallel-tickets.md) 的 worktree 配方。
+- **工单与流程**：[docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)（GitHub issues + `gh` 用法、阻塞边查询）；并行工单与分叉合并（含 merge-tree 预演）用 [docs/agents/parallel-tickets.md](docs/agents/parallel-tickets.md)。
 - **本机跑全栈 Playwright**：用 `scripts/e2e-local.sh`；夹具 env、重跑清表与 bun/npm 漂移三个坑见 [docs/agents/local-e2e.md](docs/agents/local-e2e.md)。
 - **领域词汇**：[GLOSSARY.md](GLOSSARY.md)。评审、口径与命名以此为准（如：语义层不说 MDL；动物 = (group_name, mouse_id)）。
 - **已退役模块**：Text-to-SQL 管线与试次准备/核对/结果闭环已于 2026-11-10 删除（ADR-0014）；`water_maze_v3` 语义由独立 Agent 的版本化科研 Skills 与确定性函数承担，参见 ADR-0009 至 ADR-0013。trials 目录浏览与 metrics 管线暂留（annotations 页仍消费）。
