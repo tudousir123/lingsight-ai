@@ -12,11 +12,12 @@ import { client } from "./client/client.gen"
 import { ThemeProvider } from "./components/theme-provider"
 import { Toaster } from "./components/ui/sonner"
 import "./index.css"
+import { getToken, TOKEN_STORAGE_KEY } from "./lib/credentials"
 import { routeTree } from "./routeTree.gen"
 
 client.setConfig({
   baseURL: import.meta.env.VITE_API_URL ?? "",
-  auth: () => localStorage.getItem("access_token") || "",
+  auth: () => getToken() ?? "",
 })
 
 const handleApiError = (error: Error) => {
@@ -26,7 +27,7 @@ const handleApiError = (error: Error) => {
       (error.response?.status === 403 &&
         error.response?.data?.detail === "Could not validate credentials"))
   ) {
-    localStorage.removeItem("access_token")
+    localStorage.removeItem(TOKEN_STORAGE_KEY)
     window.location.href = "/login"
   }
 }

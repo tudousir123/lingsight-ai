@@ -1,3 +1,13 @@
+// Field contract + transport for the research Agent service (lingsight-agent,
+// private repo tudousir123/lingsight-agent). True source: that service's /v1
+// API (tasks/runs/artifacts/events, forwarded at
+// backend/app/api/routes/agent.py). Field-shape drift is owned upstream by
+// that service's own tests plus the platform e2e smoke; this module only
+// pins what the workbench UI consumes.
+
+import { authHeaders } from "@/lib/credentials"
+import { agentGatewayBase } from "@/lib/upstreamRoutes.gen"
+
 export type RunStatus =
   | "queued"
   | "running"
@@ -55,14 +65,14 @@ export class AgentError extends Error {
   }
 }
 export async function agentFetch(path: string, options: RequestInit = {}) {
-  const token = localStorage.getItem("access_token")
-  const response = await fetch(`/api/v1/agent/${path}`, {
+  const response = await fetch(`${agentGatewayBase}/${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
       ...options.headers,
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      // Session auth always wins over caller-supplied Authorization.
+      ...authHeaders(),
     },
   })
   if (!response.ok) {

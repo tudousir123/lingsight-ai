@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { agentJson, type TaskEvent } from "./api"
 
 // Durable cursor polling uses the same event log as SSE. Disconnecting never
@@ -19,7 +20,7 @@ export function useTaskEvents(taskId: string) {
     const poll = async () => {
       try {
         const batch = await agentJson<TaskEvent[]>(
-          `tasks/${taskId}/events?after=${cursor}`,
+          `${agentRoutes.tasksByTaskIdEvents(taskId)}?after=${cursor}`,
           undefined,
           "GET",
           controller.signal,

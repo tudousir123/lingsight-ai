@@ -1,5 +1,7 @@
 # LingSight AI 进度（事实优先）
 
+**2026-11-10 网关内核与操作声明单源（工单 #39，ADR-0015）**：两个上游网关的转发复印收敛为 `app/api/gateway.py` 单一内核（`forward` + `UpstreamService`/`GatewayPolicy`，无回调钩子），agent/inference 退化为声明式适配器（`OperationTable` 渲染白名单正则）；工作区门禁与媒体 `?token=` 鉴权迁入 `app/api/deps.py`（推理路由不再 import 试次模块）。前端路由常量由 `scripts/export_frontend_routes.py` 从同一声明表生成入库（`upstreamRoutes.gen.ts`，含 `InferenceArtifactName` 联合），pytest 绊网内存比对零 diff；token 读取/拼装收口 `lib/credentials.ts`，推理字段类型独立为 `features/inference/contract.ts`（头注释指向上游真源）。行为逐字节不变：agent 既有 9 项契约断言原样全绿，推理侧补厚至全路由面（认证、白名单、错误归一各分支、连接失败、体量、`videos ?path=` 转发），另有工作区门禁/转发实现全仓库唯一定义的 grep 绊网；保留差异（128K/512K、60s/120s、门禁顺序等）及理由见 ADR-0015。验证：后端 lint 全绿（mypy strict + ty + ruff，47 文件）+ test-local.sh 164 passed / 6 skipped（env_gated）/ coverage 89%；前端 biome 定向检查 + tsc + vite build 通过。
+
 **2026-11-10 分支收敛与旧模块退役（ADR-0014）**：`codex/infer`（Agent 工作区 + 推理页 + onboarding/marketing）与 `codex/backend-convergence-review`（网关 + 后端收敛 + ADR-0009~0012）合并入 main（合并提交 `7ab314c`，冲突 9 个全为文档/配置，代码层 agent.py 两线一致）。随后删除本周前旧页面（/qa、/prepare、/results、/reports、/items、旧 experiments 试次详情）与 `app/text_to_sql` 全包、research/items 路由、Item 模型族（`7dafc58`，-12635 行）。验证：后端 lint 全绿（mypy/ty/ruff）+ test-local.sh 143 passed / 6 skipped（env_gated）/ coverage 88%；前端 regen-routes + tsc + vite build 通过。保留：trials 目录浏览（annotations 页消费）、metrics 管线、认证体系、双网关。尚未推送远端。
 
 **2026-11-10 视频推理接入**：独立私有推理服务已在 `62222` 主机运行，LingSight 个人工作区提供受限视频浏览、预标注确认、mask 追踪、v9 头尾、任务与结果入口。真实视频候选已生成，独立工程试验跑完追踪、v9 和叠加视频；人工确认及完整结果复核仍待完成，正式平台镜像尚未发布。原视频和科研库未写入。详见[工程验证与限制](evidence/inference-workspace/README.md)。

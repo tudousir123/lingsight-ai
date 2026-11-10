@@ -6,13 +6,11 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
-from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import select
 
-from app.api.deps import CurrentUser, SessionDep, user_from_token
-from app.core.config import settings
+from app.api.deps import CurrentUser, MediaUserDep, SessionDep
 from app.core.research import get_research_database_settings
-from app.models import ExperimentAccess, User
+from app.models import ExperimentAccess
 from app.trials.assets import ResearchTrialAssets
 from app.trials.catalog import CatalogUnavailable, TrialCatalog
 from app.trials.fixture_store import FileTrialStore, FixtureUnavailable
@@ -241,29 +239,8 @@ def get_result(
 
 # --- media serving -----------------------------------------------------------
 #
-# <video> elements cannot send an Authorization header, so the media route
-# additionally accepts the session JWT as a `token` query parameter. The URL
-# is assembled server-side per trial; the token is the caller's own
-# short-lived session token.
-
-_media_oauth2 = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/login/access-token", auto_error=False
-)
-
-
-def get_media_user(
-    session: SessionDep,
-    token: Annotated[str | None, Depends(_media_oauth2)] = None,
-    query_token: Annotated[str | None, Query(alias="token")] = None,
-) -> User:
-    raw = token or query_token
-    if not raw:
-        raise HTTPException(status_code=403, detail="Not authenticated")
-    return user_from_token(session, raw)
-
-
-MediaUserDep = Annotated[User, Depends(get_media_user)]
-
+# Media auth (bearer header or `?token=` session JWT for <video> elements)
+# lives in app.api.deps next to the other platform dependencies.
 
 @router.get("/{experiment_id}/trials/{trial_id}/media/{kind}")
 def get_trial_media(

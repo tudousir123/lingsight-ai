@@ -23,9 +23,12 @@ class AgentGatewayTest(unittest.TestCase):
         self.app.dependency_overrides[get_current_user] = lambda: self.user
         self.calls: list[httpx.Request] = []
         self.response = httpx.Response(200, json=[])
+        self.error: Exception | None = None
 
         def upstream(request: httpx.Request) -> httpx.Response:
             self.calls.append(request)
+            if self.error is not None:
+                raise self.error
             return self.response
 
         original_client = httpx.AsyncClient
@@ -34,7 +37,7 @@ class AgentGatewayTest(unittest.TestCase):
             patch.object(settings, "AGENT_API_TOKEN", "private-service-test-token"),
             patch.object(settings, "AGENT_BASE_URL", "http://agent.test"),
             patch(
-                "app.api.routes.agent.httpx.AsyncClient",
+                "app.api.gateway.httpx.AsyncClient",
                 side_effect=lambda **kw: original_client(
                     transport=httpx.MockTransport(upstream), **kw
                 ),
@@ -121,6 +124,31 @@ class AgentGatewayTest(unittest.TestCase):
         self.assertEqual(
             self.client.post("/agent/tasks", content=b"x" * 128001).status_code, 413
         )
+        self.assertFalse(self.calls)
+
+    def test_upstream_5xx_and_redirect_are_normalized(self) -> None:
+        self.response = httpx.Response(500, text="private upstream detail")
+        r = self.client.get("/agent/tasks")
+        self.assertEqual(r.status_code, 502)
+        self.assertEqual(r.json()["detail"], "科研 Agent 服务暂时不可用，请联系管理员")
+        self.response = httpx.Response(
+            302, headers={"location": "http://upstream/elsewhere"}
+        )
+        r = self.client.get("/agent/tasks")
+        self.assertEqual(r.status_code, 502)
+        self.assertEqual(r.json()["detail"], "Unexpected Agent redirect")
+
+    def test_connect_failure_reports_service_unavailable(self) -> None:
+        self.error = httpx.ConnectError("connection refused")
+        r = self.client.get("/agent/tasks")
+        self.assertEqual(r.status_code, 503)
+        self.assertEqual(r.json()["detail"], "暂时无法连接科研 Agent，请稍后重试")
+
+    def test_workspace_gate_precedes_operation_whitelist(self) -> None:
+        # Current contract: the workspace gate runs before the operation
+        # whitelist; the inference gateway checks in the opposite order.
+        self.user.email = "other@example.com"
+        self.assertEqual(self.client.get("/agent/health").status_code, 403)
         self.assertFalse(self.calls)
 
 
