@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router"
 import { ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { useState } from "react"
 import { ExperimentsService, type TrialSummary } from "@/client"
+import { PageHeader } from "@/components/Common/PageHeader"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,7 +37,9 @@ function TrialRow({ trial }: { trial: TrialSummary }) {
   return (
     <TableRow>
       <TableCell>
-        <div className="font-medium text-foreground tracking-tight">{trial.video_name}</div>
+        <div className="font-medium text-foreground tracking-tight">
+          {trial.video_name}
+        </div>
         <div className="sr-only">{trial.id}</div>
       </TableCell>
       <TableCell>
@@ -66,7 +69,7 @@ function TrialRow({ trial }: { trial: TrialSummary }) {
           to="/experiments/$experimentId/trials/$trialId"
           params={{ experimentId: trial.experiment_id, trialId: trial.id }}
           aria-label={`打开分析准备 ${trial.video_name}`}
-          className="font-medium text-foreground hover:underline"
+          className="inline-flex rounded-lg border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
         >
           查看试次
         </Link>
@@ -119,22 +122,40 @@ export function TrialDirectoryPage() {
     }) ?? []
 
   const resetFilters = () => setSkip(0)
+  const clearFilters = () => {
+    setGroupName("")
+    setMouseId("")
+    setPhase("all")
+    setDateDir("")
+    setSearch("")
+    setSkip(0)
+  }
+  const hasFilters = Boolean(
+    groupName || mouseId || phase !== "all" || dateDir || search,
+  )
 
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-sm text-muted-foreground">实验管理</p>
-        <h1 className="text-[24px] font-normal tracking-tight text-foreground">
-          实验与视频管理
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          从已有实验中选择试次，查看对应视频及分析状态。
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="EXPERIMENT LIBRARY"
+        title="实验与视频管理"
+        description="从实验到单次行为记录，查看视频、复核素材与离线分析结果。"
+        actions={
+          <Badge variant="outline" className="gap-2 px-3 py-1.5 font-normal">
+            <span className="size-1.5 rounded-full bg-brand" />
+            水迷宫研究
+          </Badge>
+        }
+      />
 
       {experiments.isPending ? (
         <Card>
-          <CardContent>正在加载实验列表…</CardContent>
+          <CardContent
+            role="status"
+            className="py-6 text-sm text-muted-foreground"
+          >
+            正在加载实验列表…
+          </CardContent>
         </Card>
       ) : experiments.isError ? (
         <Card>
@@ -158,14 +179,14 @@ export function TrialDirectoryPage() {
         <>
           <Card className="gap-3 py-4">
             <CardHeader>
-              <CardTitle>实验</CardTitle>
+              <CardTitle className="text-sm font-medium">当前实验</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap items-center gap-3">
               <Select
                 value={selectedId}
                 onValueChange={(value) => {
                   setExperimentId(value)
-                  resetFilters()
+                  clearFilters()
                 }}
               >
                 <SelectTrigger
@@ -190,7 +211,16 @@ export function TrialDirectoryPage() {
 
           <Card className="gap-3 py-4">
             <CardHeader>
-              <CardTitle>试次视频</CardTitle>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="text-base font-medium">
+                  试次视频
+                </CardTitle>
+                <span className="text-xs text-muted-foreground">
+                  {trials.data
+                    ? `${trials.data.count} 条符合筛选条件`
+                    : "读取试次目录"}
+                </span>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="mb-4 flex flex-wrap gap-2">
@@ -265,6 +295,16 @@ export function TrialDirectoryPage() {
                 </Select>
               </div>
 
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <p>
+                  实验组、鼠号、阶段和日期筛选整个实验；关键词仅搜索当前页。
+                </p>
+                {hasFilters && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    清除筛选
+                  </Button>
+                )}
+              </div>
               {trials.isPending ? (
                 <p className="py-10 text-center text-sm text-muted-foreground">
                   正在加载试次…
@@ -288,9 +328,9 @@ export function TrialDirectoryPage() {
                   当前页没有匹配的试次，请调整搜索词。
                 </p>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
+                <div className="overflow-x-auto rounded-xl border">
+                  <Table className="min-w-[780px]">
+                    <TableHeader className="bg-muted/40">
                       <TableRow>
                         <TableHead>视频</TableHead>
                         <TableHead>动物（实验组 · 鼠号）</TableHead>
@@ -310,7 +350,7 @@ export function TrialDirectoryPage() {
               )}
 
               {trials.data && trials.data.count > pageSize && (
-                <div className="mt-4 flex items-center justify-end gap-3 text-sm">
+                <div className="mt-4 flex flex-wrap items-center justify-end gap-3 text-sm">
                   <span>
                     共 {trials.data.count} 条 · 第{" "}
                     {Math.floor(skip / pageSize) + 1} 页

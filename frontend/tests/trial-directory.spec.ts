@@ -60,16 +60,14 @@ test("researcher selects a trial and reloads its stable address", async ({
       }),
   )
 
-  await page.goto("/")
+  await page.goto("/annotations")
   await expect(
     page.getByRole("heading", { name: "实验与视频管理" }),
   ).toBeVisible()
   await expect(page.getByText("sample-a.mp4")).toBeVisible()
   await page.getByRole("textbox", { name: "搜索试次" }).fill("A2 2")
   await expect(page.getByText("sample-b.mp4")).toHaveCount(0)
-  await page
-    .getByRole("link", { name: "打开分析准备 sample-a.mp4" })
-    .click()
+  await page.getByRole("link", { name: "打开分析准备 sample-a.mp4" }).click()
 
   await expect(page).toHaveURL(/\/experiments\/fixture-e1\/trials\/trial-a$/)
   await expect(
@@ -97,7 +95,7 @@ test("empty experiment list and retryable load failure are distinct", async ({
     return route.fulfill({ json: { data: [] } })
   })
 
-  await page.goto("/")
+  await page.goto("/annotations")
   await expect(page.getByText("实验列表加载失败")).toBeVisible()
   await page.getByRole("button", { name: "重试" }).click()
   await expect(page.getByText("暂无可访问的实验")).toBeVisible()
@@ -126,7 +124,7 @@ test("an experiment with no matching trials has an empty state", async ({
   await page.route("**/api/v1/experiments/fixture-e1/trials?*", (route) =>
     route.fulfill({ json: { data: [], count: 0 } }),
   )
-  await page.goto("/")
+  await page.goto("/annotations")
   await expect(page.getByText("该实验没有符合条件的试次。")).toBeVisible()
 })
 
@@ -144,7 +142,7 @@ test("researcher filters by training-day number", async ({ page }) => {
     })
   })
 
-  await page.goto("/")
+  await page.goto("/annotations")
   await page.getByRole("combobox", { name: "训练日" }).click()
   await page.getByRole("option", { name: "第 1 训练日" }).click()
   await expect(page.getByText("sample-a.mp4")).toBeVisible()

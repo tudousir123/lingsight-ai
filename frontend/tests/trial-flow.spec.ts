@@ -63,7 +63,7 @@ test("select trial, review four checks, confirm, and open the same trial's resul
   page,
 }) => {
   test.setTimeout(120_000)
-  await page.goto("/")
+  await page.goto("/annotations")
   await expect(
     page.getByRole("heading", { name: "实验与视频管理" }),
   ).toBeVisible()

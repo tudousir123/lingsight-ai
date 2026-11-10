@@ -1,0 +1,270 @@
+/* Animate children only: viewport observation and hero perspective stay fixed. */
+.landing .hero-rise {
+  animation: hero-rise 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.landing .hero-drop {
+  animation: hero-drop 2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--hero-delay, 100ms);
+}
+.research-window-sidebar {
+  --hero-delay: 100ms;
+}
+.window-tabbar {
+  --hero-delay: 180ms;
+}
+.window-user-prompt {
+  --hero-delay: 280ms;
+}
+.window-step {
+  --hero-delay: 400ms;
+}
+.window-step + .window-step {
+  --hero-delay: 520ms;
+}
+.window-step + .window-step + .window-step {
+  --hero-delay: 640ms;
+}
+.window-step + .window-step + .window-step + .window-step {
+  --hero-delay: 760ms;
+}
+.window-output-preview {
+  --hero-delay: 880ms;
+}
+.window-output-files {
+  --hero-delay: 980ms;
+}
+.window-result-preview {
+  --hero-delay: 1080ms;
+}
+.research-window-overview {
+  --hero-delay: 350ms;
+}
+
+.landing [data-motion="armed"] .ilo-rise {
+  animation: ilo-rise 650ms ease both paused;
+}
+.landing [data-motion="armed"] .ilo-item {
+  animation: ilo-item 450ms ease both paused;
+  animation-delay: 150ms;
+}
+.workflow-question .ilo-word {
+  display: inline-block;
+  margin-inline-end: 0.25em;
+}
+.landing [data-motion="armed"] .ilo-word {
+  display: inline-block;
+  animation: ilo-word 280ms ease both paused;
+}
+.landing [data-motion="armed"] .ilo-pop {
+  animation: ilo-pop 350ms cubic-bezier(0.2, 1.5, 0.5, 1) both paused;
+}
+.landing [data-motion="armed"] :is(.ilo-row, .motion-code-rows > div) {
+  animation:
+    ilo-item 450ms ease both paused,
+    ilo-highlight 900ms ease both paused;
+  animation-delay: var(--row-delay, 350ms);
+}
+.landing [data-motion="armed"] .ilo-scroll {
+  animation: ilo-scroll 3.9s ease-in-out 3s both paused;
+}
+.landing
+  [data-motion="armed"][data-inview]
+  :is(
+    .ilo-rise,
+    .ilo-item,
+    .ilo-word,
+    .ilo-pop,
+    .ilo-row,
+    .ilo-scroll,
+    .motion-code-rows > div
+  ) {
+  animation-play-state: running;
+}
+.workflow-steps > :nth-child(2),
+.export-row:nth-of-type(3) {
+  --row-delay: 650ms;
+}
+.workflow-steps > :nth-child(3),
+.export-row:nth-of-type(4) {
+  --row-delay: 950ms;
+}
+.workflow-steps > :nth-child(4) {
+  --row-delay: 1250ms;
+}
+.motion-code-rows > :nth-child(2n) {
+  --row-delay: 500ms;
+}
+.motion-code-rows > :nth-child(3n) {
+  --row-delay: 750ms;
+}
+
+.workflow-demo {
+  min-width: 0;
+}
+.workflow-demo-label {
+  padding: 13px 16px;
+  border-bottom: 1px solid #292929;
+  font-size: 11px;
+  color: #989898;
+}
+.workflow-scroll-viewport {
+  --scroll-end: 0px;
+}
+.landing [data-motion="armed"] .workflow-scroll-viewport {
+  height: 16rem;
+  overflow: hidden;
+  mask-image: linear-gradient(transparent, #000 7%, #000 93%, transparent);
+}
+.workflow-scroll-content {
+  padding: 18px 16px;
+}
+.workflow-question {
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid #333;
+  border-radius: 10px;
+  background: #242424;
+  font-size: 12px;
+  color: #dedede;
+  line-height: 1.8;
+}
+.workflow-demo .inference-readout {
+  min-height: 0;
+  padding: 12px 0;
+}
+:where(.workflow-demo) .inference-readout > div {
+  flex-wrap: wrap;
+}
+.workflow-steps {
+  padding: 14px 0;
+}
+.workflow-steps > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 7px;
+  border-bottom: 1px solid #252525;
+  color: #a6a6a6;
+  font-size: 12px;
+}
+.workflow-steps svg,
+.workflow-deliverable > svg {
+  flex-shrink: 0;
+}
+.workflow-deliverable {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #333;
+  border-radius: 12px;
+  background: #202020;
+  padding: 16px 12px;
+  color: #d9d9d9;
+}
+.workflow-deliverable strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.workflow-deliverable small {
+  display: block;
+  margin-top: 8px;
+  color: #969696;
+  font-size: 10px;
+}
+.workflow-demo-note {
+  margin: 14px 0 0;
+  font-size: 10px;
+  color: #858585;
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+@keyframes hero-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-55px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes ilo-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes ilo-item {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+@keyframes ilo-word {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+@keyframes ilo-pop {
+  /* Keep the timeline dot's original horizontal centering. */
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+@keyframes ilo-highlight {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  35% {
+    background-color: #ffffff0f;
+  }
+}
+@keyframes ilo-scroll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(var(--scroll-end));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing [data-motion="armed"] .workflow-scroll-viewport {
+    height: auto;
+    overflow: visible;
+    mask-image: none;
+  }
+}

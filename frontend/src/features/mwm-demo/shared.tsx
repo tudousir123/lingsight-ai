@@ -1,23 +1,23 @@
-import { Link } from "@tanstack/react-router";
-import { ArrowRight, CircleHelp } from "lucide-react";
-import type { ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router"
+import { ArrowRight, CircleHelp } from "lucide-react"
+import type { ReactNode } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardAction,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { experiment, sampleTrial } from "./data";
-import demoWaterMaze from "./assets/demo-water-maze.png";
+} from "@/components/ui/card"
+import demoWaterMaze from "./assets/demo-water-maze.png"
+import { experiment, sampleTrial } from "./data"
 
 // Card and page composition adapted from shadcn/ui dashboard-01 (MIT).
 export function SummaryCards({
   items,
 }: {
-  items: { label: string; value: string; detail: string }[];
+  items: { label: string; value: string; detail: string }[]
 }) {
   return (
     <div className="grid gap-3 md:grid-cols-3">
@@ -25,11 +25,11 @@ export function SummaryCards({
         <Card key={item.label} className="gap-2 rounded-lg py-5 shadow-xs">
           <CardHeader className="gap-2">
             <CardDescription>{item.label}</CardDescription>
-            <CardTitle className="text-3xl font-semibold tabular-nums text-slate-900">
+            <CardTitle className="text-3xl font-semibold tabular-nums text-foreground">
               {item.value}
             </CardTitle>
             <CardAction>
-              <Badge variant="outline" className="text-blue-600">
+              <Badge variant="outline" className="text-primary">
                 示例
               </Badge>
             </CardAction>
@@ -38,7 +38,7 @@ export function SummaryCards({
         </Card>
       ))}
     </div>
-  );
+  )
 }
 export function PageHeading({
   section,
@@ -47,11 +47,11 @@ export function PageHeading({
   actions,
   showSampleBadge = true,
 }: {
-  section: string;
-  title: string;
-  subtitle?: ReactNode;
-  actions?: ReactNode;
-  showSampleBadge?: boolean;
+  section: string
+  title: string
+  subtitle?: ReactNode
+  actions?: ReactNode
+  showSampleBadge?: boolean
 }) {
   return (
     <>
@@ -67,64 +67,66 @@ export function PageHeading({
       </div>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-medium tracking-tight text-foreground">
             {title}
           </h1>
           {subtitle && (
-            <p className="mt-2 text-sm text-slate-500">{subtitle}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
           )}
         </div>
         <div className="flex flex-wrap gap-2">{actions}</div>
       </div>
     </>
-  );
+  )
 }
 export function PreviewNotice() {
   return (
-    <div className="mb-4 flex items-center gap-2 rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+    <div className="mb-4 flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-2 text-xs text-foreground/80">
       <CircleHelp className="size-4 shrink-0" />
       界面预览使用虚构示例数据；视频分析、导入和报告导出尚未接入。
     </div>
-  );
+  )
 }
 export function PageLink({
   to,
   children,
   outline = false,
 }: {
-  to: "/" | "/prepare" | "/results" | "/reports";
-  children: ReactNode;
-  outline?: boolean;
+  to: "/" | "/prepare" | "/results" | "/reports"
+  children: ReactNode
+  outline?: boolean
 }) {
   return (
     <Button
       variant={outline ? "outline" : "default"}
       asChild
-      className={outline ? "" : "bg-blue-600 hover:bg-blue-700"}
+      className={
+        outline ? "" : "bg-primary text-primary-foreground hover:bg-primary/90"
+      }
     >
       <Link to={to}>{children}</Link>
     </Button>
-  );
+  )
 }
 export function DemoAction({
   children,
   onClick,
 }: {
-  children: ReactNode;
-  onClick: () => void;
+  children: ReactNode
+  onClick: () => void
 }) {
   return (
     <Button variant="outline" onClick={onClick}>
       {children}
     </Button>
-  );
+  )
 }
 export function TrialLabel({ completed = false }: { completed?: boolean }) {
   return completed ? (
     <span>MWM_D2_A01_T1.mp4 · 对照组 / A01 · 第 2 天 · 试次 1</span>
   ) : (
     <span>{sampleTrial} · 对照组 / A01 · 第 3 天 · 试次 1</span>
-  );
+  )
 }
 export function PoolFrame({
   boundary = true,
@@ -132,10 +134,10 @@ export function PoolFrame({
   platform = true,
   trajectory = false,
 }: {
-  boundary?: boolean;
-  marks?: boolean;
-  platform?: boolean;
-  trajectory?: boolean;
+  boundary?: boolean
+  marks?: boolean
+  platform?: boolean
+  trajectory?: boolean
 }) {
   return (
     <div className="relative aspect-[1672/941] overflow-hidden rounded-md bg-slate-300">
@@ -210,16 +212,16 @@ export function PoolFrame({
         )}
       </svg>
     </div>
-  );
+  )
 }
 export function FrameControls({
   frame,
   setFrame,
 }: {
-  frame: number;
-  setFrame: (n: number) => void;
+  frame: number
+  setFrame: (n: number) => void
 }) {
-  const seconds = frame / 30;
+  const seconds = frame / 30
   return (
     <div className="flex items-center gap-3 rounded-b-md bg-slate-900 px-4 py-2 text-xs text-white">
       <span className="tabular-nums">
@@ -232,34 +234,34 @@ export function FrameControls({
         max="1800"
         value={frame}
         onChange={(e) => setFrame(Number(e.target.value))}
-        className="min-w-0 flex-1 accent-blue-500"
+        className="min-w-0 flex-1 accent-brand"
       />
       <span>1×</span>
     </div>
-  );
+  )
 }
 export function ChartKey() {
   return (
     <div className="flex items-center gap-4 text-xs">
-      <span className="text-blue-600">● 对照组</span>
-      <span className="text-teal-600">● 实验组</span>
+      <span className="text-chart-1">● 对照组</span>
+      <span className="text-chart-3">● 实验组</span>
     </div>
-  );
+  )
 }
 export function InlineLink({
   to,
   children,
 }: {
-  to: "/" | "/prepare" | "/results" | "/reports";
-  children: ReactNode;
+  to: "/" | "/prepare" | "/results" | "/reports"
+  children: ReactNode
 }) {
   return (
     <Link
       to={to}
-      className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
+      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
     >
       {children}
       <ArrowRight className="size-4" />
     </Link>
-  );
+  )
 }

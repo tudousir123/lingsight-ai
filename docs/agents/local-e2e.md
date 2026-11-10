@@ -16,7 +16,7 @@ docker exec lingsight-ai-backend-1 sh -c 'tr "\0" "\n" < /proc/1/environ | grep 
 
 ## 2. 本机重跑前清 `trial_review`
 
-trial-flow 的确认/草稿用例假设干净库（CI 每 shard 重建）。上一次本机跑留下的 confirmed 记录会让下一次跑的主流程假失败（页面直接进入已确认态）。`scripts/e2e-local.sh` 已把清理串进流程；手动等价：
+trial-flow 的确认/草稿用例假设干净库（CI 每 shard 重建）。上一次本机跑留下的 confirmed 记录会让下一次跑的主流程假失败（页面直接进入已确认态）。`scripts/e2e-local.sh` 会删除目标库全部核对记录，因此默认在任何构建或 Compose 操作前退出；只有确认目标是可清空的隔离栈后，才设置 `LINGSIGHT_E2E_ALLOW_REVIEW_DELETE=1` 运行。以下是脚本使用的删除语句，仅适用于已确认可清空的测试库：
 
 ```bash
 docker exec lingsight-ai-db-1 sh -c 'mysql -uapp -p"$MYSQL_PASSWORD" app -e "delete from trial_review;"'
@@ -30,15 +30,13 @@ docker exec lingsight-ai-db-1 sh -c 'mysql -uapp -p"$MYSQL_PASSWORD" app -e "del
 docker compose build backend playwright
 ```
 
-## 4. 跑过后端 pytest 之后，app 库用户被清空（超管自动重建，手工账号会丢）
+## 4. 后端测试与开发库隔离（2026-11-09 收敛）
 
-`backend/tests/conftest.py` 的 autouse session fixture 在 teardown 执行
-`delete(Item)` + `delete(User)`（模板设计，CI 每 shard 全新库无害），而本地测试
-engine 指向的就是 compose 栈的 `app` 库——**任何一次 `uv run pytest`（哪怕单
-文件）都会清空 dev 栈用户**。2026-10-14 retro 起 teardown 会紧接着用 `init_db`
-**自动重建 FIRST_SUPERUSER**，本地 admin 登录不再被悄悄废掉；但**其他手工创建
-的账号仍会丢失**。需要完整重建时：`docker compose run --rm backend bash scripts/prestart.sh`。
-注意 trial_review 不在 teardown 清单里，那是第 2 节的另一个坑。
+完整后端测试从 `backend/` 执行 `bash scripts/test-local.sh`。命令创建唯一临时 MySQL 8.4 容器，使用随机本机端口和专用 `lingsight_test_*` 数据库，迁移后运行测试与 coverage，退出销毁自己创建的容器。不会停止 compose 或清除开发账号。
+
+纯计算、SQL 校验、科研任务转发测试可直接 `uv run pytest <files>`。应用配置使用测试专用合成值，不读取开发凭据；只有显式需要 `db` 的测试才初始化应用数据库。自行管理测试库时须传入 `TEST_DATABASE_URL` 并先执行迁移；库名必须符合 `lingsight_test_*`。缺少配置的数据库测试明确失败，禁止回退 `DATABASE_URL` 或开发 `app` 库。
+
+历史版本的全局 autouse 夹具确实会清空开发用户；本轮已移除该行为。Playwright 仍有自己的 compose 夹具与清理流程，第 2 节的已有试次核对记录问题仍需按 E2E 流程处理。
 
 ## 3. 本机没有 bun 时别用 `npm run lint`
 

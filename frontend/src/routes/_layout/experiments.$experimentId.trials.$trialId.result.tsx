@@ -8,5 +8,5 @@ export const Route = createFileRoute(
     const { experimentId, trialId } = Route.useParams()
     return <TrialResultPage experimentId={experimentId} trialId={trialId} />
   },
-  head: () => ({ meta: [{ title: "单次分析结果 - LingSight AI" }] }),
+  head: () => ({ meta: [{ title: "单次分析结果 - LingSight Science" }] }),
 })

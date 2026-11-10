@@ -43,7 +43,7 @@ function SpeedLine({
           }
         }}
       >
-        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis
           dataKey="t"
           type="number"
@@ -65,7 +65,13 @@ function SpeedLine({
         <Tooltip
           formatter={(value) => [`${Number(value).toFixed(1)} px/s`, "速度"]}
           labelFormatter={(label) => `t = ${Number(label).toFixed(3)} s`}
-          contentStyle={{ fontSize: 12 }}
+          contentStyle={{
+            fontSize: 12,
+            background: "var(--popover)",
+            border: "1px solid var(--border)",
+            color: "var(--popover-foreground)",
+            borderRadius: 10,
+          }}
         />
         {candidateTimeS !== undefined && candidateTimeS !== null && (
           <ReferenceLine
@@ -76,14 +82,14 @@ function SpeedLine({
               value: "平台圈进入（候选）",
               position: "insideTopRight",
               fontSize: 10,
-              fill: "#b45309",
+              fill: "var(--brand)",
             }}
           />
         )}
         <Line
           type="monotone"
           dataKey="v"
-          stroke="#2563eb"
+          stroke="var(--chart-1)"
           strokeWidth={1.6}
           dot={false}
           connectNulls={false}
@@ -142,7 +148,7 @@ export function SpeedChart({
         seekRef={seekRef}
       />
       <div
-        className="pointer-events-none absolute top-0 bottom-0 w-px bg-blue-600"
+        className="pointer-events-none absolute top-0 bottom-0 w-px bg-brand"
         style={{ left: `${cursorPct}%` }}
         aria-hidden
       />

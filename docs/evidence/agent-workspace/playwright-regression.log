@@ -1,0 +1,23 @@
+
+Running 11 tests using 2 workers
+
+(node:3154154) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:3154155) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/11] [chromium] › tests/qa-page.spec.ts:85:1 › example question streams stages, answer, caliber note and SQL details
+[2/11] [chromium] › tests/qa-page.spec.ts:127:1 › empty result is a success channel with suggestion, never a table
+[3/11] [chromium] › tests/qa-page.spec.ts:151:1 › typed rejection shows reason without a table and without a retry for 403 class
+[4/11] [chromium] › tests/qa-page.spec.ts:183:1 › provider failure offers one-click retry of the same question
+[5/11] [chromium] › tests/qa-page.spec.ts:217:1 › in-session history replays cached answers without re-sending
+[6/11] [chromium] › tests/qa-page.spec.ts:261:1 › loading state shows elapsed seconds and no fake progress
+[7/11] [chromium] › tests/trial-directory.spec.ts:33:1 › researcher selects a trial and reloads its stable address
+[8/11] [chromium] › tests/trial-directory.spec.ts:85:1 › empty experiment list and retryable load failure are distinct
+[9/11] [chromium] › tests/trial-directory.spec.ts:106:1 › a trial in an ungranted experiment stays forbidden
+[10/11] [chromium] › tests/trial-directory.spec.ts:120:1 › an experiment with no matching trials has an empty state
+[11/11] [chromium] › tests/trial-directory.spec.ts:133:1 › researcher filters by training-day number
+  11 passed (13.5s)

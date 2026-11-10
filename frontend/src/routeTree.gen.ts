@@ -11,18 +11,25 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as LayoutAnalysisRouteImport } from './routes/_layout/analysis'
+import { Route as LayoutAnnotationsRouteImport } from './routes/_layout/annotations'
+import { Route as LayoutInferenceRouteImport } from './routes/_layout/inference'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutPrepareRouteImport } from './routes/_layout/prepare'
 import { Route as LayoutQaRouteImport } from './routes/_layout/qa'
 import { Route as LayoutReportsRouteImport } from './routes/_layout/reports'
 import { Route as LayoutResultsRouteImport } from './routes/_layout/results'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutExperimentsIndexRouteImport } from './routes/_layout/experiments.index'
+import { Route as LayoutProjectsProjectIdRouteImport } from './routes/_layout/projects.$projectId'
+import { Route as LayoutTasksTaskIdRouteImport } from './routes/_layout/tasks.$taskId'
 import { Route as LayoutExperimentsExperimentIdTrialsTrialIdRouteImport } from './routes/_layout/experiments.$experimentId.trials.$trialId'
 import { Route as LayoutExperimentsExperimentIdTrialsTrialIdIndexRouteImport } from './routes/_layout/experiments.$experimentId.trials.$trialId.index'
 import { Route as LayoutExperimentsExperimentIdTrialsTrialIdResultRouteImport } from './routes/_layout/experiments.$experimentId.trials.$trialId.result'
@@ -34,6 +41,11 @@ const LayoutRoute = LayoutRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecoverPasswordRoute = RecoverPasswordRouteImport.update({
@@ -66,6 +78,21 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAnalysisRoute = LayoutAnalysisRouteImport.update({
+  id: '/analysis',
+  path: '/analysis',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutAnnotationsRoute = LayoutAnnotationsRouteImport.update({
+  id: '/annotations',
+  path: '/annotations',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutInferenceRoute = LayoutInferenceRouteImport.update({
+  id: '/inference',
+  path: '/inference',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutItemsRoute = LayoutItemsRouteImport.update({
   id: '/items',
   path: '/items',
@@ -96,6 +123,21 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutExperimentsIndexRoute = LayoutExperimentsIndexRouteImport.update({
+  id: '/experiments/',
+  path: '/experiments/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutProjectsProjectIdRoute = LayoutProjectsProjectIdRouteImport.update({
+  id: '/projects/$projectId',
+  path: '/projects/$projectId',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutTasksTaskIdRoute = LayoutTasksTaskIdRouteImport.update({
+  id: '/tasks/$taskId',
+  path: '/tasks/$taskId',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutExperimentsExperimentIdTrialsTrialIdRoute =
   LayoutExperimentsExperimentIdTrialsTrialIdRouteImport.update({
     id: '/experiments/$experimentId/trials/$trialId',
@@ -118,28 +160,39 @@ const LayoutExperimentsExperimentIdTrialsTrialIdResultRoute =
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/welcome': typeof WelcomeRoute
   '/admin': typeof LayoutAdminRoute
+  '/analysis': typeof LayoutAnalysisRoute
+  '/annotations': typeof LayoutAnnotationsRoute
+  '/inference': typeof LayoutInferenceRoute
   '/items': typeof LayoutItemsRoute
   '/prepare': typeof LayoutPrepareRoute
   '/qa': typeof LayoutQaRoute
   '/reports': typeof LayoutReportsRoute
   '/results': typeof LayoutResultsRoute
   '/settings': typeof LayoutSettingsRoute
+  '/projects/$projectId': typeof LayoutProjectsProjectIdRoute
+  '/tasks/$taskId': typeof LayoutTasksTaskIdRoute
+  '/experiments/': typeof LayoutExperimentsIndexRoute
   '/experiments/$experimentId/trials/$trialId': typeof LayoutExperimentsExperimentIdTrialsTrialIdRouteWithChildren
   '/experiments/$experimentId/trials/$trialId/result': typeof LayoutExperimentsExperimentIdTrialsTrialIdResultRoute
   '/experiments/$experimentId/trials/$trialId/': typeof LayoutExperimentsExperimentIdTrialsTrialIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/welcome': typeof WelcomeRoute
   '/admin': typeof LayoutAdminRoute
+  '/analysis': typeof LayoutAnalysisRoute
+  '/annotations': typeof LayoutAnnotationsRoute
+  '/inference': typeof LayoutInferenceRoute
   '/items': typeof LayoutItemsRoute
   '/prepare': typeof LayoutPrepareRoute
   '/qa': typeof LayoutQaRoute
@@ -147,6 +200,9 @@ export interface FileRoutesByTo {
   '/results': typeof LayoutResultsRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
+  '/projects/$projectId': typeof LayoutProjectsProjectIdRoute
+  '/tasks/$taskId': typeof LayoutTasksTaskIdRoute
+  '/experiments': typeof LayoutExperimentsIndexRoute
   '/experiments/$experimentId/trials/$trialId/result': typeof LayoutExperimentsExperimentIdTrialsTrialIdResultRoute
   '/experiments/$experimentId/trials/$trialId': typeof LayoutExperimentsExperimentIdTrialsTrialIdIndexRoute
 }
@@ -154,11 +210,15 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/welcome': typeof WelcomeRoute
   '/_layout/admin': typeof LayoutAdminRoute
+  '/_layout/analysis': typeof LayoutAnalysisRoute
+  '/_layout/annotations': typeof LayoutAnnotationsRoute
+  '/_layout/inference': typeof LayoutInferenceRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/prepare': typeof LayoutPrepareRoute
   '/_layout/qa': typeof LayoutQaRoute
@@ -166,6 +226,9 @@ export interface FileRoutesById {
   '/_layout/results': typeof LayoutResultsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/projects/$projectId': typeof LayoutProjectsProjectIdRoute
+  '/_layout/tasks/$taskId': typeof LayoutTasksTaskIdRoute
+  '/_layout/experiments/': typeof LayoutExperimentsIndexRoute
   '/_layout/experiments/$experimentId/trials/$trialId': typeof LayoutExperimentsExperimentIdTrialsTrialIdRouteWithChildren
   '/_layout/experiments/$experimentId/trials/$trialId/result': typeof LayoutExperimentsExperimentIdTrialsTrialIdResultRoute
   '/_layout/experiments/$experimentId/trials/$trialId/': typeof LayoutExperimentsExperimentIdTrialsTrialIdIndexRoute
@@ -175,28 +238,39 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/onboarding'
     | '/recover-password'
     | '/reset-password'
     | '/signup'
     | '/welcome'
     | '/admin'
+    | '/analysis'
+    | '/annotations'
+    | '/inference'
     | '/items'
     | '/prepare'
     | '/qa'
     | '/reports'
     | '/results'
     | '/settings'
+    | '/projects/$projectId'
+    | '/tasks/$taskId'
+    | '/experiments/'
     | '/experiments/$experimentId/trials/$trialId'
     | '/experiments/$experimentId/trials/$trialId/result'
     | '/experiments/$experimentId/trials/$trialId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/onboarding'
     | '/recover-password'
     | '/reset-password'
     | '/signup'
     | '/welcome'
     | '/admin'
+    | '/analysis'
+    | '/annotations'
+    | '/inference'
     | '/items'
     | '/prepare'
     | '/qa'
@@ -204,17 +278,24 @@ export interface FileRouteTypes {
     | '/results'
     | '/settings'
     | '/'
+    | '/projects/$projectId'
+    | '/tasks/$taskId'
+    | '/experiments'
     | '/experiments/$experimentId/trials/$trialId/result'
     | '/experiments/$experimentId/trials/$trialId'
   id:
     | '__root__'
     | '/_layout'
     | '/login'
+    | '/onboarding'
     | '/recover-password'
     | '/reset-password'
     | '/signup'
     | '/welcome'
     | '/_layout/admin'
+    | '/_layout/analysis'
+    | '/_layout/annotations'
+    | '/_layout/inference'
     | '/_layout/items'
     | '/_layout/prepare'
     | '/_layout/qa'
@@ -222,6 +303,9 @@ export interface FileRouteTypes {
     | '/_layout/results'
     | '/_layout/settings'
     | '/_layout/'
+    | '/_layout/projects/$projectId'
+    | '/_layout/tasks/$taskId'
+    | '/_layout/experiments/'
     | '/_layout/experiments/$experimentId/trials/$trialId'
     | '/_layout/experiments/$experimentId/trials/$trialId/result'
     | '/_layout/experiments/$experimentId/trials/$trialId/'
@@ -230,6 +314,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
   LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
   RecoverPasswordRoute: typeof RecoverPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
@@ -250,6 +335,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recover-password': {
@@ -294,6 +386,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/analysis': {
+      id: '/_layout/analysis'
+      path: '/analysis'
+      fullPath: '/analysis'
+      preLoaderRoute: typeof LayoutAnalysisRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/annotations': {
+      id: '/_layout/annotations'
+      path: '/annotations'
+      fullPath: '/annotations'
+      preLoaderRoute: typeof LayoutAnnotationsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/inference': {
+      id: '/_layout/inference'
+      path: '/inference'
+      fullPath: '/inference'
+      preLoaderRoute: typeof LayoutInferenceRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/items': {
       id: '/_layout/items'
       path: '/items'
@@ -334,6 +447,27 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof LayoutSettingsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/experiments/': {
+      id: '/_layout/experiments/'
+      path: '/experiments'
+      fullPath: '/experiments/'
+      preLoaderRoute: typeof LayoutExperimentsIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/projects/$projectId': {
+      id: '/_layout/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof LayoutProjectsProjectIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/tasks/$taskId': {
+      id: '/_layout/tasks/$taskId'
+      path: '/tasks/$taskId'
+      fullPath: '/tasks/$taskId'
+      preLoaderRoute: typeof LayoutTasksTaskIdRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/experiments/$experimentId/trials/$trialId': {
@@ -380,6 +514,9 @@ const LayoutExperimentsExperimentIdTrialsTrialIdRouteWithChildren =
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
+  LayoutAnalysisRoute: typeof LayoutAnalysisRoute
+  LayoutAnnotationsRoute: typeof LayoutAnnotationsRoute
+  LayoutInferenceRoute: typeof LayoutInferenceRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutPrepareRoute: typeof LayoutPrepareRoute
   LayoutQaRoute: typeof LayoutQaRoute
@@ -387,11 +524,17 @@ interface LayoutRouteChildren {
   LayoutResultsRoute: typeof LayoutResultsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
+  LayoutProjectsProjectIdRoute: typeof LayoutProjectsProjectIdRoute
+  LayoutTasksTaskIdRoute: typeof LayoutTasksTaskIdRoute
+  LayoutExperimentsIndexRoute: typeof LayoutExperimentsIndexRoute
   LayoutExperimentsExperimentIdTrialsTrialIdRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdRouteWithChildren
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
+  LayoutAnalysisRoute: LayoutAnalysisRoute,
+  LayoutAnnotationsRoute: LayoutAnnotationsRoute,
+  LayoutInferenceRoute: LayoutInferenceRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutPrepareRoute: LayoutPrepareRoute,
   LayoutQaRoute: LayoutQaRoute,
@@ -399,6 +542,9 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutResultsRoute: LayoutResultsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
+  LayoutProjectsProjectIdRoute: LayoutProjectsProjectIdRoute,
+  LayoutTasksTaskIdRoute: LayoutTasksTaskIdRoute,
+  LayoutExperimentsIndexRoute: LayoutExperimentsIndexRoute,
   LayoutExperimentsExperimentIdTrialsTrialIdRoute:
     LayoutExperimentsExperimentIdTrialsTrialIdRouteWithChildren,
 }
@@ -409,6 +555,7 @@ const LayoutRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
   LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
   RecoverPasswordRoute: RecoverPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,

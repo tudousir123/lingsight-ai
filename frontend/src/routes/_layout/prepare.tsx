@@ -11,5 +11,5 @@ function PrepareRoute() {
 
 export const Route = createFileRoute("/_layout/prepare")({
   component: PrepareRoute,
-  head: () => ({ meta: [{ title: "分析准备 - LingSight AI" }] }),
+  head: () => ({ meta: [{ title: "分析准备 - LingSight Science" }] }),
 })

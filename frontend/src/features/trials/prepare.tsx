@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { AxiosError } from "axios"
-import { AlertTriangle, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, CheckCircle2, VideoOff } from "lucide-react"
 import { useEffect, useState } from "react"
 import { ExperimentsService, type PreparationPublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
@@ -207,23 +207,26 @@ export function TrialPreparePage({
   const allChecked = checkItems.every((item) => checks[item.key])
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] flex-col gap-3 overflow-hidden">
+    <div className="flex flex-col gap-4 xl:h-[calc(100dvh-7rem)] xl:min-h-[640px]">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link to="/" className="text-sm text-blue-600 hover:underline">
+        <div className="min-w-0">
+          <Link to="/annotations" className="text-sm text-primary hover:underline">
             ← 返回试次列表
           </Link>
-          <h1 className="mt-0.5 text-xl font-semibold text-slate-900">
+          <h1 className="mt-2 break-words text-xl font-medium tracking-tight text-foreground">
             分析准备 · {data.trial.video_name}
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             {data.trial.group_name} · 鼠 {data.trial.mouse_id} ·{" "}
             {phaseLabel(data.trial.phase)} · {data.trial.session_label} · 试次{" "}
             {data.trial.trial_no}
           </p>
         </div>
         {confirmed && (
-          <Button asChild className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            asChild
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
             <Link
               to="/experiments/$experimentId/trials/$trialId/result"
               params={{ experimentId, trialId }}
@@ -245,7 +248,7 @@ export function TrialPreparePage({
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col gap-2">
             {src ? (
-              <div className="relative min-h-0 flex-1 overflow-hidden rounded-md bg-slate-900">
+              <div className="relative aspect-video min-h-0 flex-1 overflow-hidden rounded-md xl:aspect-auto bg-slate-900">
                 {/* behavior footage: no audio track, so there is nothing to caption */}
                 {/* biome-ignore lint/a11y/useMediaCaption: silent water-maze footage */}
                 <video
@@ -265,14 +268,21 @@ export function TrialPreparePage({
                 />
               </div>
             ) : (
-              <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                <AlertTriangle className="size-4 shrink-0" />
-                {data.video.reason ?? "该试次没有可播放的视频文件"}
+              <div className="flex min-h-56 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/20 p-6 text-center">
+                <VideoOff
+                  className="size-8 text-muted-foreground"
+                  strokeWidth={1.3}
+                  aria-hidden
+                />
+                <p className="text-sm font-medium">视频暂不可用</p>
+                <p className="max-w-sm text-xs leading-6 text-muted-foreground">
+                  {data.video.reason ?? "该试次没有可播放的视频文件"}
+                </p>
               </div>
             )}
             {trackStatus === "available" && frameCount > 0 && (
               <div className="shrink-0 space-y-1">
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   第 {frame} 帧 · t = {(frame / fps).toFixed(2)} s ·{" "}
                   {data.tracking.valid_frames}/{frameCount} 有效帧 · miss{" "}
                   {
@@ -295,7 +305,7 @@ export function TrialPreparePage({
                   max={frameCount - 1}
                   value={frame}
                   onChange={(event) => setFrame(Number(event.target.value))}
-                  className="w-full accent-blue-600"
+                  className="w-full accent-brand"
                 />
                 <SpeedChart
                   track={data.tracking}
@@ -351,7 +361,7 @@ export function TrialPreparePage({
                           }
                         />
                         <span>
-                          <span className="block font-medium text-slate-800">
+                          <span className="block font-medium text-foreground">
                             {item.label}
                           </span>
                           <span className="block text-xs text-muted-foreground">
@@ -362,7 +372,7 @@ export function TrialPreparePage({
                     ))}
                   </div>
                   {missing.length > 0 && (
-                    <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <p className="flex items-start gap-2 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
                       <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                       缺失素材：{missing.map((row) => row.name).join("、")}
                       。最终确认需要素材齐备，草稿仍可保存。
@@ -377,7 +387,7 @@ export function TrialPreparePage({
                       {saveMutation.isPending ? "保存中…" : "保存草稿"}
                     </Button>
                     <Button
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
                       disabled={saveMutation.isPending || !allChecked}
                       onClick={() => saveMutation.mutate("confirmed")}
                     >
@@ -412,7 +422,9 @@ export function TrialPreparePage({
                     key={row.name}
                     className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b pb-2 last:border-b-0"
                   >
-                    <dt className="w-24 shrink-0 text-slate-500">{row.name}</dt>
+                    <dt className="w-24 shrink-0 text-muted-foreground">
+                      {row.name}
+                    </dt>
                     <dd className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3">
                       <Badge variant={row.ok ? "secondary" : "outline"}>
                         {row.ok ? "可用" : "缺失"}
@@ -423,7 +435,7 @@ export function TrialPreparePage({
                         </span>
                       )}
                       {!row.ok && row.reason && (
-                        <span className="text-xs text-amber-700">
+                        <span className="text-xs text-amber-700 dark:text-amber-300">
                           {row.reason}
                         </span>
                       )}

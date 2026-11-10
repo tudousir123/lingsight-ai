@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/home/shuncheng/桌面/lingsight-ai/docs/architecture/ai-native-target.architecture.json",
+  "output": "/home/shuncheng/桌面/lingsight-ai/docs/architecture/ai-native-target.html",
+  "specification": {
+    "sha256": "ef2af0f045484d83649c7b9b7d203b920750e08841b0c2e352c445ef10e0e91f",
+    "bytes": 5387
+  },
+  "artifact": {
+    "sha256": "4aa6c327facfc520178649fb8d39792b377ac29cab484f95e1c5777e78197e98",
+    "bytes": 809936
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

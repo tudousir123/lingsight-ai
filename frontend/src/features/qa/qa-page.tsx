@@ -8,6 +8,7 @@ import {
   RotateCcw,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import { PageHeader } from "@/components/Common/PageHeader"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -64,6 +65,8 @@ type Exchange = {
   error: string | null
 }
 
+type CompletedExchange = Exchange & { result: QaResult }
+
 function reasonLabel(reasonCode: string) {
   return REASON_LABELS[reasonCode] ?? `查询被拒绝（${reasonCode}）`
 }
@@ -94,15 +97,20 @@ function StageTimeline({
             className="flex items-center gap-2"
           >
             {done ? (
-              <Check className="size-4 shrink-0 text-emerald-600" aria-hidden />
+              <Check
+                className="size-4 shrink-0 text-emerald-700 dark:text-emerald-400"
+                aria-hidden
+              />
             ) : (
               <Loader2
-                className="size-4 shrink-0 animate-spin text-blue-600"
+                className="size-4 shrink-0 animate-spin text-primary"
                 aria-hidden
               />
             )}
             <span
-              className={done ? "text-slate-700" : "font-medium text-slate-900"}
+              className={
+                done ? "text-foreground/80" : "font-medium text-foreground"
+              }
             >
               {STAGE_LABELS[event.stage]}
             </span>
@@ -111,7 +119,9 @@ function StageTimeline({
                 第 {event.attempt} 次尝试
               </Badge>
             )}
-            {!done && <span className="text-xs text-slate-500">进行中…</span>}
+            {!done && (
+              <span className="text-xs text-muted-foreground">进行中…</span>
+            )}
           </li>
         )
       })}
@@ -146,7 +156,7 @@ function AnswerView({ answer }: { answer: QaAnswer }) {
   const source = answer.data_source
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2.5 text-sm whitespace-pre-line text-blue-900">
+      <div className="rounded-md border border-border bg-muted/50 px-3 py-2.5 text-sm whitespace-pre-line text-foreground">
         {answer.caliber_note}
       </div>
       <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
@@ -261,10 +271,12 @@ function HistoryPanel({
   history,
   active,
   onSelect,
+  disabled,
 }: {
-  history: Exchange[]
+  history: CompletedExchange[]
   active: Exchange | null
   onSelect: (exchange: Exchange) => void
+  disabled: boolean
 }) {
   return (
     <Card className="py-4">
@@ -284,10 +296,11 @@ function HistoryPanel({
               key={`${exchange.question}-${index}`}
               type="button"
               onClick={() => onSelect(exchange)}
-              className={`rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors ${
+              disabled={disabled}
+              className={`rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors disabled:cursor-wait disabled:opacity-50 ${
                 isActive
-                  ? "border-blue-300 bg-blue-50 text-blue-900"
-                  : "text-slate-700 hover:bg-muted/60"
+                  ? "border-brand/40 bg-brand/10 text-foreground"
+                  : "text-foreground/80 hover:bg-muted/60"
               }`}
             >
               <span className="line-clamp-2">{exchange.question}</span>
@@ -312,7 +325,7 @@ export function QaPage() {
   const [running, setRunning] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [current, setCurrent] = useState<Exchange | null>(null)
-  const [history, setHistory] = useState<Exchange[]>([])
+  const [history, setHistory] = useState<CompletedExchange[]>([])
   const abortRef = useRef<AbortController | null>(null)
   const timerRef = useRef<number | null>(null)
   // 阶段事件的镜像：完成时用它组装最终 Exchange，避免在 setState 更新器
@@ -376,23 +389,32 @@ export function QaPage() {
     }
     setCurrent(exchange)
     if (result !== null) {
-      setHistory((items) => [exchange, ...items].slice(0, MAX_HISTORY))
+      setHistory((items) =>
+        [{ ...exchange, result }, ...items].slice(0, MAX_HISTORY),
+      )
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">科研问答</h1>
-        <p className="text-sm text-slate-500">
-          用自然语言查询水迷宫科研库；回答附口径声明与数据来源，被拒绝时会给出原因。
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="RESEARCH QUERY"
+        title="科研问答"
+        description="用自然语言探索水迷宫数据，结合统计口径、结果与来源复核每一次回答。"
+      />
 
-      <Card className="gap-3 py-4">
+      <Card className="gap-4 py-5">
+        <CardHeader>
+          <CardTitle className="text-base font-medium">
+            你想了解什么？
+          </CardTitle>
+          <p className="text-xs leading-5 text-muted-foreground">
+            支持查询已有科研数据。结果会保留统计口径与可追溯来源。
+          </p>
+        </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <form
-            className="flex gap-2"
+            className="flex flex-col gap-3 sm:flex-row"
             onSubmit={(event) => {
               event.preventDefault()
               void ask(input)
@@ -409,7 +431,7 @@ export function QaPage() {
             <Button
               type="submit"
               disabled={running || !input.trim()}
-              className="gap-1.5"
+              className="shrink-0 gap-1.5"
             >
               {running ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -453,7 +475,7 @@ export function QaPage() {
       {current && (
         <Card className="gap-3 py-4">
           <CardHeader>
-            <h2 className="text-base leading-relaxed font-semibold text-slate-900">
+            <h2 className="text-base leading-relaxed font-semibold text-foreground">
               {current.question}
             </h2>
           </CardHeader>
@@ -497,7 +519,7 @@ export function QaPage() {
         <p className="text-xs text-muted-foreground">
           提示：统计结论先看口径声明（逐鼠-逐日 vs
           试次直均），避免把伪重复结果写入论文； 想追溯单试次可从{" "}
-          <Link to="/" className="text-blue-600 hover:underline">
+          <Link to="/" className="text-primary hover:underline">
             实验管理
           </Link>{" "}
           进入试次页。
@@ -506,6 +528,7 @@ export function QaPage() {
           history={history}
           active={current}
           onSelect={setCurrent}
+          disabled={running}
         />
       </div>
     </div>

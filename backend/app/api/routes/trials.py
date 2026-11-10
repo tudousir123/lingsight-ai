@@ -11,8 +11,8 @@ from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep, user_from_token
 from app.core.config import settings
+from app.core.research import get_research_database_settings
 from app.models import ExperimentAccess, User
-from app.text_to_sql.settings import get_research_settings
 from app.trials.assets import ResearchTrialAssets
 from app.trials.catalog import CatalogUnavailable, TrialCatalog
 from app.trials.fixture_store import FileTrialStore, FixtureUnavailable
@@ -62,14 +62,14 @@ def get_trial_catalog() -> TrialCatalogProtocol:
     """Bounded trial catalog: research DB, or the synthetic fixture dir."""
     if get_trials_settings().TRIALS_FIXTURE_DIR is not None:
         return _fixture_or_503()
-    return TrialCatalog(get_research_settings())
+    return TrialCatalog(get_research_database_settings())
 
 
 def get_trial_assets() -> TrialAssetsProtocol:
     """Material resolver for one trial: research side, or the fixture."""
     if get_trials_settings().TRIALS_FIXTURE_DIR is not None:
         return _fixture_or_503()
-    return ResearchTrialAssets(get_research_settings(), get_trials_settings())
+    return ResearchTrialAssets(get_research_database_settings(), get_trials_settings())
 
 
 CatalogDep = Annotated[TrialCatalogProtocol, Depends(get_trial_catalog)]
@@ -197,19 +197,14 @@ def put_review(
 ) -> ReviewPublic:
     _check_access(experiment_id, session, current_user)
     try:
-        load_trial(catalog, experiment_id, trial_id)
-        video = assets.get_media(experiment_id, trial_id)
-        geometry = assets.get_geometry(experiment_id, trial_id)
-        track = assets.get_track(experiment_id, trial_id)
         return save_review(
             session,
             current_user,
             experiment_id,
             trial_id,
             update,
-            video=video,
-            geometry=geometry,
-            track=track,
+            catalog=catalog,
+            assets=assets,
         )
     except TrialNotFound:
         raise HTTPException(status_code=404, detail="Trial not found in experiment")

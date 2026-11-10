@@ -3,5 +3,7 @@ import LingSightLanding from "@/features/marketing/LingSightLanding"
 
 export const Route = createFileRoute("/welcome")({
   component: LingSightLanding,
-  head: () => ({ meta: [{ title: "LingSight Science · 逐帧动物行为分析" }] }),
+  head: () => ({
+    meta: [{ title: "LingSight Science · Animal Behavior Research" }],
+  }),
 })

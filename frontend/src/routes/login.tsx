@@ -44,7 +44,7 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       {
-        title: "登录 · LingSight Science",
+        title: "Sign in · LingSight Science",
       },
     ],
   }),
@@ -75,7 +75,9 @@ function Login() {
           className="flex flex-col gap-6"
         >
           <div className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-normal tracking-tight">登录 LingSight</h1>
+            <h1 className="text-2xl font-normal tracking-tight">
+              Sign in to LingSight
+            </h1>
           </div>
 
           <div className="grid gap-4">
@@ -109,7 +111,7 @@ function Login() {
                       to="/recover-password"
                       className="ml-auto text-sm underline-offset-4 hover:underline"
                     >
-                      忘记密码？
+                      Forgot password?
                     </RouterLink>
                   </div>
                   <FormControl>
@@ -130,7 +132,7 @@ function Login() {
           </div>
 
           <div className="text-center text-sm">
-            还没有账户？{" "}
+            New to LingSight?{" "}
             <RouterLink to="/signup" className="underline underline-offset-4">
               Sign up
             </RouterLink>

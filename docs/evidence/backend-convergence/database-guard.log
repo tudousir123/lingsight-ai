@@ -1,0 +1,34 @@
+empty EXPECTED REJECTION
+E                                                                        [100%]
+==================================== ERRORS ====================================
+___________________ ERROR at setup of test_get_access_token ____________________
+
+    @pytest.fixture(scope="session")
+    def db() -> Generator[Session]:
+        if _TEST_DATABASE_URL is None:
+>           pytest.fail(
+                "Database test requires an isolated database: bash scripts/test-local.sh"
+            )
+E           Failed: Database test requires an isolated database: bash scripts/test-local.sh
+
+tests/conftest.py:29: Failed
+=============================== warnings summary ===============================
+../.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /home/shuncheng/桌面/lingsight-ai/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tests/api/routes/test_login.py::test_get_access_token - Failed: Databas...
+1 warning, 1 error in 0.50s
+
+dev-rejected EXPECTED REJECTION
+ImportError while loading conftest '/home/shuncheng/桌面/lingsight-ai/backend/tests/conftest.py'.
+tests/conftest.py:13: in <module>
+    _TEST_DATABASE_URL = configure_application()
+                         ^^^^^^^^^^^^^^^^^^^^^^^
+tests/runtime.py:29: in configure_application
+    test_database_url(database_url)
+tests/runtime.py:20: in test_database_url
+    raise ValueError(
+E   ValueError: TEST_DATABASE_URL must use MySQL and a lingsight_test_* database

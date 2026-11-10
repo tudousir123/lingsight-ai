@@ -1,0 +1,102 @@
+science-login-v4 {
+  width: 1440,
+  bodyWidth: 1440,
+  height: 1000,
+  main: undefined,
+  theme: 'dark',
+  bg: 'rgb(10, 10, 10)',
+  h1: '登录 LingSight'
+}
+science-experiments-v4 {
+  width: 1440,
+  bodyWidth: 1440,
+  height: 1000,
+  main: 1000,
+  theme: 'dark',
+  bg: 'rgb(10, 10, 10)',
+  h1: '实验与视频管理'
+}
+science-qa-v4 {
+  width: 1440,
+  bodyWidth: 1440,
+  height: 1000,
+  main: 1000,
+  theme: 'dark',
+  bg: 'rgb(10, 10, 10)',
+  h1: '科研问答'
+}
+science-reports-v4 {
+  width: 1440,
+  bodyWidth: 1440,
+  height: 1000,
+  main: 1000,
+  theme: 'dark',
+  bg: 'rgb(10, 10, 10)',
+  h1: '实验统计与报告'
+}
+science-video-v4 {
+  width: 1440,
+  bodyWidth: 1440,
+  height: 1000,
+  main: 1000,
+  theme: 'dark',
+  bg: 'rgb(10, 10, 10)',
+  h1: '分析准备 · 合成试次A.mp4'
+}
+videoBox { x: 305, y: 245, width: 710, height: 510 }
+science-result-v4 {
+  width: 1440,
+  bodyWidth: 1440,
+  height: 1000,
+  main: 1000,
+  theme: 'dark',
+  bg: 'rgb(10, 10, 10)',
+  h1: '单次分析结果 · 合成试次A.mp4'
+}
+science-trial-v4 {
+  width: 1440,
+  bodyWidth: 1440,
+  height: 1000,
+  main: 1000,
+  theme: 'dark',
+  bg: 'rgb(10, 10, 10)',
+  h1: '分析准备 · 0804-A2-1-1.mp4'
+}
+activeNavigation [ '实验管理' ]
+science-experiments-1024-v4 {
+  width: 1024,
+  bodyWidth: 1024,
+  height: 768,
+  main: 768,
+  theme: 'dark',
+  bg: 'rgb(10, 10, 10)',
+  h1: '实验与视频管理'
+}
+science-video-1024-v4 {
+  width: 1024,
+  bodyWidth: 1024,
+  height: 768,
+  main: 768,
+  theme: 'dark',
+  bg: 'rgb(10, 10, 10)',
+  h1: '分析准备 · 合成试次A.mp4'
+}
+science-trial-1024-v4 {
+  width: 1024,
+  bodyWidth: 1024,
+  height: 768,
+  main: 768,
+  theme: 'dark',
+  bg: 'rgb(10, 10, 10)',
+  h1: '分析准备 · 0804-A2-1-1.mp4'
+}
+science-experiments-narrow-v4 {
+  width: 390,
+  bodyWidth: 390,
+  height: 844,
+  main: 844,
+  theme: 'dark',
+  bg: 'rgb(10, 10, 10)',
+  h1: '实验与视频管理'
+}
+pageErrors []

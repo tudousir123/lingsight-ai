@@ -10,7 +10,9 @@ from typing import Any
 import pymysql  # type: ignore[import-untyped]
 import pymysql.cursors  # type: ignore[import-untyped]
 
-from app.text_to_sql.settings import ResearchQuerySettings
+from app.core.research import ResearchDatabaseSettings
+from app.trials.media import ResearchTrialMedia
+from app.trials.settings import TrialsSettings, get_trials_settings
 
 
 class CatalogUnavailable(Exception):
@@ -18,7 +20,7 @@ class CatalogUnavailable(Exception):
 
 
 def read_rows(
-    settings: ResearchQuerySettings, sql: str, params: tuple[Any, ...]
+    settings: ResearchDatabaseSettings, sql: str, params: tuple[Any, ...]
 ) -> list[dict[str, Any]]:
     """One bounded read via the shared read-only account (lingsight_ro).
 
@@ -62,8 +64,13 @@ TRIAL_SELECT = (
 
 
 class TrialCatalog:
-    def __init__(self, settings: ResearchQuerySettings) -> None:
+    def __init__(
+        self, settings: ResearchDatabaseSettings, trials: TrialsSettings | None = None
+    ) -> None:
         self.settings = settings
+        self.media = ResearchTrialMedia(
+            trials if trials is not None else get_trials_settings()
+        )
 
     def _read(self, sql: str, params: tuple[Any, ...]) -> list[dict[str, Any]]:
         return read_rows(self.settings, sql, params)
@@ -134,8 +141,7 @@ class TrialCatalog:
         )
         return self._trial(rows[0]) if rows else None
 
-    @staticmethod
-    def _trial(row: dict[str, Any]) -> dict[str, Any]:
+    def _trial(self, row: dict[str, Any]) -> dict[str, Any]:
         source_path = row["source_video_path"]
         date_dir = str(row["date_dir"])
         training_day = None
@@ -161,6 +167,6 @@ class TrialCatalog:
             "session_no": row["session_no"],
             "session_label": row["session_label"],
             "trial_no": row["trial_no"],
-            "media_available": bool(source_path and Path(source_path).is_file()),
+            "media_available": self.media.available(source_path, str(row["video_id"])),
             "result_available": bool(row["result_video_id"]),
         }

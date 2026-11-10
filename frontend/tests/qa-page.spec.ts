@@ -99,7 +99,9 @@ test("example question streams stages, answer, caliber note and SQL details", as
 
   await page.goto("/qa")
   await expect(page.getByRole("heading", { name: "科研问答" })).toBeVisible()
-  await expect(page.getByRole("link", { name: "科研问答" })).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "Videos & annotations", exact: true }),
+  ).toBeVisible()
   await expect(page.getByRole("button", { name: countQuestion })).toBeVisible()
 
   await page.getByRole("button", { name: countQuestion }).click()

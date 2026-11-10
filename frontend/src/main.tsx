@@ -39,6 +39,21 @@ const queryClient = new QueryClient({
   }),
 })
 
+// Clear landing-page anchors before the router reads the initial location.
+// A refresh should open the hero; explicit links to sections still work.
+const navigation = performance.getEntriesByType("navigation")[0] as
+  | PerformanceNavigationTiming
+  | undefined
+if (
+  navigation?.type === "reload" &&
+  window.location.pathname === "/welcome" &&
+  window.location.hash
+) {
+  const landingUrl = new URL(window.location.href)
+  landingUrl.hash = ""
+  window.history.replaceState(window.history.state, "", landingUrl)
+}
+
 const router = createRouter({ routeTree })
 declare module "@tanstack/react-router" {
   interface Register {

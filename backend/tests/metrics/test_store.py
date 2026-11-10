@@ -36,7 +36,7 @@ def make_row(video_id: str, metric: str, value: float) -> MetricRow:
 
 
 @pytest.fixture()
-def metrics_table() -> Generator[Connection]:
+def metrics_table(db: object) -> Generator[Connection]:
     with engine.connect() as conn:
         conn.exec_driver_sql("DROP TABLE IF EXISTS trial_metrics")
         conn.commit()

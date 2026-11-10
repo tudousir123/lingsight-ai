@@ -10,8 +10,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.core.config import settings as app_settings
-
 MediaKind = Literal["source", "overlay"]
 Availability = Literal["available", "missing"]
 FrameStatus = Literal["ok", "miss", "coord"]
@@ -22,14 +20,6 @@ ReviewStateName = Literal["draft", "confirmed"]
 #: exact same words as the research store, so they live next to the schemas.
 REASON_NO_TRACK = "该试次尚无离线推理结果（未接入模型推理，不代填示例轨迹）"
 REASON_NO_POOL = "该试次没有水池几何参数"
-
-
-def media_url(experiment_id: str, trial_id: str, kind: str) -> str:
-    """Server-side URL of a trial's playable media (never a file path)."""
-    return (
-        f"{app_settings.API_V1_STR}/experiments/{experiment_id}"
-        f"/trials/{trial_id}/media/{kind}"
-    )
 
 
 class ExperimentSummary(BaseModel):
@@ -72,7 +62,7 @@ class MediaInfo(BaseModel):
     reason: str | None = None
     fingerprint: str | None = Field(
         default=None,
-        description="内容指纹（字节数）；用于人工核对记录绑定素材版本",
+        description="媒体内容 SHA-256；用于人工核对记录绑定素材版本",
     )
 
 

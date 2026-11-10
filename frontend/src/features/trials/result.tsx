@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { AxiosError } from "axios"
-import { AlertTriangle, Crosshair } from "lucide-react"
+import { AlertTriangle, Crosshair, VideoOff } from "lucide-react"
 import { useState } from "react"
 import { ExperimentsService, type MetricValue } from "@/client"
 import { Badge } from "@/components/ui/badge"
@@ -70,14 +70,14 @@ function StateRow({
 }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b pb-1.5 text-sm last:border-b-0">
-      <span className="w-24 shrink-0 text-slate-500">{name}</span>
+      <span className="w-24 shrink-0 text-muted-foreground">{name}</span>
       <Badge
         variant={tone === "muted" ? "outline" : "secondary"}
         className={
           tone === "ok"
-            ? "text-emerald-700"
+            ? "text-emerald-700 dark:text-emerald-400"
             : tone === "warn"
-              ? "text-amber-700"
+              ? "text-amber-700 dark:text-amber-300"
               : "text-muted-foreground"
         }
       >
@@ -156,25 +156,25 @@ export function TrialResultPage({
   const candidate = data.platform_entry_candidate ?? null
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] flex-col gap-3 overflow-hidden">
+    <div className="flex flex-col gap-4 xl:h-[calc(100dvh-7rem)] xl:min-h-[640px]">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
               to="/experiments/$experimentId/trials/$trialId"
               params={{ experimentId, trialId }}
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-primary hover:underline"
             >
               ← 返回分析准备
             </Link>
-            <Link to="/qa" className="text-sm text-blue-600 hover:underline">
+            <Link to="/qa" className="text-sm text-primary hover:underline">
               去科研问答 →
             </Link>
           </div>
-          <h1 className="mt-0.5 text-xl font-semibold text-slate-900">
+          <h1 className="mt-2 break-words text-xl font-medium tracking-tight text-foreground">
             单次分析结果 · {data.trial.video_name}
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             {data.trial.group_name} · 鼠 {data.trial.mouse_id} ·{" "}
             {phaseLabel(data.trial.phase)} · {data.trial.session_label} · 试次{" "}
             {data.trial.trial_no}
@@ -183,7 +183,7 @@ export function TrialResultPage({
       </div>
 
       {reviewState !== "confirmed" && (
-        <div className="flex shrink-0 items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <div className="flex shrink-0 items-center gap-2 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
           <AlertTriangle className="size-4 shrink-0" />
           该试次
           {reviewState === "draft"
@@ -217,7 +217,7 @@ export function TrialResultPage({
             </CardHeader>
             <CardContent className="flex min-h-0 flex-1 flex-col gap-2">
               {src ? (
-                <div className="relative min-h-0 flex-1 overflow-hidden rounded-md bg-slate-900">
+                <div className="relative aspect-video min-h-0 flex-1 overflow-hidden rounded-md xl:aspect-auto bg-slate-900">
                   {/* behavior footage: no audio track, so there is nothing to caption */}
                   {/* biome-ignore lint/a11y/useMediaCaption: silent water-maze footage */}
                   <video
@@ -237,14 +237,21 @@ export function TrialResultPage({
                   />
                 </div>
               ) : (
-                <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                  <AlertTriangle className="size-4 shrink-0" />
-                  {data.video.reason ?? "该试次没有可播放的视频文件"}
+                <div className="flex min-h-56 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/20 p-6 text-center">
+                  <VideoOff
+                    className="size-8 text-muted-foreground"
+                    strokeWidth={1.3}
+                    aria-hidden
+                  />
+                  <p className="text-sm font-medium">视频暂不可用</p>
+                  <p className="max-w-sm text-xs leading-6 text-muted-foreground">
+                    {data.video.reason ?? "该试次没有可播放的视频文件"}
+                  </p>
                 </div>
               )}
               {trackStatus === "available" && frameCount > 0 && (
                 <div className="shrink-0 space-y-1">
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     第 {frame} 帧 · t = {(frame / fps).toFixed(2)} s · 有效帧{" "}
                     {data.track.valid_frames}/{frameCount} · miss{" "}
                     {
@@ -267,7 +274,7 @@ export function TrialResultPage({
                     max={frameCount - 1}
                     value={frame}
                     onChange={(event) => setFrame(Number(event.target.value))}
-                    className="w-full accent-blue-600"
+                    className="w-full accent-brand"
                   />
                   <SpeedChart
                     track={data.track}
@@ -284,7 +291,7 @@ export function TrialResultPage({
                 </div>
               )}
               {trackStatus !== "available" && (
-                <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <div className="flex items-center gap-2 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
                   <AlertTriangle className="size-4 shrink-0" />
                   {data.track.reason ?? "该试次尚无离线追踪结果"}
                 </div>
@@ -298,7 +305,7 @@ export function TrialResultPage({
                 <CardTitle>完整轨迹俯视（按有效帧分段，不跨空隙）</CardTitle>
               </CardHeader>
               <CardContent className="min-h-0 flex-1">
-                <div className="relative h-full overflow-hidden rounded-md bg-slate-200">
+                <div className="relative h-full overflow-hidden rounded-md bg-muted">
                   <SceneOverlay
                     geometry={data.geometry}
                     track={data.track}
@@ -370,14 +377,14 @@ export function TrialResultPage({
                     className="border-b pb-1.5 last:border-b-0"
                   >
                     <div className="flex items-baseline justify-between gap-3">
-                      <dt className="text-slate-700">
+                      <dt className="text-foreground/80">
                         {metricName(row.metric)}
                       </dt>
                       <dd
                         className={`font-medium tabular-nums ${
                           row.calc_status === "ok"
-                            ? "text-slate-900"
-                            : "text-amber-700"
+                            ? "text-foreground"
+                            : "text-amber-700 dark:text-amber-300"
                         }`}
                       >
                         {formatMetricValue(row)}
@@ -403,7 +410,7 @@ export function TrialResultPage({
                 ))}
               </dl>
               {unavailable.length > 0 && (
-                <div className="space-y-1 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <div className="space-y-1 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
                   {unavailable.map((row) => (
                     <p key={row.metric}>
                       {metricName(row.metric)}不可用：{row.reason}

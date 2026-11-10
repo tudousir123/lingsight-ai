@@ -8,6 +8,8 @@ setup("authenticate", async ({ page }) => {
   await page.getByTestId("email-input").fill(firstSuperuser)
   await page.getByTestId("password-input").fill(firstSuperuserPassword)
   await page.getByRole("button", { name: "Log In" }).click()
-  await page.waitForURL("/")
+  await page.waitForURL(
+    (url) => url.pathname === "/" || url.pathname === "/onboarding",
+  )
   await page.context().storageState({ path: authFile })
 })

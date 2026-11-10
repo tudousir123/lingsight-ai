@@ -14,6 +14,7 @@ export type Item = {
   icon: LucideIcon
   title: string
   path: string
+  preview?: boolean
 }
 
 interface MainProps {
@@ -36,20 +37,31 @@ export function Main({ items }: MainProps) {
       <SidebarGroupContent>
         <SidebarMenu className="gap-1">
           {items.map((item) => {
-            const isActive = currentPath === item.path
+            const isActive =
+              currentPath === item.path ||
+              (item.path === "/annotations" &&
+                currentPath.startsWith("/experiments/"))
 
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   tooltip={item.title}
-                  className="h-10 gap-3 rounded-[10px] px-3 text-[13px] text-muted-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-foreground hover:bg-sidebar-accent hover:text-foreground"
+                  className="research-nav-link"
                   isActive={isActive}
                   asChild
                 >
-                  <RouterLink to={item.path} onClick={handleMenuClick}>
+                  <RouterLink
+                    to={item.path}
+                    onClick={handleMenuClick}
+                    aria-current={isActive ? "page" : undefined}
+                  >
                     <item.icon className="size-[17px]" strokeWidth={1.65} />
                     <span className="flex-1">{item.title}</span>
-                    {isActive && <span className="size-1.5 rounded-full bg-[#fa5f29]" aria-hidden="true" />}
+                    {item.preview && (
+                      <span className="rounded border border-border px-1 text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden">
+                        Preview
+                      </span>
+                    )}
                   </RouterLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

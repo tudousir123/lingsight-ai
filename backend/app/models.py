@@ -103,12 +103,20 @@ class TrialReview(SQLModel, table=True):
 
     Separate from the inference ``qc_status``: this row only records what a
     researcher manually acknowledged about pool boundary, markers, platform
-    reference and tracking. One row per (user, experiment, trial); drafts are
+    reference and tracking. One row per (user, experiment, trial, source version); drafts are
     partial, ``confirmed`` requires all four acknowledgements server-side.
     """
 
     __tablename__ = "trial_review"
-    __table_args__ = (UniqueConstraint("user_id", "experiment_id", "trial_id"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "experiment_id",
+            "trial_id",
+            "source_version",
+            name="uq_trial_review_source",
+        ),
+    )
 
     id: uuid.UUID = Field(
         default_factory=uuid.uuid4, primary_key=True, sa_type=Char36UUID

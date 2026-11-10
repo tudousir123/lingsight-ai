@@ -1,0 +1,36 @@
+
+Running 28 tests using 1 worker
+
+(node:50474) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/28] [chromium] › tests/agent-workspace.spec.ts:83:1 › 默认进入对话，侧栏三个工具入口
+[2/28] [chromium] › tests/agent-workspace.spec.ts:107:1 › 引导完成携带问题和范围但不自动提交
+[3/28] [chromium] › tests/agent-workspace.spec.ts:147:1 › 创建任务和刷新重放，交付物安全预览
+[4/28] [chromium] › tests/agent-workspace.spec.ts:174:1 › 提交失败保留输入
+[5/28] [chromium] › tests/agent-workspace.spec.ts:190:1 › 待确认口径通过答复入口提交
+[6/28] [chromium] › tests/agent-workspace.spec.ts:222:1 › 窄屏输入框可见，侧栏可展开
+[7/28] [chromium] › tests/agent-workspace.spec.ts:235:1 › 报告编辑失败保留修改，重试另存新版本
+[8/28] [chromium] › tests/agent-workspace.spec.ts:271:1 › 侧栏品牌菜单、真实任务状态与选中状态
+[9/28] [chromium] › tests/agent-workspace.spec.ts:295:1 › 搜索研究筛选完整任务列表，关闭后恢复最近任务
+[10/28] [chromium] › tests/agent-workspace.spec.ts:328:1 › 折叠侧栏仍可展开搜索，手机选择任务后关闭抽屉
+[11/28] [chromium] › tests/agent-workspace.spec.ts:358:1 › reference sidebar and the new task homepage use English without submitting examples
+[12/28] [chromium] › tests/agent-workspace.spec.ts:408:1 › projects can be created, filled, reloaded and emptied without deleting tasks
+[13/28] [chromium] › tests/agent-workspace.spec.ts:460:1 › blocked project storage keeps the entered name and permits retry
+[14/28] [chromium] › tests/agent-workspace.spec.ts:491:1 › project folders are isolated by account and invalid saved state does not break tasks
+[15/28] [chromium] › tests/onboarding.spec.ts:26:1 › the final desktop screen offers examples and optional scope
+[16/28] [chromium] › tests/onboarding.spec.ts:61:3 › Explore trajectories & headings: saves and restores the question and optional scope
+[17/28] [chromium] › tests/onboarding.spec.ts:61:3 › Compare training days: saves and restores the question and optional scope
+[18/28] [chromium] › tests/onboarding.spec.ts:61:3 › Draft a research report: saves and restores the question and optional scope
+[19/28] [chromium] › tests/onboarding.spec.ts:86:1 › a custom question needs no example or scope
+[20/28] [chromium] › tests/onboarding.spec.ts:104:1 › switching examples keeps the scope and does not submit a task
+[21/28] [chromium] › tests/onboarding.spec.ts:135:1 › empty input and blocked storage preserve the recovery download
+[22/28] [chromium] › tests/onboarding.spec.ts:174:1 › keyboard selection works with invalid saved data
+[23/28] [chromium] › tests/onboarding.spec.ts:192:1 › entering without a question marks onboarding seen without saving a brief
+[24/28] [chromium] › tests/onboarding.spec.ts:212:1 › a long question scrolls inside its editor
+[25/28] [chromium] › tests/onboarding.spec.ts:230:1 › the guide types its introduction and shows completed text when revisiting
+[26/28] [chromium] › tests/onboarding.spec.ts:250:1 › the mouse wheel advances one scene at a time and can go back
+[27/28] [chromium] › tests/onboarding.spec.ts:267:1 › every introduction scene is English and fits a narrow viewport
+[28/28] [chromium] › tests/onboarding.spec.ts:302:1 › typing leaves time to read and reduced motion reveals the full text immediately
+  28 passed (45.2s)

@@ -1,5 +1,7 @@
 # LingSight AI · 灵视科技
 
+**2026-11-09 架构演进：** 用户已确认采用科研任务工作区，Agent 立即拆到独立仓库，初期集成 Pi SDK、通过现有 DBHub 读取 `water_maze_v3`，在本机独立环境完成分析与报告。目标与 API/恢复方案的整体评审稿见 [产品规格](docs/01-product-spec.md)，另有[交互目标架构图](docs/architecture/ai-native-target.html)。整体方案已获确认，独立私有仓库 [lingsight-agent](https://github.com/tudousir123/lingsight-agent) 已创建，首个真实视频级分析与报告闭环已通过人工复核和修正后验收；本仓库 React/FastAPI 已完成个人科研工作区的首轮本机接入（引导 → 研究对话 → 口径确认），原运行环境仍保留；范围和验证见[工作区验收记录](docs/evidence/agent-workspace/README.md)，不等同于正式发布或全链路科研验收。下面的 M1 记录描述既有实现。
+
 > **Animal Behavior Intelligence Platform** — 面向动物行为科研的视频智能分析与科研 Agent 平台。
 
 **状态：V0.1 设计与工程初始化。** 当前仓库是 LingSight AI 的开发仓库；文档描述目标架构与验收标准，不代表所有能力已经在本仓库完成。原有 `animal_platform_v2` 仓库名称需在 GitHub Settings 中重命名为 `lingsight-ai`（当前集成没有仓库改名操作）。

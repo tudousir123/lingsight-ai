@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "LingSight · 独立 Pi Agent 目标架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1380,
+      780
+    ]
+  },
+  "components": [
+    {
+      "id": "task-workspace",
+      "type": "frontend",
+      "label": "科研任务工作区",
+      "sublabel": "对话 / 代码 / 图表 / 报告",
+      "pos": [
+        25,
+        350
+      ],
+      "size": [
+        230,
+        88
+      ]
+    },
+    {
+      "id": "platform-gateway",
+      "type": "backend",
+      "label": "LingSight · FastAPI",
+      "sublabel": "用户入口 / 实验浏览 / API 网关",
+      "pos": [
+        365,
+        350
+      ],
+      "size": [
+        230,
+        88
+      ]
+    },
+    {
+      "id": "independent-agent",
+      "type": "backend",
+      "label": "独立科研 Agent 服务",
+      "sublabel": "任务 API / 状态 / 产物管理",
+      "pos": [
+        735,
+        350
+      ],
+      "size": [
+        230,
+        88
+      ]
+    },
+    {
+      "id": "existing-dbhub",
+      "type": "external",
+      "label": "现有 DBHub · MCP",
+      "sublabel": "元数据 / 只读 SQL",
+      "pos": [
+        1100,
+        350
+      ],
+      "size": [
+        230,
+        88
+      ]
+    },
+    {
+      "id": "research-mysql-v3",
+      "type": "database",
+      "label": "现有 MySQL · v3",
+      "sublabel": "帧级结果 / 几何 / 平台参考",
+      "pos": [
+        1100,
+        65
+      ],
+      "size": [
+        230,
+        88
+      ]
+    },
+    {
+      "id": "pi-sdk-engine",
+      "type": "backend",
+      "label": "Pi SDK · 执行引擎",
+      "sublabel": "模型会话 / 工具 / 流式事件",
+      "pos": [
+        735,
+        65
+      ],
+      "size": [
+        230,
+        88
+      ]
+    },
+    {
+      "id": "versioned-science",
+      "type": "external",
+      "label": "版本化科研 Skills",
+      "sublabel": "指标口径 / 映射 / 确定性函数",
+      "pos": [
+        365,
+        65
+      ],
+      "size": [
+        230,
+        88
+      ]
+    },
+    {
+      "id": "durable-task-store",
+      "type": "database",
+      "label": "任务及步骤持久化",
+      "sublabel": "建议 SQLite / Pi 会话关联",
+      "pos": [
+        365,
+        635
+      ],
+      "size": [
+        230,
+        88
+      ]
+    },
+    {
+      "id": "python-analysis",
+      "type": "backend",
+      "label": "独立 Python 分析环境",
+      "sublabel": "建议按执行运行本机容器",
+      "pos": [
+        735,
+        635
+      ],
+      "size": [
+        230,
+        88
+      ]
+    },
+    {
+      "id": "research-artifacts",
+      "type": "external",
+      "label": "有来源的分析材料",
+      "sublabel": "数据快照 / 代码 / 图表 / 报告",
+      "pos": [
+        1100,
+        635
+      ],
+      "size": [
+        230,
+        88
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "workspace-api",
+      "from": "task-workspace",
+      "to": "platform-gateway",
+      "label": "HTTP / SSE",
+      "variant": "emphasis"
+    },
+    {
+      "id": "gateway-service",
+      "from": "platform-gateway",
+      "to": "independent-agent",
+      "label": "任务 API",
+      "variant": "emphasis"
+    },
+    {
+      "id": "service-mcp",
+      "from": "independent-agent",
+      "to": "existing-dbhub",
+      "label": "MCP 只读工具",
+      "variant": "security"
+    },
+    {
+      "id": "dbhub-mysql",
+      "from": "existing-dbhub",
+      "to": "research-mysql-v3",
+      "label": "只读查询",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "engine-session",
+      "from": "independent-agent",
+      "to": "pi-sdk-engine",
+      "label": "会话 / 事件",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "skills-use",
+      "from": "pi-sdk-engine",
+      "to": "versioned-science",
+      "label": "按需加载",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
+      "id": "persist-execution",
+      "from": "independent-agent",
+      "to": "durable-task-store",
+      "label": "保存 / 恢复",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "python-dispatch",
+      "from": "independent-agent",
+      "to": "python-analysis",
+      "label": "分析工具",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        857,
+        580
+      ]
+    },
+    {
+      "id": "artifact-output",
+      "from": "python-analysis",
+      "to": "research-artifacts",
+      "label": "生成 / 留档",
+      "fromSide": "right",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "独立仓库 · 独立所有权",
+      "items": [
+        "Agent 拥有任务、步骤、会话关联和交付物。",
+        "LingSight 和其他客户端使用同一套任务 API。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "可恢复任务 · 可核对结果",
+      "items": [
+        "关闭网页继续；从已保存的步骤边界恢复。",
+        "先视频级探索，正式动物统计先核验映射。"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "设计评审稿 · 尚未实施",
+      "items": [
+        "DBHub / MySQL 已运行；新服务与执行器待建。",
+        "首期个人、本机；SQLite / 容器为工程建议。"
+      ]
+    }
+  ]
+}

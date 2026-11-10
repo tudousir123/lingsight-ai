@@ -11,5 +11,5 @@ function ResultsRoute() {
 
 export const Route = createFileRoute("/_layout/results")({
   component: ResultsRoute,
-  head: () => ({ meta: [{ title: "单次分析结果 - LingSight AI" }] }),
+  head: () => ({ meta: [{ title: "单次分析结果 - LingSight Science" }] }),
 })

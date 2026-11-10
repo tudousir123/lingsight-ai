@@ -2,7 +2,7 @@ import { historicalDaily } from './historical'
 
 export function MazeScene({ compact = false, annotations = true, inference = false, inferenceLayers = ['MASK','HEADING','TRACK'] }: { compact?: boolean; annotations?: boolean; inference?: boolean; inferenceLayers?: string[] }) {
   return (
-    <svg viewBox="0 0 720 440" className={'maze-scene ' + (compact ? 'maze-compact' : '')} role="img" aria-label="水迷宫轨迹与标定示意图">
+    <svg viewBox="0 0 720 440" className={'maze-scene ' + (compact ? 'maze-compact' : '')} role="img" aria-label="Water maze trajectory and calibration diagram">
       <defs>
         <radialGradient id="scene-pool"><stop stopColor="#26303a"/><stop offset="1" stopColor="#151a20"/></radialGradient>
         <linearGradient id="scene-track" x1="0" y1="0" x2="1" y2="0"><stop stopColor="#f1efe9" stopOpacity=".32"/><stop offset="1" stopColor="#f1efe9" stopOpacity=".9"/></linearGradient>
@@ -13,7 +13,7 @@ export function MazeScene({ compact = false, annotations = true, inference = fal
       <ellipse cx="352" cy="218" rx="221" ry="182" fill="none" stroke="#5c6065" strokeDasharray="3 8"/>
       {(!inference||inferenceLayers.includes('TRACK'))&&<path d="M284 372 C243 362 181 315 196 248 S290 124 328 177 S411 327 471 262 S489 122 393 90 S209 106 244 209 S373 312 424 215 S381 143 344 197 S380 257 436 189" fill="none" stroke="url(#scene-track)" strokeWidth="2.4" strokeLinecap="round"/>}
       <circle cx="436" cy="189" r="4.5" fill="#f7f2e8"/>
-      {inference && inferenceLayers.length>0 && <g aria-label="示意的 Mask、头向与轨迹可视化图层">
+      {inference && inferenceLayers.length>0 && <g aria-label="Illustrative mask, heading, and trajectory layers">
         {inferenceLayers.includes('MASK')&&<path d="M421 193 Q420 180 432 176 Q446 171 454 180 Q460 190 447 197 Q432 203 421 193Z" fill="#69d8bd28" stroke="#8ad9c1" strokeWidth="2"/>}
         {inferenceLayers.includes('HEADING')&&<><path d="M437 188 L461 174" stroke="#fa5f29" strokeWidth="2.4" strokeLinecap="round"/><path d="M461 174 L453 175 M461 174 L458 182" fill="none" stroke="#fa5f29" strokeWidth="2" strokeLinecap="round"/></>}
         {inferenceLayers.includes('TRACK')&&<path d="M421 194 L394 208" stroke="#e9e9e9" strokeDasharray="4 5" strokeOpacity=".8"/>}
@@ -37,7 +37,7 @@ export function TrendChart({ height=240, minimal=false }: {height?:number;minima
   const y=(v:number)=>188-(v+1)*32
   const line=values.map((v,i)=>(i===0?'M':'L')+x(i)+' '+y(v)).join(' ')
   const area=line+' L'+x(4)+' 220 L'+x(0)+' 220 Z'
-  return <svg viewBox="0 0 585 240" style={{width:'100%',height}} role="img" aria-label="2026年8月4日至8日目标 Mark 富集指标 S 折线图">
+  return <svg viewBox="0 0 585 240" style={{width:'100%',height}} role="img" aria-label="Target mark enrichment S, August 4–8, 2026">
     {[-1,0,1,2,3,4,5].map(v=><g key={v}><line x1="52" x2="544" y1={y(v)} y2={y(v)} stroke={v===0?'#565656':'#303030'} strokeDasharray={v===0?'0':'3 6'}/>{!minimal&&<text x="37" y={y(v)+4} fill="#797979" textAnchor="end" fontSize="10">{v}</text>}</g>)}
     <path d={area} fill="#dfdedb" fillOpacity=".045"/><path d={line} fill="none" stroke="#d9d8d6" strokeWidth="2.3"/>
     {values.map((v,i)=><g key={i}><circle cx={x(i)} cy={y(v)} r="4" fill="#f2f0ed" stroke="#151515" strokeWidth="2"/>{!minimal&&<><text x={x(i)} y={y(v)-15} fontSize="11" textAnchor="middle" fill="#e8e8e8">{v>0?'+':''}{v.toFixed(2)}</text><text x={x(i)} y="235" fontSize="11" fill="#969696" textAnchor="middle">08/{String(i+4).padStart(2,'0')}</text></>}</g>)}
@@ -46,7 +46,7 @@ export function TrendChart({ height=240, minimal=false }: {height?:number;minima
 
 /** A schematic density visualization for the product showcase; not measured animal data. */
 export function HeatmapPreview() {
-  return <svg viewBox="0 0 500 300" role="img" aria-label="水迷宫空间停留热力图示意，非真实实验数据" className="heatmap-preview">
+  return <svg viewBox="0 0 500 300" role="img" aria-label="Illustrative water maze dwell heatmap, not measured experimental data" className="heatmap-preview">
     <defs>
       <clipPath id="heat-pool-clip"><ellipse cx="248" cy="149" rx="183" ry="129"/></clipPath>
       <radialGradient id="heat-hotspot"><stop offset="0" stopColor="#fa5f29" stopOpacity=".94"/><stop offset=".28" stopColor="#efaa63" stopOpacity=".72"/><stop offset=".65" stopColor="#96b09e" stopOpacity=".36"/><stop offset="1" stopColor="#789e98" stopOpacity="0"/></radialGradient>
@@ -84,12 +84,12 @@ export function AnnotationReadout() {
 
 export function ResearchLog({ detailed=false }: {detailed?:boolean}) {
   const entries = [
-    ['✓','已导入视频', '2560 × 1440'],
-    ['✓','读取采样帧率', '30 FPS'],
-    ['✓','泳池椭圆边界', 'ROI'],
-    ['✓','四个参照标牌', '4 / 4'],
-    ['○','人工确认平台位置', 'REVIEW'],
-    ['○','生成标注 JSON', 'PENDING'],
+    ['✓','Video imported', '2560 × 1440'],
+    ['✓','Frame rate loaded', '30 FPS'],
+    ['✓','Pool boundary defined', 'ROI'],
+    ['✓','Four reference markers', '4 / 4'],
+    ['○','Review platform position', 'REVIEW'],
+    ['○','Generate annotation JSON', 'PENDING'],
   ]
   return <div className="research-log">
     <div className="log-heading"><span className="status-dot"/> LingSight / Scene calibration <span className="muted mono">LOCAL</span></div>

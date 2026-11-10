@@ -9,6 +9,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+if [[ "${LINGSIGHT_E2E_ALLOW_REVIEW_DELETE:-}" != "1" ]]; then
+  echo "此脚本会删除目标栈的全部试次核对记录。请先使用隔离栈；仅在确认目标库可清空后设置 LINGSIGHT_E2E_ALLOW_REVIEW_DELETE=1。" >&2
+  exit 1
+fi
+
 if ! grep -q "^TRIALS_FIXTURE_DIR=" .env; then
   echo "TRIALS_FIXTURE_DIR 未在 .env 中启用（backend 会以研究库模式启动，测试全部 503）。" >&2
   echo "在根 .env 取消注释 TRIALS_FIXTURE_DIR=/app/backend/app/trials/fixtures 后重试。" >&2
@@ -27,7 +32,7 @@ docker compose build backend >/dev/null
 echo "==> ensuring backend matches the current .env (fixture/research mode)"
 docker compose up -d --wait backend db mailpit >/dev/null
 
-echo "==> restoring first superuser (backend pytest teardown wipes all users)"
+echo "==> applying application migrations and ensuring the first superuser exists"
 docker compose run --rm backend bash scripts/prestart.sh >/dev/null
 
 echo "==> clearing persisted trial reviews from the local stack"

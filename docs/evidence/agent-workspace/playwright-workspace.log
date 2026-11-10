@@ -1,0 +1,26 @@
+
+Running 14 tests using 2 workers
+
+(node:3159820) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:3159819) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/14] [chromium] › tests/agent-workspace.spec.ts:100:1 › 引导完成携带问题和范围但不自动提交
+[2/14] [chromium] › tests/agent-workspace.spec.ts:83:1 › 默认进入对话，侧栏三个工具入口
+[3/14] [chromium] › tests/agent-workspace.spec.ts:130:1 › 创建任务和刷新重放，交付物安全预览
+[4/14] [chromium] › tests/agent-workspace.spec.ts:157:1 › 提交失败保留输入
+[5/14] [chromium] › tests/agent-workspace.spec.ts:173:1 › 待确认口径通过答复入口提交
+[6/14] [chromium] › tests/agent-workspace.spec.ts:203:1 › 窄屏输入框可见，侧栏可展开
+[7/14] [chromium] › tests/agent-workspace.spec.ts:216:1 › 报告编辑失败保留修改，重试另存新版本
+[8/14] [chromium] › tests/onboarding.spec.ts:26:3 › 探索轨迹与朝向: simple flow saves the question and hands it to the workspace
+[9/14] [chromium] › tests/onboarding.spec.ts:26:3 › 比较训练日表现: simple flow saves the question and hands it to the workspace
+[10/14] [chromium] › tests/onboarding.spec.ts:26:3 › 整理研究报告: simple flow saves the question and hands it to the workspace
+[11/14] [chromium] › tests/onboarding.spec.ts:57:1 › returning preserves edits; changing direction regenerates the question without sending a task
+[12/14] [chromium] › tests/onboarding.spec.ts:88:1 › empty input and blocked storage do not finish onboarding; download remains available
+[13/14] [chromium] › tests/onboarding.spec.ts:121:1 › mobile keyboard flow supports reduced motion and ignores invalid storage
+[14/14] [chromium] › tests/onboarding.spec.ts:151:1 › skipping marks the guide seen without creating a research brief
+  14 passed (23.9s)

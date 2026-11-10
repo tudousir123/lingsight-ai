@@ -217,7 +217,7 @@ export function LayerToggles({
       {layerOptions.map((option) => (
         <Label
           key={option.key}
-          className="flex items-center gap-2 text-sm font-normal text-slate-700"
+          className="flex items-center gap-2 text-sm font-normal text-foreground/80"
         >
           <Checkbox
             checked={layers[option.key]}
