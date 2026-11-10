@@ -1,5 +1,7 @@
 # LingSight AI 进度（事实优先）
 
+**2026-11-10 分支收敛与旧模块退役（ADR-0014）**：`codex/infer`（Agent 工作区 + 推理页 + onboarding/marketing）与 `codex/backend-convergence-review`（网关 + 后端收敛 + ADR-0009~0012）合并入 main（合并提交 `7ab314c`，冲突 9 个全为文档/配置，代码层 agent.py 两线一致）。随后删除本周前旧页面（/qa、/prepare、/results、/reports、/items、旧 experiments 试次详情）与 `app/text_to_sql` 全包、research/items 路由、Item 模型族（`7dafc58`，-12635 行）。验证：后端 lint 全绿（mypy/ty/ruff）+ test-local.sh 143 passed / 6 skipped（env_gated）/ coverage 88%；前端 regen-routes + tsc + vite build 通过。保留：trials 目录浏览（annotations 页消费）、metrics 管线、认证体系、双网关。尚未推送远端。
+
 **2026-11-10 视频推理接入**：独立私有推理服务已在 `62222` 主机运行，LingSight 个人工作区提供受限视频浏览、预标注确认、mask 追踪、v9 头尾、任务与结果入口。真实视频候选已生成，独立工程试验跑完追踪、v9 和叠加视频；人工确认及完整结果复核仍待完成，正式平台镜像尚未发布。原视频和科研库未写入。详见[工程验证与限制](evidence/inference-workspace/README.md)。
 
 **2026-11-10 后端收敛（工作区源码，尚未部署平台）**：应用测试改用独立临时 MySQL；旧科研库连接配置与问答配置分离；试次素材版本和多版本人工核对集中管理，并保护并发确认终态。静态检查通过，主工作区结构测试 263 passed / 45 deselected、coverage 86%，迁移保留历史验证 1 passed。升级前需应用新增 Alembic 迁移，旧确认记录保留但不自动用于新素材版本。见[完整记录](evidence/backend-convergence/README.md)。独立 Pi Agent 的验证见下方，不能由这些平台测试替代。

@@ -97,7 +97,7 @@ left root-owned cache files.
 ## Backend ownership
 
 - `core/settings.py` defines application settings; `core/config.py` assembles the shared instance.
-- `core/research.py` owns existing `water_maze` read-only connection settings. Legacy Q&A adds model/query settings in `text_to_sql/settings.py`; trial browsing does not depend on that package.
+- `core/research.py` owns existing `water_maze` read-only connection settings used by trial browsing. The legacy Text-to-SQL package (including `text_to_sql/settings.py`) was retired on 2026-11-10 — see ADR-0014; natural-language querying now lives in the independent Agent service.
 - `trials/service.py` assembles trial materials and enforces version-bound review rules; `trials/media.py` owns mount mapping, playable-media selection and content fingerprints.
 - `api/routes/agent.py` authenticates/forwards personal research workspace requests. Tasks, execution, events and deliverables remain owned by the separate Agent repository.
 
