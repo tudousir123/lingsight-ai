@@ -7,6 +7,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { type Artifact, agentFetch, agentJson, download, taskKey } from "./api"
 
 function Markdown({ text }: { text: string }) {
@@ -41,7 +42,11 @@ export function ArtifactViewer({
   const file = useQuery({
     queryKey: ["agent-file", artifact.id],
     queryFn: async ({ signal }) =>
-      (await agentFetch(`artifacts/${artifact.id}`, { signal })).blob(),
+      (
+        await agentFetch(agentRoutes.artifactsByArtifactId(artifact.id), {
+          signal,
+        })
+      ).blob(),
     retry: false,
   })
   const [text, setText] = useState("")
@@ -74,7 +79,11 @@ export function ArtifactViewer({
     setSaving(true)
     setError("")
     try {
-      await agentJson(`artifacts/${artifact.id}`, { markdown: draft }, "PATCH")
+      await agentJson(
+        agentRoutes.artifactsByArtifactId(artifact.id),
+        { markdown: draft },
+        "PATCH",
+      )
       await queryClient.invalidateQueries({ queryKey: taskKey(taskId) })
       onClose()
     } catch (e) {
@@ -99,9 +108,10 @@ export function ArtifactViewer({
           <button
             type="button"
             onClick={() =>
-              void download(`artifacts/${artifact.id}`, artifact.name).catch(
-                (e) => setError(e.message),
-              )
+              void download(
+                agentRoutes.artifactsByArtifactId(artifact.id),
+                artifact.name,
+              ).catch((e) => setError(e.message))
             }
           >
             <Download size={15} />

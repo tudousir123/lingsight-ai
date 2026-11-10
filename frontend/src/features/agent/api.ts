@@ -1,3 +1,5 @@
+import { agentGatewayBase } from "@/lib/upstreamRoutes.gen"
+
 export type RunStatus =
   | "queued"
   | "running"
@@ -56,7 +58,7 @@ export class AgentError extends Error {
 }
 export async function agentFetch(path: string, options: RequestInit = {}) {
   const token = localStorage.getItem("access_token")
-  const response = await fetch(`/api/v1/agent/${path}`, {
+  const response = await fetch(`${agentGatewayBase}/${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",

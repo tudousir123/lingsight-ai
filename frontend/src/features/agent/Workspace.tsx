@@ -20,6 +20,7 @@ import {
 import { useEffect, useRef, useState } from "react"
 import { consumeBrief, pendingBriefPrompt } from "@/features/research/entry"
 import { flagshipVisionModel } from "@/features/research/vision-model"
+import { agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { ArtifactCards, ArtifactViewer } from "./Artifacts"
 import {
   type Artifact,
@@ -166,7 +167,10 @@ function Clarification({
         setError("")
         try {
           await agentJson(
-            `runs/${run.id}/clarifications/${question.id}/answer`,
+            agentRoutes.runsByRunIdClarificationsByClarificationIdAnswer(
+              run.id,
+              question.id,
+            ),
             { answer },
           )
           onDone()
@@ -204,7 +208,12 @@ export function AgentWorkspace({ taskId = "" }: { taskId?: string }) {
   const task = useQuery({
     queryKey: taskKey(taskId),
     queryFn: ({ signal }) =>
-      agentJson<Task>(`tasks/${taskId}`, undefined, "GET", signal),
+      agentJson<Task>(
+        agentRoutes.tasksByTaskId(taskId),
+        undefined,
+        "GET",
+        signal,
+      ),
     enabled: !!taskId,
     refetchInterval: 2500,
     retry: false,
@@ -226,9 +235,12 @@ export function AgentWorkspace({ taskId = "" }: { taskId?: string }) {
     setPending(true)
     setError("")
     try {
-      if (taskId) await agentJson(`tasks/${taskId}/messages`, { text })
+      if (taskId)
+        await agentJson(agentRoutes.tasksByTaskIdMessages(taskId), { text })
       else {
-        const created = await agentJson<{ task: Task }>("tasks", { goal: text })
+        const created = await agentJson<{ task: Task }>(agentRoutes.tasks(), {
+          goal: text,
+        })
         await navigate({
           to: "/tasks/$taskId",
           params: { taskId: created.task.id },
@@ -248,7 +260,11 @@ export function AgentWorkspace({ taskId = "" }: { taskId?: string }) {
     setPending(true)
     setError("")
     try {
-      await agentJson(`runs/${run.id}/${op}`, {})
+      const path =
+        op === "cancel"
+          ? agentRoutes.runsByRunIdCancel(run.id)
+          : agentRoutes.runsByRunIdResume(run.id)
+      await agentJson(path, {})
       refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : "操作未完成，请重试。")
@@ -301,7 +317,7 @@ export function AgentWorkspace({ taskId = "" }: { taskId?: string }) {
                         type="button"
                         onClick={() =>
                           void download(
-                            `tasks/${taskId}/bundle`,
+                            agentRoutes.tasksByTaskIdBundle(taskId),
                             `research-${taskId}.zip`,
                           ).catch((e) => setError(e.message))
                         }

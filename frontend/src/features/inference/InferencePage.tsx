@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  type InferenceArtifactName,
+  inferenceGatewayBase,
+  inferenceRoutes,
+} from "@/lib/upstreamRoutes.gen"
 
 type Entry = {
   type: "directory" | "video"
@@ -45,7 +50,7 @@ const stageLabels: Record<string, string> = {
 
 async function request<T>(path: string, data?: unknown): Promise<T> {
   const token = localStorage.getItem("access_token")
-  const response = await fetch(`/api/v1/inference/${path}`, {
+  const response = await fetch(`${inferenceGatewayBase}/${path}`, {
     method: data === undefined ? "GET" : "POST",
     headers: {
       "Content-Type": "application/json",
@@ -63,9 +68,10 @@ async function request<T>(path: string, data?: unknown): Promise<T> {
   }
   return response.json() as Promise<T>
 }
-function artifact(id: string, name: string): string {
+function artifact(id: string, name: InferenceArtifactName): string {
   const token = localStorage.getItem("access_token")
-  return `/api/v1/inference/tasks/${id}/artifacts/${name}${token ? `?token=${encodeURIComponent(token)}` : ""}`
+  const path = inferenceRoutes.tasksByTaskIdArtifactsByArtifactName(id, name)
+  return `${inferenceGatewayBase}/${path}${token ? `?token=${encodeURIComponent(token)}` : ""}`
 }
 
 export function InferencePage() {
@@ -82,14 +88,16 @@ export function InferencePage() {
 
   const initializedTask = useRef<string | null>(null)
   const loadTasks = useCallback(async () => {
-    const value = await request<{ items: Task[] }>("tasks")
+    const value = await request<{ items: Task[] }>(inferenceRoutes.tasks())
     setTasks(value.items)
     setCurrent((old) =>
       old ? (value.items.find((t) => t.id === old.id) ?? old) : null,
     )
   }, [])
   useEffect(() => {
-    request<{ items: Entry[] }>(`videos?path=${encodeURIComponent(directory)}`)
+    request<{ items: Entry[] }>(
+      `${inferenceRoutes.videos()}?path=${encodeURIComponent(directory)}`,
+    )
       .then((v) => setEntries(v.items))
       .catch((e: Error) => setError(e.message))
   }, [directory])
@@ -128,8 +136,8 @@ export function InferencePage() {
       setBusy(false)
     }
   }
-  async function submit(id: string, suffix: string, body: unknown) {
-    const task = await request<Task>(`tasks/${id}/${suffix}`, body)
+  async function submit(path: string, body: unknown) {
+    const task = await request<Task>(path, body)
     setCurrent(task)
     await loadTasks()
   }
@@ -192,9 +200,12 @@ export function InferencePage() {
                     className="rounded border px-3 py-1"
                     onClick={() =>
                       void act(async () => {
-                        const task = await request<Task>("tasks", {
-                          video_id: entry.id,
-                        })
+                        const task = await request<Task>(
+                          inferenceRoutes.tasks(),
+                          {
+                            video_id: entry.id,
+                          },
+                        )
                         setCurrent(task)
                         await loadTasks()
                       })
@@ -255,7 +266,11 @@ export function InferencePage() {
               type="button"
               className="rounded border px-3 py-2"
               disabled={busy}
-              onClick={() => void act(() => submit(current.id, "cancel", {}))}
+              onClick={() =>
+                void act(() =>
+                  submit(inferenceRoutes.tasksByTaskIdCancel(current.id), {}),
+                )
+              }
             >
               取消任务
             </button>
@@ -265,7 +280,11 @@ export function InferencePage() {
               type="button"
               className="ml-2 rounded border px-3 py-2"
               disabled={busy}
-              onClick={() => void act(() => submit(current.id, "retry", {}))}
+              onClick={() =>
+                void act(() =>
+                  submit(inferenceRoutes.tasksByTaskIdRetry(current.id), {}),
+                )
+              }
             >
               重试当前阶段
             </button>
@@ -385,11 +404,14 @@ export function InferencePage() {
                 onClick={() =>
                   void act(async () => {
                     const parsed: unknown = JSON.parse(marks)
-                    await submit(current.id, "confirm", {
-                      seed,
-                      pool,
-                      marks: parsed,
-                    })
+                    await submit(
+                      inferenceRoutes.tasksByTaskIdConfirm(current.id),
+                      {
+                        seed,
+                        pool,
+                        marks: parsed,
+                      },
+                    )
                   })
                 }
               >
@@ -451,10 +473,13 @@ export function InferencePage() {
                     className="mt-2 rounded border px-3 py-2"
                     onClick={() =>
                       void act(() =>
-                        submit(current.id, "review", {
-                          tracking_ok: true,
-                          note,
-                        }),
+                        submit(
+                          inferenceRoutes.tasksByTaskIdReview(current.id),
+                          {
+                            tracking_ok: true,
+                            note,
+                          },
+                        ),
                       )
                     }
                   >
@@ -466,10 +491,13 @@ export function InferencePage() {
                     className="ml-2 rounded border px-3 py-2"
                     onClick={() =>
                       void act(() =>
-                        submit(current.id, "review", {
-                          tracking_ok: false,
-                          note,
-                        }),
+                        submit(
+                          inferenceRoutes.tasksByTaskIdReview(current.id),
+                          {
+                            tracking_ok: false,
+                            note,
+                          },
+                        ),
                       )
                     }
                   >
