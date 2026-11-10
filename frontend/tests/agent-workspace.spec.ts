@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test"
+import { stubProjectsApi } from "./utils/projectsApi"
 
 const id = "11111111-1111-4111-8111-111111111111",
   runId = "22222222-2222-4222-8222-222222222222",
@@ -34,6 +35,7 @@ async function mock(page: Page) {
     localStorage.setItem("lingsight.onboarding-seen.v1", "1")
     localStorage.setItem("vite-ui-theme", "dark")
   })
+  stubProjectsApi(page)
   await page.route("**/api/v1/users/me", (r) =>
     r.fulfill({
       json: {
@@ -80,6 +82,7 @@ async function mock(page: Page) {
   })
 }
 test.beforeEach(async ({ page }) => mock(page))
+
 test("默认进入对话，侧栏三个工具入口", async ({ page }) => {
   await page.goto("/")
   await expect(
@@ -382,7 +385,7 @@ test("侧栏与首页使用中文，示例问题只填入草稿", async ({ page 
   expect(writes).toBe(0)
 })
 
-test("projects can be created, filled, reloaded and emptied without deleting tasks", async ({
+test("项目可新建、归组任务、刷新保留并清空，不写 Agent 服务", async ({
   page,
 }) => {
   let taskWrites = 0
@@ -400,7 +403,7 @@ test("projects can be created, filled, reloaded and emptied without deleting tas
     .getByRole("link", { name: "Spatial learning pilot", exact: true })
     .click()
   await expect(
-    page.getByRole("heading", { name: "Spatial learning pilot", exact: true }),
+    page.getByRole("heading", { name: "Spatial learning pilot" }),
   ).toBeVisible()
   await page.getByRole("button", { name: "整理任务" }).click()
   await page.getByRole("checkbox", { name: task.title }).check()
@@ -430,48 +433,73 @@ test("projects can be created, filled, reloaded and emptied without deleting tas
   expect(taskWrites).toBe(0)
 })
 
-test("blocked project storage keeps the entered name and permits retry", async ({
-  page,
-}) => {
-  await page.addInitScript(() => {
-    const original = Storage.prototype.setItem
-    Storage.prototype.setItem = function (key, value) {
-      if (key.startsWith("lingsight.workspace-projects"))
-        throw new DOMException("blocked", "SecurityError")
-      return original.call(this, key, value)
-    }
+test("项目可改名与删除，删除后任务保留", async ({ page }) => {
+  await page.goto("/")
+  await page.getByRole("link", { name: "学习与记忆", exact: true }).click()
+  await expect(page).toHaveURL(/\/projects\/learning-memory/)
+  await page.getByRole("button", { name: "重命名项目" }).click()
+  const dialog = page.getByRole("dialog")
+  await dialog.getByLabel("项目名称").fill("空间学习试点")
+  await dialog.getByRole("button", { name: "保存名称" }).click()
+  await expect(dialog).toBeHidden()
+  await expect(
+    page.getByRole("heading", { name: /空间学习试点/ }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "空间学习试点", exact: true }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "删除项目" }).click()
+  await expect(
+    page.getByRole("dialog").getByText("此操作不可撤销"),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "确认删除" }).click()
+  await expect(page).toHaveURL("/")
+  await expect(
+    page.getByRole("link", { name: "空间学习试点", exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    page
+      .locator(".research-history-list")
+      .getByRole("link", { name: new RegExp(task.title) }),
+  ).toBeVisible()
+})
+
+test("新建项目失败保留名称并允许重试", async ({ page }) => {
+  let failCreate = true
+  await page.route("**/api/v1/projects/", (route) => {
+    if (route.request().method() === "POST" && failCreate)
+      return route.fulfill({
+        status: 503,
+        json: { detail: "项目服务暂时不可用" },
+      })
+    return route.fallback()
   })
   await page.goto("/")
   await page.getByRole("button", { name: "新建项目", exact: true }).click()
   const dialog = page.getByRole("dialog")
   await dialog.getByLabel("项目名称").fill("Keep this project name")
   await dialog.getByRole("button", { name: "新建项目", exact: true }).click()
-  await expect(dialog.getByRole("alert")).toContainText("无法保存项目")
+  await expect(dialog.getByRole("alert")).toContainText("项目服务暂时不可用")
   await expect(dialog.getByLabel("项目名称")).toHaveValue(
     "Keep this project name",
   )
   await expect(
     page.getByRole("link", { name: "Keep this project name", exact: true }),
   ).toHaveCount(0)
+  failCreate = false
+  await dialog.getByRole("button", { name: "新建项目", exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await expect(
+    page.getByRole("link", { name: "Keep this project name", exact: true }),
+  ).toBeVisible()
 })
 
-test("project folders are isolated by account and invalid saved state does not break tasks", async ({
-  page,
-}) => {
-  await page.addInitScript(() => {
-    localStorage.setItem(
-      "lingsight.workspace-projects.v1:other-user",
-      JSON.stringify([
-        { id: "private", name: "Other account folder", taskIds: [] },
-      ]),
-    )
-    localStorage.setItem("lingsight.workspace-projects.v1:user", "invalid JSON")
-  })
+test("项目接口失败不阻塞科研任务", async ({ page }) => {
+  await page.route("**/api/v1/projects/**", (route) =>
+    route.fulfill({ status: 500, json: { detail: "projects down" } }),
+  )
   await page.goto("/")
-  await expect(
-    page.getByRole("link", { name: "Other account folder" }),
-  ).toHaveCount(0)
-  await expect(page.getByText("无法读取当前浏览器中保存的项目。")).toBeVisible()
+  await expect(page.getByText("无法加载项目，请稍后重试。")).toBeVisible()
   await expect(
     page.getByRole("button", { name: "新建项目", exact: true }),
   ).toBeDisabled()
@@ -483,4 +511,54 @@ test("project folders are isolated by account and invalid saved state does not b
     .getByRole("link", { name: new RegExp(task.title) })
     .click()
   await expect(page).toHaveURL(new RegExp(`/tasks/${id}`))
+})
+
+test("localStorage 旧项目一次性迁移导入且重放幂等", async ({ page }) => {
+  const state = stubProjectsApi(page, [])
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "lingsight.workspace-projects.v1:user",
+      JSON.stringify([
+        {
+          id: "legacy-1",
+          name: "学习与记忆",
+          taskIds: ["11111111-1111-4111-8111-111111111111"],
+        },
+        { id: "legacy-2", name: "动物行为研究笔记", taskIds: [] },
+      ]),
+    )
+  })
+  await page.goto("/")
+  await expect(
+    page.getByRole("link", { name: "学习与记忆", exact: true }),
+  ).toBeVisible()
+  expect(state.imports.length).toBe(1)
+  expect(state.imports[0]).toEqual([
+    {
+      name: "学习与记忆",
+      task_ids: ["11111111-1111-4111-8111-111111111111"],
+    },
+    { name: "动物行为研究笔记", task_ids: [] },
+  ])
+  expect(
+    await page.evaluate(() =>
+      localStorage.getItem("lingsight.workspace-projects.v1:user"),
+    ),
+  ).toBeNull()
+  expect(
+    await page.evaluate(() =>
+      localStorage.getItem("lingsight.workspace-projects.migrated.v1:user"),
+    ),
+  ).toBe("1")
+  await page.getByRole("link", { name: "学习与记忆", exact: true }).click()
+  await expect(
+    page
+      .locator(".agent-task-list")
+      .getByRole("link", { name: new RegExp(task.title) }),
+  ).toBeVisible()
+  await page.reload()
+  await expect(
+    page.getByRole("link", { name: "学习与记忆", exact: true }),
+  ).toBeVisible()
+  expect(state.imports.length).toBe(1)
 })

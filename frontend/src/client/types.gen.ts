@@ -82,74 +82,6 @@ export type HTTPValidationError = {
 };
 
 /**
- * ItemCreate
- */
-export type ItemCreate = {
-    /**
-     * Title
-     */
-    title: string;
-    /**
-     * Description
-     */
-    description?: string | null;
-};
-
-/**
- * ItemPublic
- */
-export type ItemPublic = {
-    /**
-     * Title
-     */
-    title: string;
-    /**
-     * Description
-     */
-    description?: string | null;
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Owner Id
-     */
-    owner_id: string;
-    /**
-     * Created At
-     */
-    created_at?: string | null;
-};
-
-/**
- * ItemUpdate
- */
-export type ItemUpdate = {
-    /**
-     * Title
-     */
-    title?: string | null;
-    /**
-     * Description
-     */
-    description?: string | null;
-};
-
-/**
- * ItemsPublic
- */
-export type ItemsPublic = {
-    /**
-     * Data
-     */
-    data: Array<ItemPublic>;
-    /**
-     * Count
-     */
-    count: number;
-};
-
-/**
  * MarkerShape
  */
 export type MarkerShape = {
@@ -210,7 +142,7 @@ export type MediaInfo = {
     /**
      * Fingerprint
      *
-     * 内容指纹（字节数）；用于人工核对记录绑定素材版本
+     * 媒体内容 SHA-256；用于人工核对记录绑定素材版本
      */
     fingerprint?: string | null;
 };
@@ -413,13 +345,143 @@ export type PrivateUserCreate = {
 };
 
 /**
- * ResearchQueryRequest
+ * ProjectCreate
  */
-export type ResearchQueryRequest = {
+export type ProjectCreate = {
     /**
-     * Question
+     * Name
      */
-    question: string;
+    name: string;
+};
+
+/**
+ * ProjectImportItem
+ *
+ * One browser-local project folder from the pre-entity localStorage era.
+ */
+export type ProjectImportItem = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Task Ids
+     */
+    task_ids?: Array<string>;
+};
+
+/**
+ * ProjectImportRequest
+ */
+export type ProjectImportRequest = {
+    /**
+     * Projects
+     */
+    projects?: Array<ProjectImportItem>;
+};
+
+/**
+ * ProjectImportResult
+ */
+export type ProjectImportResult = {
+    /**
+     * Created
+     */
+    created: number;
+    /**
+     * Skipped
+     */
+    skipped: number;
+};
+
+/**
+ * ProjectMemberAdd
+ */
+export type ProjectMemberAdd = {
+    /**
+     * Kind
+     */
+    kind: 'agent_task' | 'video';
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label?: string | null;
+};
+
+/**
+ * ProjectMemberPublic
+ */
+export type ProjectMemberPublic = {
+    /**
+     * Kind
+     */
+    kind: 'agent_task' | 'video';
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label?: string | null;
+    /**
+     * Added At
+     */
+    added_at?: string | null;
+};
+
+/**
+ * ProjectPublic
+ */
+export type ProjectPublic = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Created At
+     */
+    created_at?: string | null;
+    /**
+     * Updated At
+     */
+    updated_at?: string | null;
+    /**
+     * Members
+     */
+    members?: Array<ProjectMemberPublic>;
+};
+
+/**
+ * ProjectRename
+ */
+export type ProjectRename = {
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
+ * ProjectsPublic
+ */
+export type ProjectsPublic = {
+    /**
+     * Data
+     */
+    data: Array<ProjectPublic>;
+    /**
+     * Count
+     */
+    count: number;
 };
 
 /**
@@ -1333,178 +1395,6 @@ export type utilsHealthCheckResponses = {
 
 export type utilsHealthCheckResponse = utilsHealthCheckResponses[keyof utilsHealthCheckResponses];
 
-export type itemsReadItemsData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Skip
-         */
-        skip?: number;
-        /**
-         * Limit
-         */
-        limit?: number;
-    };
-    url: '/api/v1/items/';
-};
-
-export type itemsReadItemsErrors = {
-    /**
-     * Validation Error
-     */
-    422: HTTPValidationError;
-};
-
-export type itemsReadItemsError = itemsReadItemsErrors[keyof itemsReadItemsErrors];
-
-export type itemsReadItemsResponses = {
-    /**
-     * Successful Response
-     */
-    200: ItemsPublic;
-};
-
-export type itemsReadItemsResponse = itemsReadItemsResponses[keyof itemsReadItemsResponses];
-
-export type itemsCreateItemData = {
-    body: ItemCreate;
-    path?: never;
-    query?: never;
-    url: '/api/v1/items/';
-};
-
-export type itemsCreateItemErrors = {
-    /**
-     * Validation Error
-     */
-    422: HTTPValidationError;
-};
-
-export type itemsCreateItemError = itemsCreateItemErrors[keyof itemsCreateItemErrors];
-
-export type itemsCreateItemResponses = {
-    /**
-     * Successful Response
-     */
-    200: ItemPublic;
-};
-
-export type itemsCreateItemResponse = itemsCreateItemResponses[keyof itemsCreateItemResponses];
-
-export type itemsDeleteItemData = {
-    body?: never;
-    path: {
-        /**
-         * Id
-         */
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/items/{id}';
-};
-
-export type itemsDeleteItemErrors = {
-    /**
-     * Validation Error
-     */
-    422: HTTPValidationError;
-};
-
-export type itemsDeleteItemError = itemsDeleteItemErrors[keyof itemsDeleteItemErrors];
-
-export type itemsDeleteItemResponses = {
-    /**
-     * Successful Response
-     */
-    200: Message;
-};
-
-export type itemsDeleteItemResponse = itemsDeleteItemResponses[keyof itemsDeleteItemResponses];
-
-export type itemsReadItemData = {
-    body?: never;
-    path: {
-        /**
-         * Id
-         */
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/items/{id}';
-};
-
-export type itemsReadItemErrors = {
-    /**
-     * Validation Error
-     */
-    422: HTTPValidationError;
-};
-
-export type itemsReadItemError = itemsReadItemErrors[keyof itemsReadItemErrors];
-
-export type itemsReadItemResponses = {
-    /**
-     * Successful Response
-     */
-    200: ItemPublic;
-};
-
-export type itemsReadItemResponse = itemsReadItemResponses[keyof itemsReadItemResponses];
-
-export type itemsUpdateItemData = {
-    body: ItemUpdate;
-    path: {
-        /**
-         * Id
-         */
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/items/{id}';
-};
-
-export type itemsUpdateItemErrors = {
-    /**
-     * Validation Error
-     */
-    422: HTTPValidationError;
-};
-
-export type itemsUpdateItemError = itemsUpdateItemErrors[keyof itemsUpdateItemErrors];
-
-export type itemsUpdateItemResponses = {
-    /**
-     * Successful Response
-     */
-    200: ItemPublic;
-};
-
-export type itemsUpdateItemResponse = itemsUpdateItemResponses[keyof itemsUpdateItemResponses];
-
-export type researchResearchQueryData = {
-    body: ResearchQueryRequest;
-    path?: never;
-    query?: never;
-    url: '/api/v1/research/query';
-};
-
-export type researchResearchQueryErrors = {
-    /**
-     * Validation Error
-     */
-    422: HTTPValidationError;
-};
-
-export type researchResearchQueryError = researchResearchQueryErrors[keyof researchResearchQueryErrors];
-
-export type researchResearchQueryResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
 export type experimentsListExperimentsData = {
     body?: never;
     path?: never;
@@ -1747,6 +1637,377 @@ export type experimentsGetTrialMediaErrors = {
 export type experimentsGetTrialMediaError = experimentsGetTrialMediaErrors[keyof experimentsGetTrialMediaErrors];
 
 export type experimentsGetTrialMediaResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type projectsListProjectsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/projects/';
+};
+
+export type projectsListProjectsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectsPublic;
+};
+
+export type projectsListProjectsResponse = projectsListProjectsResponses[keyof projectsListProjectsResponses];
+
+export type projectsCreateProjectData = {
+    body: ProjectCreate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/projects/';
+};
+
+export type projectsCreateProjectErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type projectsCreateProjectError = projectsCreateProjectErrors[keyof projectsCreateProjectErrors];
+
+export type projectsCreateProjectResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectPublic;
+};
+
+export type projectsCreateProjectResponse = projectsCreateProjectResponses[keyof projectsCreateProjectResponses];
+
+export type projectsDeleteProjectData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}';
+};
+
+export type projectsDeleteProjectErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type projectsDeleteProjectError = projectsDeleteProjectErrors[keyof projectsDeleteProjectErrors];
+
+export type projectsDeleteProjectResponses = {
+    /**
+     * Successful Response
+     */
+    200: Message;
+};
+
+export type projectsDeleteProjectResponse = projectsDeleteProjectResponses[keyof projectsDeleteProjectResponses];
+
+export type projectsRenameProjectData = {
+    body: ProjectRename;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}';
+};
+
+export type projectsRenameProjectErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type projectsRenameProjectError = projectsRenameProjectErrors[keyof projectsRenameProjectErrors];
+
+export type projectsRenameProjectResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectPublic;
+};
+
+export type projectsRenameProjectResponse = projectsRenameProjectResponses[keyof projectsRenameProjectResponses];
+
+export type projectsAddProjectMemberData = {
+    body: ProjectMemberAdd;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/members';
+};
+
+export type projectsAddProjectMemberErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type projectsAddProjectMemberError = projectsAddProjectMemberErrors[keyof projectsAddProjectMemberErrors];
+
+export type projectsAddProjectMemberResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectMemberPublic;
+};
+
+export type projectsAddProjectMemberResponse = projectsAddProjectMemberResponses[keyof projectsAddProjectMemberResponses];
+
+export type projectsRemoveProjectMemberData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Member Kind
+         */
+        member_kind: 'agent_task' | 'video';
+        /**
+         * Member Id
+         */
+        member_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/members/{member_kind}/{member_id}';
+};
+
+export type projectsRemoveProjectMemberErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type projectsRemoveProjectMemberError = projectsRemoveProjectMemberErrors[keyof projectsRemoveProjectMemberErrors];
+
+export type projectsRemoveProjectMemberResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type projectsRemoveProjectMemberResponse = projectsRemoveProjectMemberResponses[keyof projectsRemoveProjectMemberResponses];
+
+export type projectsImportProjectsData = {
+    body: ProjectImportRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/projects/import';
+};
+
+export type projectsImportProjectsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type projectsImportProjectsError = projectsImportProjectsErrors[keyof projectsImportProjectsErrors];
+
+export type projectsImportProjectsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectImportResult;
+};
+
+export type projectsImportProjectsResponse = projectsImportProjectsResponses[keyof projectsImportProjectsResponses];
+
+export type agentAgentGatewayData = {
+    body?: never;
+    path: {
+        /**
+         * Path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/v1/agent/{path}';
+};
+
+export type agentAgentGatewayErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type agentAgentGatewayError = agentAgentGatewayErrors[keyof agentAgentGatewayErrors];
+
+export type agentAgentGatewayResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type agentAgentGateway2Data = {
+    body?: never;
+    path: {
+        /**
+         * Path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/v1/agent/{path}';
+};
+
+export type agentAgentGateway2Errors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type agentAgentGateway2Error = agentAgentGateway2Errors[keyof agentAgentGateway2Errors];
+
+export type agentAgentGateway2Responses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type agentAgentGateway3Data = {
+    body?: never;
+    path: {
+        /**
+         * Path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/v1/agent/{path}';
+};
+
+export type agentAgentGateway3Errors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type agentAgentGateway3Error = agentAgentGateway3Errors[keyof agentAgentGateway3Errors];
+
+export type agentAgentGateway3Responses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type inferenceInferenceArtifactData = {
+    body?: never;
+    path: {
+        /**
+         * Path
+         */
+        path: string;
+        /**
+         * Name
+         */
+        name: string;
+    };
+    query?: {
+        /**
+         * Token
+         */
+        token?: string | null;
+    };
+    url: '/api/v1/inference/{path}/artifacts/{name}';
+};
+
+export type inferenceInferenceArtifactErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type inferenceInferenceArtifactError = inferenceInferenceArtifactErrors[keyof inferenceInferenceArtifactErrors];
+
+export type inferenceInferenceArtifactResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type inferenceInferenceGatewayData = {
+    body?: never;
+    path: {
+        /**
+         * Path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/v1/inference/{path}';
+};
+
+export type inferenceInferenceGatewayErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type inferenceInferenceGatewayError = inferenceInferenceGatewayErrors[keyof inferenceInferenceGatewayErrors];
+
+export type inferenceInferenceGatewayResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type inferenceInferenceGateway2Data = {
+    body?: never;
+    path: {
+        /**
+         * Path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/v1/inference/{path}';
+};
+
+export type inferenceInferenceGateway2Errors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type inferenceInferenceGateway2Error = inferenceInferenceGateway2Errors[keyof inferenceInferenceGateway2Errors];
+
+export type inferenceInferenceGateway2Responses = {
     /**
      * Successful Response
      */

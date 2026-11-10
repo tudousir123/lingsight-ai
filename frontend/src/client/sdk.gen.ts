@@ -2,7 +2,7 @@
 
 import { type Client, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { experimentsGetPreparationData, experimentsGetPreparationErrors, experimentsGetPreparationResponses, experimentsGetResultData, experimentsGetResultErrors, experimentsGetResultResponses, experimentsGetTrialData, experimentsGetTrialErrors, experimentsGetTrialMediaData, experimentsGetTrialMediaErrors, experimentsGetTrialMediaResponses, experimentsGetTrialResponses, experimentsListExperimentsData, experimentsListExperimentsResponses, experimentsListTrialsData, experimentsListTrialsErrors, experimentsListTrialsResponses, experimentsPutReviewData, experimentsPutReviewErrors, experimentsPutReviewResponses, itemsCreateItemData, itemsCreateItemErrors, itemsCreateItemResponses, itemsDeleteItemData, itemsDeleteItemErrors, itemsDeleteItemResponses, itemsReadItemData, itemsReadItemErrors, itemsReadItemResponses, itemsReadItemsData, itemsReadItemsErrors, itemsReadItemsResponses, itemsUpdateItemData, itemsUpdateItemErrors, itemsUpdateItemResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, researchResearchQueryData, researchResearchQueryErrors, researchResearchQueryResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
+import type { agentAgentGateway2Data, agentAgentGateway2Errors, agentAgentGateway2Responses, agentAgentGateway3Data, agentAgentGateway3Errors, agentAgentGateway3Responses, agentAgentGatewayData, agentAgentGatewayErrors, agentAgentGatewayResponses, experimentsGetPreparationData, experimentsGetPreparationErrors, experimentsGetPreparationResponses, experimentsGetResultData, experimentsGetResultErrors, experimentsGetResultResponses, experimentsGetTrialData, experimentsGetTrialErrors, experimentsGetTrialMediaData, experimentsGetTrialMediaErrors, experimentsGetTrialMediaResponses, experimentsGetTrialResponses, experimentsListExperimentsData, experimentsListExperimentsResponses, experimentsListTrialsData, experimentsListTrialsErrors, experimentsListTrialsResponses, experimentsPutReviewData, experimentsPutReviewErrors, experimentsPutReviewResponses, inferenceInferenceArtifactData, inferenceInferenceArtifactErrors, inferenceInferenceArtifactResponses, inferenceInferenceGateway2Data, inferenceInferenceGateway2Errors, inferenceInferenceGateway2Responses, inferenceInferenceGatewayData, inferenceInferenceGatewayErrors, inferenceInferenceGatewayResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, projectsAddProjectMemberData, projectsAddProjectMemberErrors, projectsAddProjectMemberResponses, projectsCreateProjectData, projectsCreateProjectErrors, projectsCreateProjectResponses, projectsDeleteProjectData, projectsDeleteProjectErrors, projectsDeleteProjectResponses, projectsImportProjectsData, projectsImportProjectsErrors, projectsImportProjectsResponses, projectsListProjectsData, projectsListProjectsResponses, projectsRemoveProjectMemberData, projectsRemoveProjectMemberErrors, projectsRemoveProjectMemberResponses, projectsRenameProjectData, projectsRenameProjectErrors, projectsRenameProjectResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -284,109 +284,6 @@ export class UtilsService {
     }
 }
 
-export class ItemsService {
-    /**
-     * Read Items
-     *
-     * Retrieve items.
-     */
-    public static readItems<ThrowOnError extends boolean = true>(options?: Options<itemsReadItemsData, ThrowOnError>) {
-        return (options?.client ?? client).get<itemsReadItemsResponses, itemsReadItemsErrors, ThrowOnError>({
-            responseType: 'json',
-            security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/',
-            ...options
-        });
-    }
-    
-    /**
-     * Create Item
-     *
-     * Create new item.
-     */
-    public static createItem<ThrowOnError extends boolean = true>(options: Options<itemsCreateItemData, ThrowOnError>) {
-        return (options.client ?? client).post<itemsCreateItemResponses, itemsCreateItemErrors, ThrowOnError>({
-            responseType: 'json',
-            security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-    
-    /**
-     * Delete Item
-     *
-     * Delete an item.
-     */
-    public static deleteItem<ThrowOnError extends boolean = true>(options: Options<itemsDeleteItemData, ThrowOnError>) {
-        return (options.client ?? client).delete<itemsDeleteItemResponses, itemsDeleteItemErrors, ThrowOnError>({
-            responseType: 'json',
-            security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/{id}',
-            ...options
-        });
-    }
-    
-    /**
-     * Read Item
-     *
-     * Get item by ID.
-     */
-    public static readItem<ThrowOnError extends boolean = true>(options: Options<itemsReadItemData, ThrowOnError>) {
-        return (options.client ?? client).get<itemsReadItemResponses, itemsReadItemErrors, ThrowOnError>({
-            responseType: 'json',
-            security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/{id}',
-            ...options
-        });
-    }
-    
-    /**
-     * Update Item
-     *
-     * Update an item.
-     */
-    public static updateItem<ThrowOnError extends boolean = true>(options: Options<itemsUpdateItemData, ThrowOnError>) {
-        return (options.client ?? client).put<itemsUpdateItemResponses, itemsUpdateItemErrors, ThrowOnError>({
-            responseType: 'json',
-            security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/{id}',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-}
-
-export class ResearchService {
-    /**
-     * Research Query
-     *
-     * Answer one research question from the whitelisted `water_maze` tables.
-     *
-     * The user dependency is load-bearing (bearer-token auth, template
-     * convention) even though its value is not read here.
-     */
-    public static researchQuery<ThrowOnError extends boolean = true>(options: Options<researchResearchQueryData, ThrowOnError>) {
-        return (options.client ?? client).post<researchResearchQueryResponses, researchResearchQueryErrors, ThrowOnError>({
-            responseType: 'json',
-            security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/research/query',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        });
-    }
-}
-
 export class ExperimentsService {
     /**
      * List Experiments
@@ -472,6 +369,200 @@ export class ExperimentsService {
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/experiments/{experiment_id}/trials/{trial_id}/media/{kind}',
+            ...options
+        });
+    }
+}
+
+export class ProjectsService {
+    /**
+     * List Projects
+     *
+     * List the current user's projects with their member references.
+     */
+    public static listProjects<ThrowOnError extends boolean = true>(options?: Options<projectsListProjectsData, ThrowOnError>) {
+        return (options?.client ?? client).get<projectsListProjectsResponses, unknown, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/',
+            ...options
+        });
+    }
+    
+    /**
+     * Create Project
+     *
+     * Create a project for the current user.
+     */
+    public static createProject<ThrowOnError extends boolean = true>(options: Options<projectsCreateProjectData, ThrowOnError>) {
+        return (options.client ?? client).post<projectsCreateProjectResponses, projectsCreateProjectErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Delete Project
+     *
+     * Delete one of the current user's projects; member references cascade.
+     */
+    public static deleteProject<ThrowOnError extends boolean = true>(options: Options<projectsDeleteProjectData, ThrowOnError>) {
+        return (options.client ?? client).delete<projectsDeleteProjectResponses, projectsDeleteProjectErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}',
+            ...options
+        });
+    }
+    
+    /**
+     * Rename Project
+     *
+     * Rename one of the current user's projects.
+     */
+    public static renameProject<ThrowOnError extends boolean = true>(options: Options<projectsRenameProjectData, ThrowOnError>) {
+        return (options.client ?? client).patch<projectsRenameProjectResponses, projectsRenameProjectErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Add Project Member
+     *
+     * Add (or refresh the label of) one member reference; idempotent.
+     */
+    public static addProjectMember<ThrowOnError extends boolean = true>(options: Options<projectsAddProjectMemberData, ThrowOnError>) {
+        return (options.client ?? client).post<projectsAddProjectMemberResponses, projectsAddProjectMemberErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/members',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Remove Project Member
+     *
+     * Remove one member reference; the referenced item itself is untouched.
+     */
+    public static removeProjectMember<ThrowOnError extends boolean = true>(options: Options<projectsRemoveProjectMemberData, ThrowOnError>) {
+        return (options.client ?? client).delete<projectsRemoveProjectMemberResponses, projectsRemoveProjectMemberErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/members/{member_kind}/{member_id}',
+            ...options
+        });
+    }
+    
+    /**
+     * Import Projects
+     *
+     * Import pre-entity browser-local projects once, idempotently.
+     *
+     * Replaying the same payload creates nothing new and never overwrites the
+     * projects and memberships the user has reorganized server-side.
+     */
+    public static importProjects<ThrowOnError extends boolean = true>(options: Options<projectsImportProjectsData, ThrowOnError>) {
+        return (options.client ?? client).post<projectsImportProjectsResponses, projectsImportProjectsErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/import',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+}
+
+export class AgentService {
+    /**
+     * Agent Gateway
+     */
+    public static agentGateway<ThrowOnError extends boolean = true>(options: Options<agentAgentGatewayData, ThrowOnError>) {
+        return (options.client ?? client).get<agentAgentGatewayResponses, agentAgentGatewayErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/agent/{path}',
+            ...options
+        });
+    }
+    
+    /**
+     * Agent Gateway
+     */
+    public static agentGateway2<ThrowOnError extends boolean = true>(options: Options<agentAgentGateway2Data, ThrowOnError>) {
+        return (options.client ?? client).patch<agentAgentGateway2Responses, agentAgentGateway2Errors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/agent/{path}',
+            ...options
+        });
+    }
+    
+    /**
+     * Agent Gateway
+     */
+    public static agentGateway3<ThrowOnError extends boolean = true>(options: Options<agentAgentGateway3Data, ThrowOnError>) {
+        return (options.client ?? client).post<agentAgentGateway3Responses, agentAgentGateway3Errors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/agent/{path}',
+            ...options
+        });
+    }
+}
+
+export class InferenceService {
+    /**
+     * Inference Artifact
+     */
+    public static inferenceArtifact<ThrowOnError extends boolean = true>(options: Options<inferenceInferenceArtifactData, ThrowOnError>) {
+        return (options.client ?? client).get<inferenceInferenceArtifactResponses, inferenceInferenceArtifactErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/inference/{path}/artifacts/{name}',
+            ...options
+        });
+    }
+    
+    /**
+     * Inference Gateway
+     */
+    public static inferenceGateway<ThrowOnError extends boolean = true>(options: Options<inferenceInferenceGatewayData, ThrowOnError>) {
+        return (options.client ?? client).get<inferenceInferenceGatewayResponses, inferenceInferenceGatewayErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/inference/{path}',
+            ...options
+        });
+    }
+    
+    /**
+     * Inference Gateway
+     */
+    public static inferenceGateway2<ThrowOnError extends boolean = true>(options: Options<inferenceInferenceGateway2Data, ThrowOnError>) {
+        return (options.client ?? client).post<inferenceInferenceGateway2Responses, inferenceInferenceGateway2Errors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/inference/{path}',
             ...options
         });
     }

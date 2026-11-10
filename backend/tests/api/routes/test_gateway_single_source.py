@@ -25,7 +25,9 @@ def _workspace_gate_definitions() -> list[Path]:
 
 
 def test_workspace_gate_defined_once_repo_wide() -> None:
-    assert _workspace_gate_definitions() == [_repo_root() / "backend" / "app" / "api" / "deps.py"]
+    assert _workspace_gate_definitions() == [
+        _repo_root() / "backend" / "app" / "api" / "deps.py"
+    ]
 
 
 def test_forwarding_implementation_defined_once() -> None:

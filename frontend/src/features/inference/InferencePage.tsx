@@ -1,4 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  projectErrorText,
+  useAddProjectMember,
+  useWorkspaceProjects,
+} from "@/features/agent/projects"
 import type { Entry, Mark, Task } from "@/features/inference/contract"
 import { authHeaders, withTokenQuery } from "@/lib/credentials"
 import {
@@ -58,6 +69,11 @@ export function InferencePage() {
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState("")
+  const [groupingVideo, setGroupingVideo] = useState<Entry | null>(null)
+  const projects = useWorkspaceProjects()
+  const addProjectMember = useAddProjectMember()
+  const [groupNote, setGroupNote] = useState("")
+  const [groupError, setGroupError] = useState("")
 
   const initializedTask = useRef<string | null>(null)
   const loadTasks = useCallback(async () => {
@@ -167,25 +183,41 @@ export function InferencePage() {
                     打开
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    className="rounded border px-3 py-1"
-                    onClick={() =>
-                      void act(async () => {
-                        const task = await request<Task>(
-                          inferenceRoutes.tasks(),
-                          {
-                            video_id: entry.id,
-                          },
-                        )
-                        setCurrent(task)
-                        await loadTasks()
-                      })
-                    }
-                  >
-                    开始
-                  </button>
+                  <span className="flex shrink-0 items-center gap-2">
+                    {entry.id && (
+                      <button
+                        type="button"
+                        className="rounded border px-3 py-1"
+                        aria-label={`将 ${entry.name} 归入项目`}
+                        onClick={() => {
+                          setGroupError("")
+                          setGroupNote("")
+                          setGroupingVideo(entry)
+                        }}
+                      >
+                        加入项目
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="rounded border px-3 py-1"
+                      onClick={() =>
+                        void act(async () => {
+                          const task = await request<Task>(
+                            inferenceRoutes.tasks(),
+                            {
+                              video_id: entry.id,
+                            },
+                          )
+                          setCurrent(task)
+                          await loadTasks()
+                        })
+                      }
+                    >
+                      开始
+                    </button>
+                  </span>
                 )}
               </li>
             ))}
@@ -482,6 +514,71 @@ export function InferencePage() {
           )}
         </section>
       )}
+      <Dialog
+        open={groupingVideo !== null}
+        onOpenChange={(open) => {
+          if (!open) setGroupingVideo(null)
+        }}
+      >
+        <DialogContent className="project-dialog">
+          <DialogTitle>归入项目</DialogTitle>
+          <DialogDescription>
+            将“{groupingVideo?.name}
+            ”的引用加入一个项目；视频本体仍由推理服务管理。
+          </DialogDescription>
+          {groupError && (
+            <p role="alert" className="agent-error">
+              {groupError}
+            </p>
+          )}
+          {groupNote && <p className="research-history-note">{groupNote}</p>}
+          <div className="project-task-options">
+            {projects.isPending && <p>正在加载项目…</p>}
+            {projects.error && <p role="alert">无法加载项目，请稍后重试。</p>}
+            {(projects.data ?? []).map((project) => (
+              <button
+                type="button"
+                key={project.id}
+                className="project-action"
+                disabled={addProjectMember.isPending || !groupingVideo?.id}
+                onClick={() => {
+                  if (!groupingVideo?.id) return
+                  setGroupError("")
+                  addProjectMember.mutate(
+                    {
+                      projectId: project.id,
+                      kind: "video",
+                      id: groupingVideo.id,
+                      label: groupingVideo.name,
+                    },
+                    {
+                      onSuccess: () => {
+                        setGroupNote(
+                          `已将“${groupingVideo.name}”归入“${project.name}”。`,
+                        )
+                      },
+                      onError: (mutationError) =>
+                        setGroupError(
+                          projectErrorText(
+                            mutationError,
+                            "归入项目失败，请重试。",
+                          ),
+                        ),
+                    },
+                  )
+                }}
+              >
+                {project.name}
+              </button>
+            ))}
+            {!projects.isPending &&
+              !projects.error &&
+              !(projects.data ?? []).length && (
+                <p>还没有项目。先在左侧栏“新建项目”，再回来归入视频。</p>
+              )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

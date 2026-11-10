@@ -1,7 +1,8 @@
 import uuid
 from datetime import UTC, datetime
+from typing import Annotated, Literal
 
-from pydantic import EmailStr
+from pydantic import EmailStr, field_validator
 from sqlalchemy import CHAR, Dialect, TypeDecorator, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
@@ -140,6 +141,51 @@ class TrialReview(SQLModel, table=True):
     updated_at: datetime | None = Field(default_factory=get_datetime_utc)
 
 
+class Project(SQLModel, table=True):
+    """User-owned research organization unit (GLOSSARY: 项目/Project).
+
+    Members reference items owned by other services (agent tasks, inference
+    videos) by id; the platform only owns the grouping, never the items.
+    """
+
+    __tablename__ = "project"
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_project_user_name"),)
+
+    id: uuid.UUID = Field(
+        default_factory=uuid.uuid4, primary_key=True, sa_type=Char36UUID
+    )
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        ondelete="CASCADE",
+        sa_type=Char36UUID,
+    )
+    name: str = Field(nullable=False, max_length=80)
+    created_at: datetime | None = Field(default_factory=get_datetime_utc)
+    updated_at: datetime | None = Field(default_factory=get_datetime_utc)
+
+
+class ProjectMember(SQLModel, table=True):
+    """Reference from a project to one upstream-owned item.
+
+    ``member_kind``/``member_id`` have no foreign key on purpose: the
+    referenced rows live in the agent/inference services, not this database.
+    """
+
+    __tablename__ = "project_member"
+
+    project_id: uuid.UUID = Field(
+        foreign_key="project.id",
+        primary_key=True,
+        ondelete="CASCADE",
+        sa_type=Char36UUID,
+    )
+    member_kind: str = Field(primary_key=True, max_length=16)
+    member_id: str = Field(primary_key=True, max_length=128)
+    label: str | None = Field(default=None, max_length=255)
+    added_at: datetime | None = Field(default_factory=get_datetime_utc)
+
+
 # Properties to return via API, id is always required
 class UserPublic(UserBase):
     id: uuid.UUID
@@ -170,3 +216,70 @@ class TokenPayload(SQLModel):
 class NewPassword(SQLModel):
     token: str
     new_password: str = Field(min_length=8, max_length=128)
+
+
+ProjectMemberKind = Literal["agent_task", "video"]
+
+
+class ProjectNameBase(SQLModel):
+    name: str = Field(min_length=1, max_length=80)
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise ValueError("项目名称不能为空白")
+        return name
+
+
+class ProjectCreate(ProjectNameBase):
+    pass
+
+
+class ProjectRename(ProjectNameBase):
+    pass
+
+
+class ProjectMemberAdd(SQLModel):
+    kind: ProjectMemberKind
+    id: str = Field(min_length=1, max_length=128)
+    label: str | None = Field(default=None, max_length=255)
+
+
+class ProjectMemberPublic(SQLModel):
+    kind: ProjectMemberKind
+    id: str
+    label: str | None = None
+    added_at: datetime | None = None
+
+
+class ProjectPublic(SQLModel):
+    id: uuid.UUID
+    name: str
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    members: list[ProjectMemberPublic] = []
+
+
+class ProjectsPublic(SQLModel):
+    data: list[ProjectPublic]
+    count: int
+
+
+class ProjectImportItem(ProjectNameBase):
+    """One browser-local project folder from the pre-entity localStorage era."""
+
+    task_ids: list[Annotated[str, Field(min_length=1, max_length=128)]] = Field(
+        default_factory=list,
+        max_length=5000,
+    )
+
+
+class ProjectImportRequest(SQLModel):
+    projects: list[ProjectImportItem] = Field(default_factory=list, max_length=100)
+
+
+class ProjectImportResult(SQLModel):
+    created: int
+    skipped: int

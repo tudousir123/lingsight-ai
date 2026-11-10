@@ -1,6 +1,26 @@
-import { expect, test } from "@playwright/test"
+import { expect, type Page, test } from "@playwright/test"
+import { stubProjectsApi } from "./utils/projectsApi"
 
 test.use({ storageState: { cookies: [], origins: [] } })
+
+async function mockWorkspace(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem("access_token", "test-token")
+    localStorage.setItem("lingsight.onboarding-seen.v1", "1")
+  })
+  await page.route("**/api/v1/users/me", (route) =>
+    route.fulfill({
+      json: {
+        id: "user",
+        email: "owner@example.com",
+        full_name: "研究者",
+        is_active: true,
+        is_superuser: false,
+      },
+    }),
+  )
+  stubProjectsApi(page)
+}
 
 test("预标注编辑在轮询后保留，并作为独立确认提交", async ({ page }) => {
   const id = "11111111-1111-4111-8111-111111111111"
@@ -31,21 +51,7 @@ test("预标注编辑在轮询后保留，并作为独立确认提交", async ({
       evidence: { review_reasons: [] },
     },
   })
-  await page.addInitScript(() => {
-    localStorage.setItem("access_token", "test-token")
-    localStorage.setItem("lingsight.onboarding-seen.v1", "1")
-  })
-  await page.route("**/api/v1/users/me", (route) =>
-    route.fulfill({
-      json: {
-        id: "user",
-        email: "owner@example.com",
-        full_name: "研究者",
-        is_active: true,
-        is_superuser: false,
-      },
-    }),
-  )
+  await mockWorkspace(page)
   await page.route("**/api/v1/inference/**", async (route) => {
     const url = new URL(route.request().url())
     if (url.pathname.endsWith("/videos"))
@@ -77,4 +83,37 @@ test("预标注编辑在轮询后保留，并作为独立确认提交", async ({
       marks,
     })
   await expect(page.getByRole("heading", { name: /排队中/ })).toBeVisible()
+})
+
+test("视频目录浏览可归入项目并从项目页移出", async ({ page }) => {
+  await mockWorkspace(page)
+  await page.route("**/api/v1/inference/**", (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname.endsWith("/videos"))
+      return route.fulfill({
+        json: {
+          items: [{ type: "video", name: "Day5-Trial3.mp4", id: "vid-77" }],
+        },
+      })
+    if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
+      return route.fulfill({ json: { items: [] } })
+    return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
+  })
+  await page.goto("/inference")
+  await page
+    .getByRole("button", { name: "将 Day5-Trial3.mp4 归入项目" })
+    .click()
+  const dialog = page.getByRole("dialog")
+  await dialog.getByRole("button", { name: "学习与记忆", exact: true }).click()
+  await expect(
+    dialog.getByText("已将“Day5-Trial3.mp4”归入“学习与记忆”。"),
+  ).toBeVisible()
+  await page.goto("/projects/learning-memory")
+  await expect(
+    page.getByRole("heading", { name: "归入项目的视频" }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "移出视频 Day5-Trial3.mp4" }).click()
+  await expect(
+    page.getByRole("heading", { name: "归入项目的视频" }),
+  ).toBeHidden()
 })

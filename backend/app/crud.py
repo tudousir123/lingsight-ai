@@ -1,9 +1,20 @@
+import uuid
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, col, select
 
 from app.core.security import get_password_hash, verify_password
-from app.models import User, UserCreate, UserUpdate
+from app.models import (
+    Project,
+    ProjectImportItem,
+    ProjectImportResult,
+    ProjectMember,
+    User,
+    UserCreate,
+    UserUpdate,
+)
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
@@ -57,3 +68,135 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
         session.commit()
         session.refresh(db_user)
     return db_user
+
+
+def create_project(*, session: Session, user_id: uuid.UUID, name: str) -> Project:
+    """Create one project; callers translate IntegrityError into a conflict."""
+    project = Project(user_id=user_id, name=name)
+    session.add(project)
+    session.commit()
+    session.refresh(project)
+    return project
+
+
+def get_project(
+    *, session: Session, user_id: uuid.UUID, project_id: uuid.UUID
+) -> Project | None:
+    statement = select(Project).where(
+        Project.id == project_id, Project.user_id == user_id
+    )
+    return session.exec(statement).first()
+
+
+def list_projects(*, session: Session, user_id: uuid.UUID) -> list[Project]:
+    statement = (
+        select(Project)
+        .where(Project.user_id == user_id)
+        .order_by(col(Project.created_at), col(Project.id))
+    )
+    return list(session.exec(statement).all())
+
+
+def rename_project(*, session: Session, project: Project, name: str) -> Project:
+    project.name = name
+    session.add(project)
+    session.commit()
+    session.refresh(project)
+    return project
+
+
+def delete_project(*, session: Session, project: Project) -> None:
+    session.delete(project)
+    session.commit()
+
+
+def list_project_members(
+    *, session: Session, project_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, list[ProjectMember]]:
+    if not project_ids:
+        return {}
+    statement = (
+        select(ProjectMember)
+        .where(col(ProjectMember.project_id).in_(project_ids))
+        .order_by(col(ProjectMember.added_at), col(ProjectMember.member_id))
+    )
+    grouped: dict[uuid.UUID, list[ProjectMember]] = {}
+    for member in session.exec(statement).all():
+        grouped.setdefault(member.project_id, []).append(member)
+    return grouped
+
+
+def add_project_member(
+    *,
+    session: Session,
+    project: Project,
+    member_kind: str,
+    member_id: str,
+    label: str | None,
+) -> tuple[ProjectMember, bool]:
+    """Add or update one member reference; returns (member, created)."""
+    member = session.get(ProjectMember, (project.id, member_kind, member_id))
+    created = member is None
+    if member is None:
+        member = ProjectMember(
+            project_id=project.id, member_kind=member_kind, member_id=member_id
+        )
+        session.add(member)
+    if label is not None:
+        member.label = label
+        session.add(member)
+    session.commit()
+    session.refresh(member)
+    return member, created
+
+
+def remove_project_member(
+    *, session: Session, project: Project, member_kind: str, member_id: str
+) -> bool:
+    member = session.get(ProjectMember, (project.id, member_kind, member_id))
+    if member is None:
+        return False
+    session.delete(member)
+    session.commit()
+    return True
+
+
+def import_local_projects(
+    *, session: Session, user_id: uuid.UUID, items: list[ProjectImportItem]
+) -> ProjectImportResult:
+    """Import browser-local projects once, idempotently.
+
+    A project whose name already exists (compared case-insensitively, matching
+    MySQL's default collation) is skipped entirely: neither its members nor
+    anything else the user reorganized server-side is overwritten.
+    """
+    created = 0
+    skipped = 0
+    for item in items:
+        exists = session.exec(
+            select(Project.id).where(
+                Project.user_id == user_id,
+                func.lower(Project.name) == item.name.lower(),
+            )
+        ).first()
+        if exists is not None:
+            skipped += 1
+            continue
+        try:
+            project = create_project(session=session, user_id=user_id, name=item.name)
+        except IntegrityError:
+            # Another request imported the same name concurrently.
+            session.rollback()
+            skipped += 1
+            continue
+        for task_id in dict.fromkeys(item.task_ids):
+            session.add(
+                ProjectMember(
+                    project_id=project.id,
+                    member_kind="agent_task",
+                    member_id=task_id,
+                )
+            )
+        session.commit()
+        created += 1
+    return ProjectImportResult(created=created, skipped=skipped)
