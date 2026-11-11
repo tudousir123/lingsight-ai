@@ -1,6 +1,26 @@
-import { expect, test } from "@playwright/test"
+import { expect, type Page, test } from "@playwright/test"
+import { stubProjectsApi } from "./utils/projectsApi"
 
 test.use({ storageState: { cookies: [], origins: [] } })
+
+async function mockWorkspace(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem("access_token", "test-token")
+    localStorage.setItem("lingsight.onboarding-seen.v1", "1")
+  })
+  await page.route("**/api/v1/users/me", (route) =>
+    route.fulfill({
+      json: {
+        id: "user",
+        email: "owner@example.com",
+        full_name: "研究者",
+        is_active: true,
+        is_superuser: false,
+      },
+    }),
+  )
+  stubProjectsApi(page)
+}
 
 test("预标注编辑在轮询后保留，并作为独立确认提交", async ({ page }) => {
   const id = "11111111-1111-4111-8111-111111111111"
@@ -31,21 +51,7 @@ test("预标注编辑在轮询后保留，并作为独立确认提交", async ({
       evidence: { review_reasons: [] },
     },
   })
-  await page.addInitScript(() => {
-    localStorage.setItem("access_token", "test-token")
-    localStorage.setItem("lingsight.onboarding-seen.v1", "1")
-  })
-  await page.route("**/api/v1/users/me", (route) =>
-    route.fulfill({
-      json: {
-        id: "user",
-        email: "owner@example.com",
-        full_name: "研究者",
-        is_active: true,
-        is_superuser: false,
-      },
-    }),
-  )
+  await mockWorkspace(page)
   await page.route("**/api/v1/inference/**", async (route) => {
     const url = new URL(route.request().url())
     if (url.pathname.endsWith("/videos"))
@@ -77,4 +83,159 @@ test("预标注编辑在轮询后保留，并作为独立确认提交", async ({
       marks,
     })
   await expect(page.getByRole("heading", { name: /排队中/ })).toBeVisible()
+})
+
+test("视频目录浏览可归入项目并从项目页移出", async ({ page }) => {
+  await mockWorkspace(page)
+  await page.route("**/api/v1/inference/**", (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname.endsWith("/videos"))
+      return route.fulfill({
+        json: {
+          items: [{ type: "video", name: "Day5-Trial3.mp4", id: "vid-77" }],
+        },
+      })
+    if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
+      return route.fulfill({ json: { items: [] } })
+    return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
+  })
+  await page.goto("/inference")
+  await page
+    .getByRole("button", { name: "将 Day5-Trial3.mp4 归入项目" })
+    .click()
+  const dialog = page.getByRole("dialog")
+  await dialog.getByRole("button", { name: "学习与记忆", exact: true }).click()
+  await expect(
+    dialog.getByText("已将“Day5-Trial3.mp4”归入“学习与记忆”。"),
+  ).toBeVisible()
+  await page.goto("/projects/learning-memory")
+  await expect(
+    page.getByRole("heading", { name: "归入项目的视频" }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "移出视频 Day5-Trial3.mp4" }).click()
+  await expect(
+    page.getByRole("heading", { name: "归入项目的视频" }),
+  ).toBeHidden()
+})
+
+const publishedResult = (taskId: string) => ({
+  task_id: taskId,
+  project_id: "learning-memory",
+  video_id: "day01/maze.mp4",
+  fps: 30,
+  total_frames: 600,
+  valid_frames: 580,
+  frames_with_heading: 570,
+  proposal_frames: 12,
+  heading_algorithm: "frozen-ball-chord-7px-v1",
+  keypoint_protocol: "fixed-mask-centroid-crop256-fp32-v9",
+  video_sha256: "a".repeat(64),
+  content_fingerprint: "f".repeat(64),
+  review_note: "看过叠加视频",
+  published_at: "2026-11-10T10:00:00Z",
+  replayed: false,
+})
+
+test("复核通过后出现发布动作，发布结果进项目且重放幂等", async ({ page }) => {
+  const taskId = "44444444-4444-4444-8444-444444444444"
+  let publishCount = 0
+  const task = {
+    id: taskId,
+    video_id: "day01/maze.mp4",
+    status: "succeeded",
+    stage: "overlay",
+    error: null,
+    review: { tracking_ok: true, note: "看过叠加视频" },
+    candidate: null,
+    confirmed: null,
+  }
+  await mockWorkspace(page)
+  await page.route("**/api/v1/inference/**", (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
+      return route.fulfill({ json: { items: [task] } })
+    return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
+  })
+  await page.route("**/api/v1/projects/*/results", async (route) => {
+    if (route.request().method() !== "POST")
+      return route.fulfill({ json: { data: [], count: 0 } })
+    expect(route.request().postDataJSON()).toEqual({ task_id: taskId })
+    publishCount += 1
+    return route.fulfill({
+      status: publishCount === 1 ? 201 : 200,
+      json: { ...publishedResult(taskId), replayed: publishCount > 1 },
+    })
+  })
+  await page.goto("/inference")
+  await page.getByRole("button", { name: /推理完成/ }).click()
+  await page.getByRole("button", { name: "发布到项目" }).click()
+  const dialog = page.getByRole("dialog")
+  await dialog.getByRole("button", { name: "学习与记忆", exact: true }).click()
+  await expect(
+    dialog.getByText(/已发布到“学习与记忆”：570 帧带朝向/),
+  ).toBeVisible()
+  await dialog.getByRole("button", { name: "学习与记忆", exact: true }).click()
+  await expect(dialog.getByText(/幂等重放/)).toBeVisible()
+  expect(publishCount).toBe(2)
+})
+
+test("未通过复核的结果不出现发布动作", async ({ page }) => {
+  const task = {
+    id: "55555555-5555-4555-8555-555555555555",
+    video_id: "day01/maze.mp4",
+    status: "succeeded",
+    stage: "overlay",
+    error: null,
+    review: { tracking_ok: false, note: "轨迹断了" },
+    candidate: null,
+    confirmed: null,
+  }
+  await mockWorkspace(page)
+  await page.route("**/api/v1/inference/**", (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
+      return route.fulfill({ json: { items: [task] } })
+    return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
+  })
+  await page.goto("/inference")
+  await page.getByRole("button", { name: /推理完成/ }).click()
+  await expect(page.getByText("结果已核对：需复查")).toBeVisible()
+  await expect(page.getByRole("button", { name: "发布到项目" })).toHaveCount(0)
+})
+
+test("发布失败呈现服务端拒绝原因", async ({ page }) => {
+  const taskId = "66666666-6666-4666-8666-666666666666"
+  const task = {
+    id: taskId,
+    video_id: "day01/maze.mp4",
+    status: "succeeded",
+    stage: "overlay",
+    error: null,
+    review: { tracking_ok: true, note: "" },
+    candidate: null,
+    confirmed: null,
+  }
+  await mockWorkspace(page)
+  await page.route("**/api/v1/inference/**", (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
+      return route.fulfill({ json: { items: [task] } })
+    return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
+  })
+  await page.route("**/api/v1/projects/*/results", (route) =>
+    route.fulfill({
+      status: 409,
+      json: { detail: "只有通过人工复核（tracking_ok）的推理任务才能发布" },
+    }),
+  )
+  await page.goto("/inference")
+  await page.getByRole("button", { name: /推理完成/ }).click()
+  await page.getByRole("button", { name: "发布到项目" }).click()
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "学习与记忆", exact: true })
+    .click()
+  await expect(
+    page.getByRole("dialog").getByText(/只有通过人工复核/),
+  ).toBeVisible()
 })

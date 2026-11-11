@@ -1,0 +1,10 @@
++ '[' -d .mypy_cache ']'
++ '[' -d .ruff_cache ']'
++ mypy app scripts
+Success: no issues found in 48 source files
++ ty check app scripts
+All checks passed!
++ ruff check app scripts
+All checks passed!
++ ruff format app scripts --check
+48 files already formatted

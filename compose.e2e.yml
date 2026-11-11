@@ -1,0 +1,51 @@
+# Disposable test stack; no published ports or access to host research services.
+# Used only with compose.yml, never with the developer compose.override.yml.
+services:
+  backend:
+    image: ${COMPOSE_PROJECT_NAME}-backend:local
+    build:
+      network: ${LINGSIGHT_E2E_BUILD_NETWORK:-default}
+      args:
+        HTTP_PROXY: ${LINGSIGHT_E2E_HTTP_PROXY:-}
+        HTTPS_PROXY: ${LINGSIGHT_E2E_HTTP_PROXY:-}
+    environment:
+      FASTAPI_ENV: development
+      SMTP_HOST: mailpit
+      SMTP_USER: ""
+      SMTP_PASSWORD: ""
+      SMTP_PORT: "1025"
+      SMTP_TLS: "false"
+      TRIALS_FIXTURE_DIR: /app/backend/app/trials/fixtures
+    labels:
+      traefik.enable: "false"
+
+  mailpit:
+    image: axllent/mailpit
+
+  playwright:
+    image: ${COMPOSE_PROJECT_NAME}-playwright:local
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.playwright
+      network: ${LINGSIGHT_E2E_BUILD_NETWORK:-default}
+      args:
+        HTTP_PROXY: ${LINGSIGHT_E2E_HTTP_PROXY:-}
+        HTTPS_PROXY: ${LINGSIGHT_E2E_HTTP_PROXY:-}
+    user: "${LINGSIGHT_E2E_UID:-1000}:${LINGSIGHT_E2E_GID:-1000}"
+    ipc: host
+    depends_on:
+      backend:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      FIRST_SUPERUSER: ${FIRST_SUPERUSER:?Variable not set}
+      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:?Variable not set}
+      PLAYWRIGHT_BASE_URL: http://backend:8000
+      VITE_API_URL: http://backend:8000
+      MAILPIT_HOST: http://mailpit:8025
+      CI: "true"
+      HOME: /tmp
+    volumes:
+      - ./frontend/blob-report:/app/frontend/blob-report
+      - ./frontend/test-results:/app/frontend/test-results

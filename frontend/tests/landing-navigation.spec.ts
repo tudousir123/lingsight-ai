@@ -38,15 +38,30 @@ test("refreshing after manual scrolling returns to the homepage hero", async ({
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
 })
 
-test("the public homepage is English on desktop and mobile", async ({
+test("the public homepage switches languages on desktop and mobile", async ({
   page,
 }) => {
   await page.goto("/welcome")
   await expect(page.locator("html")).toHaveAttribute("lang", "en")
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+  await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
     "Decode animal behavior, frame by frame.",
   )
-  expect(await page.locator("body").innerText()).not.toMatch(/\p{Script=Han}/u)
+  await expect(page.locator(".landing")).toHaveAttribute("lang", "en")
+  expect(await page.locator("main").innerText()).not.toMatch(/\p{Script=Han}/u)
+  await page
+    .getByRole("button", {
+      name: "切换到中文 / Switch to Chinese",
+      exact: true,
+    })
+    .click()
+  await expect(page.locator(".landing")).toHaveAttribute("lang", "zh")
+  await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
+    "逐帧解码动物行为。",
+  )
+  await page.reload()
+  await expect(page.locator(".landing")).toHaveAttribute("lang", "zh")
+  await page.locator(".lang-toggle").click()
+  await expect(page.locator(".landing")).toHaveAttribute("lang", "en")
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(
     page
@@ -58,4 +73,31 @@ test("the public homepage is English on desktop and mobile", async ({
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true)
+})
+
+test("the public homepage remains usable when browser storage is blocked", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Storage.prototype.getItem = () => {
+      throw new Error("storage blocked")
+    }
+    Storage.prototype.setItem = () => {
+      throw new Error("storage blocked")
+    }
+  })
+  await page.goto("/welcome")
+  await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
+    "Decode animal behavior, frame by frame.",
+  )
+  await expect(page.locator("#assistant .example-caption")).toHaveText(
+    "Illustrative examples · synthetic data",
+  )
+  await page.locator(".lang-toggle").click()
+  await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
+    "逐帧解码动物行为。",
+  )
+  await expect(page.locator("#assistant .example-caption")).toHaveText(
+    "功能演示 · 合成示例数据",
+  )
 })

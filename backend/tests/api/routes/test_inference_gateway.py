@@ -38,9 +38,7 @@ def gateway() -> Harness:
     app.dependency_overrides[get_current_user] = lambda: user
     app.dependency_overrides[get_media_user] = lambda: user
     requests: list[httpx.Request] = []
-    state = SimpleNamespace(
-        response=httpx.Response(200, json=[]), error=None
-    )
+    state = SimpleNamespace(response=httpx.Response(200, json=[]), error=None)
 
     def upstream(req: httpx.Request) -> httpx.Response:
         requests.append(req)
@@ -157,7 +155,10 @@ def test_payload_size_limit(gateway: Harness) -> None:
 def test_videos_query_path_forwarded(gateway: Harness) -> None:
     gateway.client.get("/inference/videos?path=day01/sub")
     assert gateway.requests[-1].url.params["path"] == "day01/sub"
-    assert str(gateway.requests[-1].url) == "http://inference.test/v1/videos?path=day01%2Fsub"
+    assert (
+        str(gateway.requests[-1].url)
+        == "http://inference.test/v1/videos?path=day01%2Fsub"
+    )
     gateway.client.get("/inference/videos")
     assert gateway.requests[-1].url.params["path"] == ""
     gateway.client.get("/inference/tasks?path=should-not-forward")

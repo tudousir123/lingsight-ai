@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 
 async function reachQuestion(page: Page) {
   for (let step = 2; step <= 4; step++) {
-    await page.getByRole("button", { name: "Next step" }).click()
+    await page.getByRole("button", { name: "下一步" }).click()
     await expect(page.locator(".research-progress")).toContainText(
       `0${step} / 04`,
     )
@@ -18,7 +18,7 @@ async function reachQuestion(page: Page) {
 }
 
 async function addScope(page: Page, scope: string) {
-  const field = page.getByLabel("Data scope", { exact: true })
+  const field = page.getByLabel("数据范围", { exact: true })
   if (!(await field.isVisible())) await page.locator("summary").click()
   await field.fill(scope)
 }
@@ -30,33 +30,26 @@ test("the final desktop screen offers examples and optional scope", async ({
   await page.goto("/onboarding")
   await reachQuestion(page)
   await expect(
-    page.getByRole("heading", { name: "What would you like to explore?" }),
+    page.getByRole("heading", { name: "你想探索什么？" }),
+  ).toBeInViewport()
+  await expect(page.getByLabel("研究问题", { exact: true })).toBeInViewport()
+  await expect(page.getByLabel("研究问题", { exact: true })).toBeEmpty()
+  await expect(
+    page.getByRole("button", { name: "进入工作台", exact: true }),
   ).toBeInViewport()
   await expect(
-    page.getByLabel("Research question", { exact: true }),
+    page.getByRole("link", { name: "直接进入工作台" }),
   ).toBeInViewport()
   await expect(
-    page.getByLabel("Research question", { exact: true }),
-  ).toBeEmpty()
-  await expect(
-    page.getByRole("button", { name: "Enter workspace", exact: true }),
-  ).toBeInViewport()
-  await expect(
-    page.getByRole("link", { name: "Explore the workspace" }),
-  ).toBeInViewport()
-  await expect(
-    page.getByRole("group", { name: "Example questions" }).getByRole("button"),
+    page.getByRole("group", { name: "示例问题" }).getByRole("button"),
   ).toHaveCount(3)
-  await expect(page.getByLabel("Data scope", { exact: true })).toBeHidden()
+  await expect(page.getByLabel("数据范围", { exact: true })).toBeHidden()
 })
 
 for (const [goal, expected] of [
-  ["Explore trajectories & headings", "exploratory figures"],
-  [
-    "Compare training days",
-    "compare behavior across training days within the same batch",
-  ],
-  ["Draft a research report", "editable report"],
+  ["探索轨迹与朝向", "探索性图表"],
+  ["比较训练日", "比较同批次内各训练日间的行为差异"],
+  ["起草研究报告", "可编辑报告"],
 ]) {
   test(`${goal}: saves and restores the question and optional scope`, async ({
     page,
@@ -64,20 +57,18 @@ for (const [goal, expected] of [
     await page.goto("/onboarding")
     await reachQuestion(page)
     await page.getByRole("button", { name: goal, exact: true }).click()
-    await expect(
-      page.getByLabel("Research question", { exact: true }),
-    ).toHaveValue(new RegExp(expected))
+    await expect(page.getByLabel("研究问题", { exact: true })).toHaveValue(
+      new RegExp(expected),
+    )
     await addScope(page, "同一批次第 1–5 天")
-    await page
-      .getByRole("button", { name: "Enter workspace", exact: true })
-      .click()
+    await page.getByRole("button", { name: "进入工作台", exact: true }).click()
     await expect(page).not.toHaveURL(/\/onboarding$/)
     await page.goto("/onboarding")
     await reachQuestion(page)
-    await expect(
-      page.getByLabel("Research question", { exact: true }),
-    ).toHaveValue(new RegExp(expected))
-    await expect(page.getByLabel("Data scope", { exact: true })).toHaveValue(
+    await expect(page.getByLabel("研究问题", { exact: true })).toHaveValue(
+      new RegExp(expected),
+    )
+    await expect(page.getByLabel("数据范围", { exact: true })).toHaveValue(
       "同一批次第 1–5 天",
     )
   })
@@ -87,18 +78,16 @@ test("a custom question needs no example or scope", async ({ page }) => {
   await page.goto("/onboarding")
   await reachQuestion(page)
   await page
-    .getByLabel("Research question", { exact: true })
+    .getByLabel("研究问题", { exact: true })
     .fill("先核对轨迹缺失的情况。")
-  await page
-    .getByRole("button", { name: "Enter workspace", exact: true })
-    .click()
+  await page.getByRole("button", { name: "进入工作台", exact: true }).click()
   await expect(page).not.toHaveURL(/\/onboarding$/)
   await page.goto("/onboarding")
   await reachQuestion(page)
-  await expect(
-    page.getByLabel("Research question", { exact: true }),
-  ).toHaveValue("先核对轨迹缺失的情况。")
-  await expect(page.getByLabel("Data scope", { exact: true })).toBeHidden()
+  await expect(page.getByLabel("研究问题", { exact: true })).toHaveValue(
+    "先核对轨迹缺失的情况。",
+  )
+  await expect(page.getByLabel("数据范围", { exact: true })).toBeHidden()
 })
 
 test("switching examples keeps the scope and does not submit a task", async ({
@@ -112,22 +101,20 @@ test("switching examples keeps the scope and does not submit a task", async ({
   await reachQuestion(page)
   await page
     .getByRole("button", {
-      name: "Explore trajectories & headings",
+      name: "探索轨迹与朝向",
       exact: true,
     })
     .click()
   await addScope(page, "第二批训练视频")
-  await page
-    .getByRole("button", { name: "Draft a research report", exact: true })
-    .click()
-  await expect(
-    page.getByLabel("Research question", { exact: true }),
-  ).toHaveValue(/editable report/)
-  await expect(page.getByLabel("Data scope", { exact: true })).toHaveValue(
+  await page.getByRole("button", { name: "起草研究报告", exact: true }).click()
+  await expect(page.getByLabel("研究问题", { exact: true })).toHaveValue(
+    /可编辑报告/,
+  )
+  await expect(page.getByLabel("数据范围", { exact: true })).toHaveValue(
     "第二批训练视频",
   )
   await expect(
-    page.getByRole("button", { name: "Draft a research report", exact: true }),
+    page.getByRole("button", { name: "起草研究报告", exact: true }),
   ).toHaveAttribute("aria-pressed", "true")
   expect(requests).toEqual([])
 })
@@ -145,30 +132,24 @@ test("empty input and blocked storage preserve the recovery download", async ({
   })
   await page.goto("/onboarding")
   await reachQuestion(page)
-  const question = page.getByLabel("Research question", { exact: true })
+  const question = page.getByLabel("研究问题", { exact: true })
   await question.fill("   ")
   await expect(
-    page.getByRole("button", { name: "Enter workspace", exact: true }),
+    page.getByRole("button", { name: "进入工作台", exact: true }),
   ).toBeDisabled()
   await question.fill("先检查轨迹缺失情况。")
   await addScope(page, "同一批训练视频")
-  await page
-    .getByRole("button", { name: "Enter workspace", exact: true })
-    .click()
-  await expect(page.getByRole("alert")).toContainText(
-    "This browser could not save your question",
-  )
+  await page.getByRole("button", { name: "进入工作台", exact: true }).click()
+  await expect(page.getByRole("alert")).toContainText("浏览器未能保存你的问题")
   await expect(question).toHaveValue("先检查轨迹缺失情况。")
   await expect(page).toHaveURL(/\/onboarding$/)
   const downloaded = page.waitForEvent("download")
-  await page.getByRole("button", { name: "Download research brief" }).click()
+  await page.getByRole("button", { name: "下载研究简报" }).click()
   const download = await downloaded
   const content = await readFile((await download.path())!, "utf8")
   expect(content).toContain("同一批训练视频")
   expect(content).toContain("先检查轨迹缺失情况")
-  expect(content).toContain(
-    "without spatial calibration, do not report centimeter-based units",
-  )
+  expect(content).toContain("缺少空间标定不报告厘米单位")
 })
 
 test("keyboard selection works with invalid saved data", async ({ page }) => {
@@ -177,25 +158,19 @@ test("keyboard selection works with invalid saved data", async ({ page }) => {
   )
   await page.goto("/onboarding")
   await reachQuestion(page)
-  await expect(
-    page.getByLabel("Research question", { exact: true }),
-  ).toBeEmpty()
-  await page
-    .getByRole("button", { name: "Compare training days", exact: true })
-    .focus()
+  await expect(page.getByLabel("研究问题", { exact: true })).toBeEmpty()
+  await page.getByRole("button", { name: "比较训练日", exact: true }).focus()
   await page.keyboard.press("Enter")
-  await expect(
-    page.getByLabel("Research question", { exact: true }),
-  ).toHaveValue(/within the same batch/)
+  await expect(page.getByLabel("研究问题", { exact: true })).toHaveValue(
+    /同批次/,
+  )
 })
 
 test("entering without a question marks onboarding seen without saving a brief", async ({
   page,
 }) => {
   await page.goto("/onboarding")
-  await page
-    .getByRole("link", { name: "Explore the workspace", exact: true })
-    .click()
+  await page.getByRole("link", { name: "直接进入工作台", exact: true }).click()
   await expect(page).not.toHaveURL(/\/onboarding$/)
   expect(
     await page.evaluate(() =>
@@ -212,7 +187,7 @@ test("entering without a question marks onboarding seen without saving a brief",
 test("a long question scrolls inside its editor", async ({ page }) => {
   await page.goto("/onboarding")
   await reachQuestion(page)
-  const question = page.getByLabel("Research question", { exact: true })
+  const question = page.getByLabel("研究问题", { exact: true })
   await question.fill("逐视频核对轨迹与缺失值。\n".repeat(80))
   await question.evaluate((element) => {
     element.scrollTop = 0
@@ -223,7 +198,7 @@ test("a long question scrolls inside its editor", async ({ page }) => {
     .poll(() => question.evaluate((element) => element.scrollTop))
     .toBeGreaterThan(0)
   await expect(
-    page.getByRole("button", { name: "Enter workspace", exact: true }),
+    page.getByRole("button", { name: "进入工作台", exact: true }),
   ).toBeInViewport()
 })
 
@@ -240,9 +215,9 @@ test("the guide types its introduction and shows completed text when revisiting"
   await expect
     .poll(() => intro.locator('[data-visible="true"]').count())
     .toBeGreaterThan(0)
-  await page.getByRole("button", { name: "Next step" }).click()
+  await page.getByRole("button", { name: "下一步" }).click()
   await expect(page.locator(".research-progress")).toContainText("02 / 04")
-  await page.getByRole("button", { name: "Previous step" }).click()
+  await page.getByRole("button", { name: "上一步" }).click()
   await expect(page.locator(".research-progress")).toContainText("01 / 04")
   await expect(intro).toHaveAttribute("data-typing", "false")
 })
@@ -252,26 +227,33 @@ test("the mouse wheel advances one scene at a time and can go back", async ({
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto("/onboarding")
-  await page.mouse.move(700, 400)
+  // Wait for the rendered guide before dispatching a native wheel event;
+  // goto alone can finish before Vite has mounted React and its listeners.
+  await expect(page.locator(".research-progress")).toContainText("01 / 04")
+  await page
+    .locator(".research-guide-main")
+    .hover({ position: { x: 20, y: 20 } })
+  await page.clock.install()
   for (const next of [2, 3, 4]) {
     await page.mouse.wheel(0, 120)
     await expect(page.locator(".research-progress")).toContainText(
       `0${next} / 04`,
     )
-    await page.waitForTimeout(900)
+    // Advance the real gesture cooldown deterministically, without sleeping.
+    await page.clock.fastForward(900)
   }
   await page.mouse.wheel(0, -120)
   await expect(page.locator(".research-progress")).toContainText("03 / 04")
 })
 
-test("every introduction scene is English and fits a narrow viewport", async ({
+test("every introduction scene is Chinese and fits a narrow viewport", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto("/onboarding")
   await expect(page.locator(".research-onboarding")).toHaveAttribute(
     "lang",
-    "en",
+    "zh",
   )
   for (let step = 1; step <= 4; step++) {
     await expect(page.locator(".research-progress")).toContainText(
@@ -281,17 +263,15 @@ test("every introduction scene is English and fits a narrow viewport", async ({
     await expect(scene.locator(".research-scene-content")).toHaveClass(
       /is-ready/,
     )
-    expect(await scene.innerText()).not.toMatch(/\p{Script=Han}/u)
+    expect(await scene.innerText()).toMatch(/\p{Script=Han}/u)
     expect(
       await scene.evaluate(
         (element) => element.scrollWidth <= element.clientWidth,
       ),
     ).toBe(true)
-    if (step < 4) await page.getByRole("button", { name: "Next step" }).click()
+    if (step < 4) await page.getByRole("button", { name: "下一步" }).click()
   }
-  await expect(
-    page.getByRole("button", { name: "Enter workspace" }),
-  ).toBeVisible()
+  await expect(page.getByRole("button", { name: "进入工作台" })).toBeVisible()
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -303,7 +283,8 @@ test("typing leaves time to read and reduced motion reveals the full text immedi
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" })
-  await page.clock.install()
+  await page.clock.install({ time: new Date("2026-11-11T00:00:00Z") })
+  await page.clock.pauseAt(new Date("2026-11-11T00:00:01Z"))
   await page.goto("/onboarding")
   const scene = page.locator(".research-guide-scene").first()
   const ink = scene.locator(".research-typewriter-ink")
@@ -315,7 +296,7 @@ test("typing leaves time to read and reduced motion reveals the full text immedi
   await page.emulateMedia({ reducedMotion: "reduce" })
   await expect(ink).toHaveAttribute("data-typing", "false")
   await expect(scene.locator(".research-scene-support")).toBeVisible()
-  await expect(ink).toHaveText("Hi,\nI’m your research assistant.")
+  await expect(ink).toHaveText("你好，\n我是你的科研助手。")
 })
 
 for (const viewport of [
@@ -338,7 +319,7 @@ for (const viewport of [
         new Promise<{ opacity: number; x: number; y: number }[]>((resolve) => {
           const character = Array.from(
             element.querySelectorAll<HTMLElement>(".research-typewriter-glyph"),
-          ).find((glyph) => glyph.textContent === "I")!
+          ).find((glyph) => glyph.textContent === "你")!
           const started = performance.now()
           const frames: { opacity: number; x: number; y: number }[] = []
           function sample(now: number) {

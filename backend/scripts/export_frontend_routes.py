@@ -45,9 +45,7 @@ def load_services() -> tuple[ServiceRoutes, ...]:
 
     api_prefix = str(Settings.model_fields["API_V1_STR"].default or "")
     return (
-        ServiceRoutes(
-            "agent", f"{api_prefix}{agent.router.prefix}", agent.OPERATIONS
-        ),
+        ServiceRoutes("agent", f"{api_prefix}{agent.router.prefix}", agent.OPERATIONS),
         ServiceRoutes(
             "inference",
             f"{api_prefix}{inference.router.prefix}",
@@ -57,9 +55,7 @@ def load_services() -> tuple[ServiceRoutes, ...]:
 
 
 def _pascal(name: str) -> str:
-    return "".join(
-        part[:1].upper() + part[1:] for part in name.split("_") if part
-    )
+    return "".join(part[:1].upper() + part[1:] for part in name.split("_") if part)
 
 
 def _camel(name: str) -> str:
@@ -79,11 +75,7 @@ def _route_key(pattern: str) -> str:
 
 
 def _ts_literal(segment: str) -> str:
-    return (
-        segment.replace("\\", "\\\\")
-        .replace("`", "\\`")
-        .replace("${", "\\${")
-    )
+    return segment.replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${")
 
 
 def _ts_template(pattern: str) -> str:

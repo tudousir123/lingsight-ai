@@ -1,0 +1,243 @@
+/* Assistant positioning: hero word stagger, feature cards with product mocks,
+   and the agent chat timeline. Motion hooks (hero-word, ilo-*) live in
+   landing-motion.css; this file is layout and surface styling only. */
+
+/* --- hero words ------------------------------------------------------- */
+.landing .hero-word {
+  display: inline-block;
+  /* Trailing spaces collapse inside inline-block boxes; margins are the space. */
+  margin-inline-end: 0.3em;
+  animation: hero-rise 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0.4s);
+}
+/* Chinese rises per character; inter-word margins would break the glyphs. */
+.landing[lang="zh"] .hero-word {
+  margin-inline-end: 0;
+}
+
+/* --- feature trio ------------------------------------------------------ */
+.assistant-features h2 {
+  font-size: clamp(26px, 3.4vw, 40px);
+  font-weight: 480;
+  letter-spacing: -0.015em;
+  margin: 0 0 34px;
+}
+.assistant-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.assistant-card {
+  display: flex;
+  flex-direction: column;
+  padding: 26px 22px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  background: var(--bg-card);
+}
+.assistant-card h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 520;
+}
+.assistant-card > p {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #a3a3a3;
+  flex-grow: 1;
+}
+.feature-mock,
+.feature-mock-canvas {
+  margin-top: 18px;
+  border-radius: 16px;
+  background: #16191c;
+  border: 1px solid #23282d;
+  overflow: hidden;
+}
+.feature-mock {
+  padding: 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #cfcfcf;
+}
+.feature-mock-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.feature-mock--report .report-line {
+  margin: 0 0 8px;
+}
+.report-line--dim {
+  color: #8b8b8b;
+  font-size: 11.5px;
+}
+.report-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 12px;
+}
+.report-chips span {
+  padding: 3px 8px;
+  border: 1px solid #2c3138;
+  border-radius: 999px;
+  font-size: 10.5px;
+  color: #9aa4ae;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.report-figure {
+  height: 84px;
+  border-radius: 10px;
+  background:
+    radial-gradient(120px 60px at 30% 70%, #1f3b46 0%, transparent 70%),
+    radial-gradient(140px 70px at 72% 30%, #33261e 0%, transparent 70%), #1b1e21;
+}
+
+.feature-mock--chat .chat-time {
+  margin: 0 0 10px;
+  font-size: 10.5px;
+  color: #6d757d;
+}
+.chat-bubble {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  max-width: 92%;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.chat-bubble--user,
+.chat-bubble--reply {
+  margin-left: auto;
+  width: fit-content;
+  background: var(--bg-elevated);
+  color: #ececec;
+}
+.chat-bubble--reply {
+  border: 1px dashed #343a40;
+  color: #b9c2c9;
+}
+.chat-bubble--agent {
+  width: fit-content;
+  background: #14171a;
+  border: 1px solid #262b30;
+}
+.chat-status {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 10px 2px 12px;
+  font-size: 11px;
+  color: #7f8a94;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+/* --- agent timeline ---------------------------------------------------- */
+/* Center the whole narrative column (heading + timeline) in the section. */
+.research-workflow > h2 {
+  max-width: 640px;
+  margin-inline: auto;
+}
+.agent-timeline {
+  max-width: 640px;
+  margin-inline: auto;
+}
+.agent-step {
+  position: relative;
+  min-width: 0;
+  padding: 0 0 44px 34px;
+}
+.agent-step:last-child {
+  padding-bottom: 8px;
+}
+.agent-rail {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 1px;
+  background: var(--border-subtle);
+}
+.agent-dot {
+  position: absolute;
+  top: 6px;
+  left: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bg-canvas);
+  border: 1.5px solid #d7d7d7;
+  animation: agent-dot 350ms cubic-bezier(0.2, 1.5, 0.5, 1) both;
+  animation-delay: 60ms;
+  animation-play-state: paused;
+}
+.agent-step[data-inview] .agent-dot {
+  animation-play-state: running;
+}
+@keyframes agent-dot {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.agent-time {
+  margin: 0;
+  font-size: 12px;
+  color: #6d757d;
+}
+.agent-step h3 {
+  margin: 8px 0 0;
+  font-size: 17px;
+  font-weight: 520;
+}
+.agent-note {
+  margin: 6px 0 14px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #a3a3a3;
+}
+.agent-step .chat-bubble {
+  font-size: 13px;
+}
+.agent-step .ilo-word {
+  display: inline-block;
+  margin-inline-end: 0.25em;
+}
+.agent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+}
+.agent-chips span {
+  padding: 6px 11px;
+  border: 1px solid #2c3138;
+  border-radius: 999px;
+  font-size: 11.5px;
+  color: #9aa4ae;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+/* assistant cards reveal with a short cascade (landing-reveal handles the base) */
+.assistant-cards > .assistant-card.delay-2 {
+  transition-delay: 100ms;
+}
+.assistant-cards > .assistant-card.delay-3 {
+  transition-delay: 200ms;
+}
+
+@media (max-width: 900px) {
+  .assistant-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.example-caption {
+  color: var(--muted-foreground, #667085);
+  font-size: 0.8rem;
+}

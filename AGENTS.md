@@ -9,6 +9,7 @@
 - **领域词汇**：[GLOSSARY.md](GLOSSARY.md)。评审、口径与命名以此为准（如：语义层不说 MDL；动物 = (group_name, mouse_id)）。
 - **已退役模块**：Text-to-SQL 管线与试次准备/核对/结果闭环已于 2026-11-10 删除（ADR-0014）；`water_maze_v3` 语义由独立 Agent 的版本化科研 Skills 与确定性函数承担，参见 ADR-0009 至 ADR-0013。trials 目录浏览与 metrics 管线暂留（annotations 页仍消费）。
 - **真实科研库与新数据入口**：现行 LingSight 仍直连本机容器 `healthad-mysql` 的旧 `water_maze`（`lingsight_ro`）。新目标经现有 DBHub 连接 `water_maze_v3`；DBHub 的 `wm_ro` 现对旧库和 v3 都有 SELECT。v3 的表、动物映射及指标条件与旧库不同，不可只改数据库名或直接复用旧 schema。核查事实见 `docs/research/ai-native-platform-local-discovery.md`。凭据仅通过本机环境/运行配置取得，不回显、不入库。
+- **科研管线权威实现在哪**：找冻结球弦朝向、v9 推理等各阶段的生产实现时先查 [docs/agents/research-code-map.md](docs/agents/research-code-map.md)——冻结球弦唯一生产实现在**本机** `~/wm_heading_v9_20261105/`（不是 A100；A100 上只有试点与 v9 推理）。
 - **检查命令**：静态检查 = `cd backend && uv run bash scripts/lint.sh`（mypy strict + ty + ruff，覆盖 `app/` 与 `scripts/`）；完整测试 = `cd backend && bash scripts/test-local.sh`（每次独立临时 MySQL，退出销毁，不触碰 dev 库）。纯计算/转发测试可直接 `uv run pytest <files>`；需要持久化的测试必须显式使用 `TEST_DATABASE_URL` 且库名为 `lingsight_test_*`，缺配置即拒绝，不回退开发库。`env_gated` 执行层测试依赖真实研究库/LLM，门控探活失败自动 skip（CI 只跑结构层）。详见 local-e2e §4。独立脚本/探针要 `import app.*` 时先 `from tests.runtime import configure_application; configure_application()`（合成 settings，不读开发 .env；范例 `scripts/export_frontend_routes.py`）。评审判断型规则见 [CODING_STANDARDS.md](CODING_STANDARDS.md)。前端本机无 bun 时用 `scripts/fe.sh`（build / regen-routes / check|fix <files>，docker 跑仓库锁定的 bun 工具链，文件路径相对 frontend/；别用 `npm run lint`，见 local-e2e §3）。
 - **进度事实**：[docs/progress.md](docs/progress.md)；决策依据在 [docs/adr/](docs/adr/)。
 
@@ -51,6 +52,7 @@
 ## 5. 安全、仓库和文档纪律
 
 - 不提交 API Key、密码、真实客户/科研原始数据、大型模型权重或无授权的第三方源码/ZIP；先审查脚手架 LICENSE、依赖和敏感配置。
+- 主树提交一律**显式文件路径** add（禁 `git add -A`/`-u`/`commit -a`）：本机常有多个会话共用主工作树，并行 WIP 随时在场（2026-11-10 实例：retro 提交时另一会话的营销页 WIP 共存树中）。
 - 不删除未经确认的既有业务代码或历史 Git 记录；结构迁移先核对差异和可恢复路径。
 - README 是项目入口；规格、路线和进度各维护一份，不新增相互冲突的 V2/V3 文档。
 - 不声称模型运行、性能指标、测试通过或部署完成，除非存在实际证据。

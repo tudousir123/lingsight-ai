@@ -52,9 +52,9 @@ export function GuideScene({
         const pause =
           character === "\n"
             ? 500
-            : /[.!?]/.test(character)
+            : /[.!?。！？]/.test(character)
               ? 350
-              : /[,;:]/.test(character)
+              : /[,;:，；：、]/.test(character)
                 ? 250
                 : 0
         timer = setTimeout(typeNext, CHARACTER_DELAY_MS + pause)

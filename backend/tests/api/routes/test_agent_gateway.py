@@ -23,12 +23,18 @@ class AgentGatewayTest(unittest.TestCase):
         self.app.dependency_overrides[get_current_user] = lambda: self.user
         self.calls: list[httpx.Request] = []
         self.response = httpx.Response(200, json=[])
+        self.capabilities = httpx.Response(
+            200,
+            json={"project_scope": "immutable-v1", "project_data_configured": True},
+        )
         self.error: Exception | None = None
 
         def upstream(request: httpx.Request) -> httpx.Response:
             self.calls.append(request)
             if self.error is not None:
                 raise self.error
+            if request.method == "GET" and request.url.path == "/v1/capabilities":
+                return self.capabilities
             return self.response
 
         original_client = httpx.AsyncClient

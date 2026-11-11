@@ -242,6 +242,7 @@ def get_result(
 # Media auth (bearer header or `?token=` session JWT for <video> elements)
 # lives in app.api.deps next to the other platform dependencies.
 
+
 @router.get("/{experiment_id}/trials/{trial_id}/media/{kind}")
 def get_trial_media(
     experiment_id: str,

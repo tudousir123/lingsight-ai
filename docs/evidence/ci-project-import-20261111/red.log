@@ -1,0 +1,36 @@
+
+Running 1 test using 1 worker
+
+(node:597365) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+  1) [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等 ───────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('link', { name: '学习与记忆', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('link', { name: '学习与记忆', exact: true }) with timeout 5000ms
+      - waiting for getByRole('link', { name: '学习与记忆', exact: true })
+
+
+      558 |   await expect(
+      559 |     page.getByRole("link", { name: "学习与记忆", exact: true }),
+    > 560 |   ).toBeVisible()
+          |     ^
+      561 |   expect(state.imports.length).toBe(1)
+      562 |   expect(state.imports[0]).toEqual([
+      563 |     {
+        at /home/x/桌面/lingsight-ai/frontend/tests/agent-workspace.spec.ts:560:5
+
+    Error Context: ../../../Documents/Codex/2026-11-11/wo-de/work/migration-red/agent-workspace-localStorage-旧项目一次性迁移导入且重放幂等-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等 ────────────────

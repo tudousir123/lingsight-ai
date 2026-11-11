@@ -11,7 +11,7 @@ permissions:
 jobs:
   test-backend:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -25,6 +25,12 @@ jobs:
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "latest-known"
+      # Repo-wide lint: the prek gate only checks PR-touched files, so
+      # tree-wide drift (e.g. a ruff format style change) otherwise
+      # accumulates invisibly while per-PR checks stay green (2026-11-10).
+      - name: Lint
+        run: uv run bash scripts/lint.sh
+        working-directory: backend
       - name: Run tests
         run: bash scripts/test-local.sh
         working-directory: backend

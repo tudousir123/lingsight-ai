@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import { SidebarAppearance } from "@/components/Common/Appearance"
 import {
   Dialog,
   DialogContent,
@@ -40,7 +41,12 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { statusLabels } from "@/features/agent/api"
-import { useWorkspaceProjects } from "@/features/agent/projects"
+import {
+  projectErrorText,
+  useCreateProject,
+  useLegacyProjectImport,
+  useWorkspaceProjects,
+} from "@/features/agent/projects"
 import { useTasks } from "@/features/agent/queries"
 import useAuth from "@/hooks/useAuth"
 import { type Item, Main } from "./Main"
@@ -57,6 +63,8 @@ export function AppSidebar() {
   const { user } = useAuth()
   const tasks = useTasks()
   const projects = useWorkspaceProjects()
+  useLegacyProjectImport()
+  const createProject = useCreateProject()
   const [creatingProject, setCreatingProject] = useState(false)
   const [projectName, setProjectName] = useState("")
   const [projectError, setProjectError] = useState("")
@@ -257,7 +265,7 @@ export function AppSidebar() {
                 <Plus size={14} />
               </button>
             </div>
-            {projects.projects.map((project) => (
+            {(projects.data ?? []).map((project) => (
               <Link
                 to="/projects/$projectId"
                 params={{ projectId: project.id }}
@@ -274,9 +282,14 @@ export function AppSidebar() {
             ))}
             {projects.error && (
               <p className="research-history-note" role="alert">
-                无法读取当前浏览器中保存的项目。
+                无法加载项目，请稍后重试。
               </p>
             )}
+            {!projects.error &&
+              !projects.isPending &&
+              !(projects.data ?? []).length && (
+                <p className="research-history-note">你的项目将显示在这里。</p>
+              )}
           </section>
         </div>
       </SidebarContent>
@@ -285,34 +298,29 @@ export function AppSidebar() {
           <CircleDot size={12} />
           让研究与发现相连
         </div>
+        <SidebarMenu>
+          <SidebarAppearance />
+        </SidebarMenu>
         <User user={user} />
       </SidebarFooter>
       <Dialog open={creatingProject} onOpenChange={setCreatingProject}>
         <DialogContent className="project-dialog">
           <DialogTitle>新建项目</DialogTitle>
           <DialogDescription>
-            Group related research tasks. 项目 are saved in this browser for
-            your account.
+            归集相关科研任务与视频。项目保存在你的平台账号中，换设备登录同样可见。
           </DialogDescription>
           <form
             onSubmit={(event) => {
               event.preventDefault()
-              if (!projectName.trim()) return
-              try {
-                projects.save([
-                  ...projects.projects,
-                  {
-                    id: crypto.randomUUID(),
-                    name: projectName.trim(),
-                    taskIds: [],
-                  },
-                ])
-                setCreatingProject(false)
-              } catch (error) {
-                setProjectError(
-                  error instanceof Error ? error.message : "无法创建项目。",
-                )
-              }
+              const name = projectName.trim()
+              if (!name) return
+              createProject.mutate(name, {
+                onSuccess: () => setCreatingProject(false),
+                onError: (error) =>
+                  setProjectError(
+                    projectErrorText(error, "无法创建项目，请重试。"),
+                  ),
+              })
             }}
           >
             <label htmlFor="project-name">项目名称</label>
@@ -332,7 +340,7 @@ export function AppSidebar() {
             <button
               className="project-action"
               type="submit"
-              disabled={!projectName.trim()}
+              disabled={!projectName.trim() || createProject.isPending}
             >
               新建项目
             </button>

@@ -23,6 +23,7 @@ import { Route as LayoutAnnotationsRouteImport } from './routes/_layout/annotati
 import { Route as LayoutInferenceRouteImport } from './routes/_layout/inference'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutExperimentsIndexRouteImport } from './routes/_layout/experiments.index'
+import { Route as LayoutProjectResearchProjectIdRouteImport } from './routes/_layout/project-research.$projectId'
 import { Route as LayoutProjectsProjectIdRouteImport } from './routes/_layout/projects.$projectId'
 import { Route as LayoutTasksTaskIdRouteImport } from './routes/_layout/tasks.$taskId'
 
@@ -95,6 +96,12 @@ const LayoutExperimentsIndexRoute = LayoutExperimentsIndexRouteImport.update({
   path: '/experiments/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutProjectResearchProjectIdRoute =
+  LayoutProjectResearchProjectIdRouteImport.update({
+    id: '/project-research/$projectId',
+    path: '/project-research/$projectId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutProjectsProjectIdRoute = LayoutProjectsProjectIdRouteImport.update({
   id: '/projects/$projectId',
   path: '/projects/$projectId',
@@ -119,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/annotations': typeof LayoutAnnotationsRoute
   '/inference': typeof LayoutInferenceRoute
   '/settings': typeof LayoutSettingsRoute
+  '/project-research/$projectId': typeof LayoutProjectResearchProjectIdRoute
   '/projects/$projectId': typeof LayoutProjectsProjectIdRoute
   '/tasks/$taskId': typeof LayoutTasksTaskIdRoute
   '/experiments/': typeof LayoutExperimentsIndexRoute
@@ -136,6 +144,7 @@ export interface FileRoutesByTo {
   '/inference': typeof LayoutInferenceRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
+  '/project-research/$projectId': typeof LayoutProjectResearchProjectIdRoute
   '/projects/$projectId': typeof LayoutProjectsProjectIdRoute
   '/tasks/$taskId': typeof LayoutTasksTaskIdRoute
   '/experiments': typeof LayoutExperimentsIndexRoute
@@ -155,6 +164,7 @@ export interface FileRoutesById {
   '/_layout/inference': typeof LayoutInferenceRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/project-research/$projectId': typeof LayoutProjectResearchProjectIdRoute
   '/_layout/projects/$projectId': typeof LayoutProjectsProjectIdRoute
   '/_layout/tasks/$taskId': typeof LayoutTasksTaskIdRoute
   '/_layout/experiments/': typeof LayoutExperimentsIndexRoute
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/annotations'
     | '/inference'
     | '/settings'
+    | '/project-research/$projectId'
     | '/projects/$projectId'
     | '/tasks/$taskId'
     | '/experiments/'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/inference'
     | '/settings'
     | '/'
+    | '/project-research/$projectId'
     | '/projects/$projectId'
     | '/tasks/$taskId'
     | '/experiments'
@@ -209,6 +221,7 @@ export interface FileRouteTypes {
     | '/_layout/inference'
     | '/_layout/settings'
     | '/_layout/'
+    | '/_layout/project-research/$projectId'
     | '/_layout/projects/$projectId'
     | '/_layout/tasks/$taskId'
     | '/_layout/experiments/'
@@ -324,6 +337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutExperimentsIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/project-research/$projectId': {
+      id: '/_layout/project-research/$projectId'
+      path: '/project-research/$projectId'
+      fullPath: '/project-research/$projectId'
+      preLoaderRoute: typeof LayoutProjectResearchProjectIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/projects/$projectId': {
       id: '/_layout/projects/$projectId'
       path: '/projects/$projectId'
@@ -348,6 +368,7 @@ interface LayoutRouteChildren {
   LayoutInferenceRoute: typeof LayoutInferenceRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
+  LayoutProjectResearchProjectIdRoute: typeof LayoutProjectResearchProjectIdRoute
   LayoutProjectsProjectIdRoute: typeof LayoutProjectsProjectIdRoute
   LayoutTasksTaskIdRoute: typeof LayoutTasksTaskIdRoute
   LayoutExperimentsIndexRoute: typeof LayoutExperimentsIndexRoute
@@ -360,6 +381,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutInferenceRoute: LayoutInferenceRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
+  LayoutProjectResearchProjectIdRoute: LayoutProjectResearchProjectIdRoute,
   LayoutProjectsProjectIdRoute: LayoutProjectsProjectIdRoute,
   LayoutTasksTaskIdRoute: LayoutTasksTaskIdRoute,
   LayoutExperimentsIndexRoute: LayoutExperimentsIndexRoute,

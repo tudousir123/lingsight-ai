@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-11",
+  "backend_passed": 236,
+  "backend_research_live_skipped": 6,
+  "browser_passed": 102,
+  "browser_exit_code": 0,
+  "browser_fail_on_flaky_tests": true,
+  "agent_docker_passed": 27,
+  "inference_passed": 21,
+  "deployed": false,
+  "remote_tracker_updated": false
+}

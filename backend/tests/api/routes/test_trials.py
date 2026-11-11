@@ -68,7 +68,8 @@ class FixtureCatalog:
 
     def list_experiments(self, allowed_ids: set[str] | None) -> list[dict]:
         return [
-            item for item in self.experiments
+            item
+            for item in self.experiments
             if allowed_ids is None or item["id"] in allowed_ids
         ]
 
@@ -84,7 +85,8 @@ class FixtureCatalog:
         limit: int,
     ) -> tuple[list[dict], int]:
         rows = [
-            item for item in self.trials
+            item
+            for item in self.trials
             if item["experiment_id"] == experiment_id
             and (group_name is None or item["group_name"] == group_name)
             and (mouse_id is None or item["mouse_id"] == mouse_id)
@@ -96,7 +98,8 @@ class FixtureCatalog:
     def get_trial(self, experiment_id: str, trial_id: str) -> dict | None:
         return next(
             (
-                item for item in self.trials
+                item
+                for item in self.trials
                 if item["experiment_id"] == experiment_id and item["id"] == trial_id
             ),
             None,
@@ -127,12 +130,18 @@ def test_superuser_can_filter_trials_and_open_selected_trial(
     )
     assert experiments.status_code == 200
     assert [row["id"] for row in experiments.json()["data"]] == [
-        "fixture-e1", "fixture-e2"
+        "fixture-e1",
+        "fixture-e2",
     ]
 
     response = client.get(
         f"{settings.API_V1_STR}/experiments/fixture-e1/trials",
-        params={"group_name": "A2", "mouse_id": "2", "phase": "training_day", "date_dir": "0804"},
+        params={
+            "group_name": "A2",
+            "mouse_id": "2",
+            "phase": "training_day",
+            "date_dir": "0804",
+        },
         headers=superuser_token_headers,
     )
     assert response.status_code == 200

@@ -24,12 +24,7 @@ import { GuideScene } from "./GuideScene"
 import { ResearchIllustration } from "./ResearchIllustration"
 import "./research.css"
 
-const stages = [
-  "Meet your assistant",
-  "Explore behavior",
-  "Research outputs",
-  "Start your research",
-]
+const stages = ["认识你的助手", "探索行为", "研究成果", "开始你的研究"]
 
 const goalIcons = {
   trajectory: ScanLine,
@@ -160,19 +155,19 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="research-onboarding" lang="en">
+    <div className="research-onboarding" lang="zh">
       <header className="research-onboarding-header">
         <Link to="/welcome" className="research-wordmark">
           LingSight <span>Science</span>
         </Link>
         <Link to="/" onClick={markOnboardingSeen} className="research-skip">
-          Explore the workspace <ArrowRight size={14} aria-hidden="true" />
+          直接进入工作台 <ArrowRight size={14} aria-hidden="true" />
         </Link>
       </header>
       <main
         ref={scroller}
         className="research-guide-main"
-        aria-label="Research assistant introduction"
+        aria-label="科研助手介绍"
       >
         <section
           className="research-guide-scene"
@@ -182,16 +177,16 @@ export default function Onboarding() {
           <GuideScene
             active={step === 0}
             first
-            title={"Hi,\nI’m your research assistant."}
+            title={"你好，\n我是你的科研助手。"}
           >
             <p className="research-scene-subtitle">
-              Ready to explore the patterns behind animal behavior?
+              准备好探索动物行为背后的模式了吗？
             </p>
             <div className="research-welcome-mark" aria-hidden="true">
               <ScanLine size={38} strokeWidth={1} />
             </div>
             <p className="research-scene-caption">
-              Starting with the water maze data already connected
+              已接入水迷宫数据，可直接开始
             </p>
           </GuideScene>
         </section>
@@ -200,21 +195,20 @@ export default function Onboarding() {
           inert={step !== 1}
           aria-label={stages[1]}
         >
-          <GuideScene active={step === 1} title="See how behavior changes.">
+          <GuideScene active={step === 1} title="看见行为的改变。">
             <p className="research-scene-subtitle">
-              Review trajectories and headings. Compare training days within the
-              same batch.
+              回顾轨迹与朝向，比较同批次内的训练日变化。
             </p>
             <div className="research-behavior-preview">
               <ResearchIllustration />
               <div className="research-behavior-labels">
                 <span>
-                  <ScanLine size={17} /> Trajectories & headings
+                  <ScanLine size={17} /> 轨迹与朝向
                 </span>
                 <span>
-                  <ChartNoAxesCombined size={17} /> Changes across training days
+                  <ChartNoAxesCombined size={17} /> 训练日间的变化
                 </span>
-                <small>Illustrative behavior analysis</small>
+                <small>行为分析示意图</small>
               </div>
             </div>
           </GuideScene>
@@ -226,31 +220,30 @@ export default function Onboarding() {
         >
           <GuideScene
             active={step === 2}
-            title="Your research, ready to build on."
+            title="你的研究，可以在此基础上继续。"
           >
             <p className="research-scene-subtitle">
-              Figures, data tables, and editable reports stay together in one
-              task.
+              图表、数据表与可编辑的报告保存在同一个任务里。
             </p>
             <div className="research-deliverables">
               <div>
                 <ChartNoAxesCombined size={34} strokeWidth={1} />
-                <strong>Analysis figures</strong>
-                <span>See behavioral changes</span>
+                <strong>分析图表</strong>
+                <span>看见行为变化</span>
               </div>
               <div>
                 <Table2 size={34} strokeWidth={1} />
-                <strong>Result tables</strong>
-                <span>Keep the calculation trail</span>
+                <strong>结果数据表</strong>
+                <span>保留计算过程</span>
               </div>
               <div>
                 <FileText size={34} strokeWidth={1} />
-                <strong>Editable reports</strong>
-                <span>Refine your findings</span>
+                <strong>可编辑报告</strong>
+                <span>打磨你的结论</span>
               </div>
             </div>
             <p className="research-scene-caption">
-              Illustrative outputs · Results depend on the available data
+              示意产出 · 结果取决于可用数据
             </p>
           </GuideScene>
         </section>
@@ -259,17 +252,11 @@ export default function Onboarding() {
           inert={step !== 3}
           aria-label={stages[3]}
         >
-          <GuideScene
-            active={step === 3}
-            title="What would you like to explore?"
-          >
+          <GuideScene active={step === 3} title="你想探索什么？">
             <p className="research-scene-subtitle">
-              Choose a starting point, or ask your own question.
+              选一个起点，或直接提出你的问题。
             </p>
-            <fieldset
-              className="research-starters"
-              aria-label="Example questions"
-            >
+            <fieldset className="research-starters" aria-label="示例问题">
               {researchGoals.map((item) => {
                 const Icon = goalIcons[item.id]
                 return (
@@ -293,27 +280,27 @@ export default function Onboarding() {
             </fieldset>
             <div className="research-composer">
               <label className="sr-only" htmlFor="research-question">
-                Research question
+                研究问题
               </label>
               <textarea
                 id="research-question"
                 value={question}
                 maxLength={8000}
                 rows={3}
-                placeholder="For example: How does this batch of mice perform across training days?"
+                placeholder="例如：这批小鼠在训练日间的表现如何？"
                 onChange={(event) => setQuestion(event.target.value)}
                 aria-describedby="research-handoff-note"
               />
               <div className="research-composer-footer">
                 <span id="research-handoff-note">
-                  Edit in the workspace. Analysis starts only when you send.
+                  可在工作台继续修改；发送后才开始分析。
                 </span>
                 <Button
                   className="research-primary"
                   disabled={!question.trim()}
                   onClick={enterWorkspace}
                 >
-                  Enter workspace <ArrowRight size={15} aria-hidden="true" />
+                  进入工作台 <ArrowRight size={15} aria-hidden="true" />
                 </Button>
               </div>
             </div>
@@ -323,29 +310,26 @@ export default function Onboarding() {
                 open={scope.trim() ? true : undefined}
               >
                 <summary>
-                  Add data scope <span>Optional</span>
+                  补充数据范围 <span>可选</span>
                 </summary>
                 <label className="sr-only" htmlFor="research-scope">
-                  Data scope
+                  数据范围
                 </label>
                 <textarea
                   id="research-scope"
                   className="research-textarea"
                   rows={2}
                   maxLength={400}
-                  placeholder="Batch, training days, or video names"
+                  placeholder="批次、训练日或视频名称"
                   value={scope}
                   onChange={(event) => setScope(event.target.value)}
                 />
               </details>
-              <span className="research-data-note">
-                Using the water maze data already connected
-              </span>
+              <span className="research-data-note">使用已接入的水迷宫数据</span>
             </div>
             {storageError && (
               <div role="alert" className="research-error">
-                This browser could not save your question. Your input is still
-                here. Download it to bring into the workspace.
+                浏览器未能保存你的问题。输入仍在这里，可下载后带入工作台。
                 <button
                   type="button"
                   onClick={() =>
@@ -355,7 +339,7 @@ export default function Onboarding() {
                     )
                   }
                 >
-                  Download research brief
+                  下载研究简报
                 </button>
               </div>
             )}
@@ -372,12 +356,12 @@ export default function Onboarding() {
           ) : (
             <ArrowDown size={14} aria-hidden="true" />
           )}
-          {step === 3 ? "Scroll up to revisit" : "Scroll down to continue"}
+          {step === 3 ? "上滑回顾" : "下滑继续"}
         </span>
         <div className="research-step-controls">
           <button
             type="button"
-            aria-label="Previous step"
+            aria-label="上一步"
             disabled={step === 0}
             onClick={() => goToStep(step - 1)}
           >
@@ -385,7 +369,7 @@ export default function Onboarding() {
           </button>
           <button
             type="button"
-            aria-label="Next step"
+            aria-label="下一步"
             disabled={step === stages.length - 1}
             onClick={() => goToStep(step + 1)}
           >
