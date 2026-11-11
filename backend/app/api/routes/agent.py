@@ -3,6 +3,7 @@
 import json
 import uuid
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from app.api.deps import CurrentUser, SessionDep, ensure_workspace_user, owned_project
@@ -51,6 +52,7 @@ OPERATIONS = OperationTable(
 # 128_000 covers task/chat JSON payloads; 60 s covers JSON responses (this
 # service streams events, not media).
 POLICY = GatewayPolicy(body_cap_bytes=128_000, read_timeout_s=60, sse_cursor=True)
+CAPABILITY_POLICY = GatewayPolicy(body_cap_bytes=0, read_timeout_s=5)
 
 UNKNOWN_OPERATION = "Unknown Agent operation"
 
@@ -64,6 +66,35 @@ def _service() -> UpstreamService:
         upstream_error_detail="科研 Agent 服务暂时不可用，请联系管理员",
         redirect_detail="Unexpected Agent redirect",
     )
+
+
+async def ensure_project_support(request: Request, service: UpstreamService) -> None:
+    """Refuse old Agent versions before they can create an unscoped task."""
+    unavailable = "科研 Agent 项目分析尚未就绪，请先更新服务并配置项目数据源"
+    probe = Request({**request.scope, "method": "GET", "query_string": b""})
+    try:
+        response = await forward(
+            probe, "capabilities", service, CAPABILITY_POLICY, payload=b""
+        )
+        try:
+            if response.status_code != 200:
+                raise HTTPException(503, unavailable)
+            payload = bytearray()
+            async for chunk in response.body_iterator:
+                payload.extend(chunk.encode() if isinstance(chunk, str) else chunk)
+                if len(payload) > 4096:
+                    raise HTTPException(503, unavailable)
+            capabilities = json.loads(payload)
+            if not isinstance(capabilities, dict) or (
+                capabilities.get("project_scope") != "immutable-v1"
+                or capabilities.get("project_data_configured") is not True
+            ):
+                raise HTTPException(503, unavailable)
+        finally:
+            if response.background is not None:
+                await response.background()
+    except HTTPException, ValueError, UnicodeDecodeError, httpx.HTTPError:
+        raise HTTPException(503, unavailable) from None
 
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PATCH"])
@@ -86,4 +117,5 @@ async def agent_gateway(
             except ValueError, TypeError, AttributeError:
                 raise HTTPException(422, "Invalid project_id") from None
             owned_project(session, current_user, project_id)
+            await ensure_project_support(request, service)
     return await forward(request, path, service, POLICY, payload=payload)

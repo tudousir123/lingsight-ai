@@ -254,10 +254,30 @@ export function AgentWorkspace({
       if (taskId)
         await agentJson(agentRoutes.tasksByTaskIdMessages(taskId), { text })
       else {
-        const created = await agentJson<{ task: Task }>(agentRoutes.tasks(), {
-          goal: text,
-          ...(projectId ? { project_id: projectId } : {}),
-        })
+        const created = await agentJson<{ task: Task; run?: Run }>(
+          agentRoutes.tasks(),
+          {
+            goal: text,
+            ...(projectId ? { project_id: projectId } : {}),
+          },
+        )
+        if (projectId && created.task.project_id !== projectId) {
+          let stopped = false
+          if (created.run) {
+            try {
+              await agentJson(agentRoutes.runsByRunIdCancel(created.run.id), {})
+              stopped = true
+            } catch {
+              // Keep the original question and make the uncertain run visible.
+            }
+          }
+          refresh()
+          throw new Error(
+            stopped
+              ? "Agent 返回的项目范围不一致，任务已停止。请检查服务配置后重试。"
+              : "Agent 返回的项目范围不一致，未能确认任务已停止。请先在任务列表检查，避免重复发送。",
+          )
+        }
         if (projectId) {
           try {
             await addMember.mutateAsync({

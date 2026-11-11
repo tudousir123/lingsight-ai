@@ -110,3 +110,46 @@ test("unavailable project retains the question without creating an unscoped task
   ).toHaveValue("保留这个问题")
   expect(creates).toBe(0)
 })
+
+test("unexpected upstream scope stops the new run without grouping or resending", async ({
+  page,
+}) => {
+  const posts: string[] = []
+  let groups = 0
+  await page.route("**/api/v1/projects/*/members", (route) => {
+    groups++
+    return route.fulfill({ status: 204 })
+  })
+  await page.route("**/api/v1/agent/**", (route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    if (request.method() !== "POST") return route.fulfill({ json: [] })
+    posts.push(path)
+    return route.fulfill({
+      status: path.endsWith("/cancel") ? 200 : 202,
+      json: path.endsWith("/cancel")
+        ? { status: "cancelled" }
+        : {
+            task: { id: taskId, project_id: null, title: "wrong scope" },
+            run: { id: runId },
+          },
+    })
+  })
+  await page.goto(`/project-research/${projectId}`)
+  await page
+    .getByRole("textbox", { name: "研究问题", exact: true })
+    .fill("只分析本项目")
+  await page.getByRole("button", { name: "发送研究问题", exact: true }).click()
+  await expect(page.getByRole("alert")).toContainText(
+    "项目范围不一致，任务已停止",
+  )
+  expect(posts).toEqual([
+    "/api/v1/agent/tasks",
+    `/api/v1/agent/runs/${runId}/cancel`,
+  ])
+  expect(groups).toBe(0)
+  await expect(page).toHaveURL(`/project-research/${projectId}`)
+  await expect(
+    page.getByRole("textbox", { name: "研究问题", exact: true }),
+  ).toHaveValue("只分析本项目")
+})
