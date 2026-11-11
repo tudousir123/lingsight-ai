@@ -310,7 +310,8 @@ test("typing leaves time to read and reduced motion reveals the full text immedi
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" })
-  await page.clock.install()
+  await page.clock.install({ time: new Date("2026-11-11T00:00:00Z") })
+  await page.clock.pauseAt(new Date("2026-11-11T00:00:01Z"))
   await page.goto("/onboarding")
   const scene = page.locator(".research-guide-scene").first()
   const ink = scene.locator(".research-typewriter-ink")
