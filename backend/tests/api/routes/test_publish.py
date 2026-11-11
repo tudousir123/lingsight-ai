@@ -436,6 +436,22 @@ def test_publish_writes_v3_shaped_summary_and_frame_rows(
     assert frames[2].is_proposal is True
 
 
+def test_publish_preserves_v9_mask_pixel_centroid(
+    client: TestClient, workspace_headers: dict[str, str], db: Session
+) -> None:
+    project_id = _create_project(client, workspace_headers)
+    task_id, task = fresh_task()
+    artifacts = default_artifacts()
+    artifacts["tracking.json"]["frames"][0]["center"] = [100.12, 201.34]
+    expected = [101.123456789, 202.987654321]
+    artifacts["keypoints.json"]["frames"][0]["center"] = expected
+    with fake_inference(FakeUpstream(task, artifacts)):
+        response = _publish(client, workspace_headers, project_id, task_id)
+    assert response.status_code == 201, response.text
+    frame = _frame_rows(db, task_id)[0]
+    assert [frame.centroid_x, frame.centroid_y] == expected
+
+
 def test_publish_replays_identical_version_without_rewriting(
     client: TestClient, workspace_headers: dict[str, str], db: Session
 ) -> None:
@@ -508,6 +524,10 @@ def test_concurrent_publication_replays_or_refuses_the_winning_version(
         ("tracking.json", ("frames",), []),
         ("tracking.json", ("frames", 5, "frame"), 6),
         ("keypoints.json", ("frames", 0, "frame"), False),
+        ("keypoints.json", ("frames", 0, "center"), None),
+        ("keypoints.json", ("frames", 0, "center"), [1]),
+        ("keypoints.json", ("frames", 0, "center"), [1, float("nan")]),
+        ("keypoints.json", ("frames", 0, "center"), [True, 2]),
         ("keypoints.json", ("frames", 5, "heading_status"), "unknown"),
         ("keypoints.json", ("frames", 0, "heading_angle_deg"), -1),
         ("keypoints.json", ("frames", 0, "heading_angle_deg"), float("nan")),
@@ -697,7 +717,7 @@ def test_publish_rolls_back_whole_version_on_readback_failure(
     project_id = _create_project(client, workspace_headers)
     task_id, task = fresh_task()
 
-    def boom(session: Session, prepared: publishing.PreparedPublish) -> None:
+    def boom(_session: Session, _prepared: publishing.PreparedPublish) -> None:
         raise publishing.PublishRejected(
             status_code=500, detail=publishing.READBACK_DETAIL
         )
@@ -785,7 +805,7 @@ def test_readback_detects_digest_mismatch(db: Session) -> None:
 
 
 def test_project_results_listing_and_frame_rows(
-    client: TestClient, workspace_headers: dict[str, str], db: Session
+    client: TestClient, workspace_headers: dict[str, str]
 ) -> None:
     project_id = _create_project(client, workspace_headers)
     other_project_id = _create_project(client, workspace_headers)

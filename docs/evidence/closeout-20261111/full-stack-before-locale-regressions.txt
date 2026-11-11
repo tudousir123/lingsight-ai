@@ -1,6 +1,6 @@
 Running isolated stack: lingsight-e2e-lingsight-e2e-cguqd1uw
- Image lingsight-e2e-lingsight-e2e-cguqd1uw-backend:local Building 
- Image lingsight-e2e-lingsight-e2e-cguqd1uw-playwright:local Building 
+ Image lingsight-e2e-lingsight-e2e-cguqd1uw-backend:local Building
+ Image lingsight-e2e-lingsight-e2e-cguqd1uw-playwright:local Building
 #1 [internal] load local bake definitions
 #1 reading from stdin 1.51kB done
 #1 DONE 0.0s
@@ -214,7 +214,7 @@ Running isolated stack: lingsight-e2e-lingsight-e2e-cguqd1uw
 #33 12.60 ../backend/app/frontend/assets/client-D2GANpgd.js                             75.10 kB │ gzip: 25.97 kB
 #33 12.60 ../backend/app/frontend/assets/schemas-D3tkzAe4.js                            80.24 kB │ gzip: 22.98 kB
 #33 12.60 ../backend/app/frontend/assets/index-DSTBTP8z.js                             298.26 kB │ gzip: 96.26 kB
-#33 12.60 
+#33 12.60
 #33 12.62 ✓ built in 1.17s
 #33 DONE 13.2s
 
@@ -269,24 +269,24 @@ Running isolated stack: lingsight-e2e-lingsight-e2e-cguqd1uw
 
 #45 [playwright] resolving provenance for metadata file
 #45 DONE 0.0s
- Image lingsight-e2e-lingsight-e2e-cguqd1uw-backend:local Built 
- Image lingsight-e2e-lingsight-e2e-cguqd1uw-playwright:local Built 
- Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Creating 
- Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Creating 
- Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Creating 
- Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Creating 
- Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Created 
- Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Created 
- Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Created 
- Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Created 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Creating 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Created 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Starting 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Started 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Waiting 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Healthy 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-run-3152d76a6c27 Creating 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-run-3152d76a6c27 Created 
+ Image lingsight-e2e-lingsight-e2e-cguqd1uw-backend:local Built
+ Image lingsight-e2e-lingsight-e2e-cguqd1uw-playwright:local Built
+ Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Creating
+ Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Creating
+ Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Creating
+ Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Creating
+ Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Created
+ Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Created
+ Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Created
+ Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Created
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Creating
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Created
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Starting
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Started
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-run-3152d76a6c27 Creating
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-run-3152d76a6c27 Created
 + alembic upgrade head
 INFO  [alembic.runtime.migration] Context impl MySQLImpl.
 INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
@@ -299,32 +299,32 @@ INFO  [alembic.runtime.migration] Running upgrade a1b2c3d4e5f6 -> b7d8e9f0a1c2, 
 + python app/initial_data.py
 INFO:__main__:Creating initial data
 INFO:__main__:Initial data created
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Running 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Creating 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Creating 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Created 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Created 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Waiting 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Starting 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Started 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Healthy 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Starting 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Started 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Waiting 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Waiting 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Waiting 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Healthy 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Healthy 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Healthy 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Running 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Running 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Running 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Waiting 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Healthy 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Waiting 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Healthy 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-playwright-run-b7fe51988505 Creating 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-playwright-run-b7fe51988505 Created 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Running
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Creating
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Creating
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Created
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Created
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Starting
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Started
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Starting
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Started
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Running
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Running
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Running
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-playwright-run-b7fe51988505 Creating
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-playwright-run-b7fe51988505 Created
 ◇ injected env (0) from ../.env
 
 Running 102 tests using 1 worker
@@ -335,7 +335,7 @@ Running 102 tests using 1 worker
 ············◇ injected env (0) from ../.env
 ··············
 
-  1) [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile 
+  1) [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile
 
     Error: expect(locator).toHaveText(expected) failed
 
@@ -440,7 +440,7 @@ Running 102 tests using 1 worker
 
     ────────────────────────────────────────────────────────────────────────────────────────────────
 
-  2) [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately 
+  2) [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately
 
     Error: expect(locator).toHaveAttribute(expected) failed
 
@@ -546,23 +546,23 @@ Running 102 tests using 1 worker
     ────────────────────────────────────────────────────────────────────────────────────────────────
 
   2 failed
-    [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile 
-    [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately 
+    [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile
+    [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately
   100 passed (3.0m)
 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Stopping 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Stopping 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Stopped 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Removing 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Removed 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Stopped 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Removing 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Removed 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Stopping 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Stopped 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Removing 
- Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Removed 
- Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Removing 
- Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Removing 
- Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Removed 
- Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Removed 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Stopping
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Stopping
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Stopped
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Removing
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Removed
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Stopped
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Removing
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Removed
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Stopping
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Stopped
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Removing
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Removed
+ Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Removing
+ Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Removing
+ Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Removed
+ Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Removed

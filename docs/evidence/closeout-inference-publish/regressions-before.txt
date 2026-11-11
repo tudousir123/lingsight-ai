@@ -34,11 +34,11 @@ db = <sqlmodel.orm.session.Session object at 0x70799bc59550>
         task_id, task = fresh_task()
         ready = Barrier(2, timeout=15)
         writer = publishing._write_whole_version
-    
+
         def simultaneous_write(*args: Any, **kwargs: Any) -> PublishedResult:
             ready.wait()
             return writer(*args, **kwargs)
-    
+
         with (
             fake_inference(FakeUpstream(task, default_artifacts())),
             patch.object(publishing, "_write_whole_version", simultaneous_write),
@@ -54,7 +54,7 @@ db = <sqlmodel.orm.session.Session object at 0x70799bc59550>
         ]
 E       AssertionError: ['{"task_id":"805b8679-cedb-4331-887e-00a582349b36","project_id":"0bed5b2b-0c59-40c6-a145-7ea70c579e1c","video_id":"da...7b7244c676","review_note":"看过叠加视频","published_at":"2026-11-11T14:01:24Z","replayed":false}', '{"detail":"发布写入失败，已回滚"}']
 E       assert [201, 500] == [200, 201]
-E         
+E
 E         At index 0 diff: 201 != 200
 E         Use -v to get more diff
 

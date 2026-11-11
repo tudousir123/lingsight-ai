@@ -8,7 +8,7 @@ Running 19 tests using 1 worker
 [1/19] [chromium] › tests/landing-navigation.spec.ts:5:1 › refreshing the model section returns to the homepage hero
 [2/19] [chromium] › tests/landing-navigation.spec.ts:26:1 › refreshing after manual scrolling returns to the homepage hero
 [3/19] [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile
-  1) [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile 
+  1) [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile
 
     Error: expect(locator).toHaveText(expected) failed
 
@@ -54,7 +54,7 @@ Running 19 tests using 1 worker
 [15/19] [chromium] › tests/onboarding.spec.ts:247:1 › the mouse wheel advances one scene at a time and can go back
 [16/19] [chromium] › tests/onboarding.spec.ts:271:1 › every introduction scene is Chinese and fits a narrow viewport
 [17/19] [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately
-  2) [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately 
+  2) [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately
 
     Error: expect(locator).toBeHidden() failed
 
@@ -89,6 +89,6 @@ Running 19 tests using 1 worker
 [18/19] [chromium] › tests/onboarding.spec.ts:329:3 › characters fade in without shifting while typing at 1440px
 [19/19] [chromium] › tests/onboarding.spec.ts:329:3 › characters fade in without shifting while typing at 390px
   2 failed
-    [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile 
-    [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately 
+    [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile
+    [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately
   17 passed (49.1s)

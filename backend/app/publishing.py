@@ -394,10 +394,13 @@ def _prepare(
         _require(rle is not None, f"第 {index} 帧的 mask RLE 不合法")
         assert rle is not None
         counts, width, height = rle
-        center = _point(tracking_row.get("center"))
-        kp_center = _point(row.get("center"))
-        centroid_x = center[0] if center[0] is not None else kp_center[0]
-        centroid_y = center[1] if center[1] is not None else kp_center[1]
+        # v9 stores the mask-pixel mean used for its crop and frozen heading.
+        # Tracking's rounded contour-moments center is a different quantity.
+        centroid_x, centroid_y = _point(row.get("center"))
+        _require(
+            centroid_x is not None and centroid_y is not None,
+            f"第 {index} 帧缺少有效的 v9 mask 像素质心",
+        )
         head = _point(row.get("head"))
         tail = _point(row.get("tail"))
         area = _finite(tracking_row.get("contour_area"))

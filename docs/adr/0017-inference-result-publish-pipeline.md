@@ -67,3 +67,5 @@ status: accepted
   任务（推理服务任务本身不可重跑覆写产物，vision 阶段有视频哈希守卫）。
 - `published_frame` 尚无 DBHub 只读通道与 Agent 消费（#44 范围）；v3 六表保持
   零写入（#40 用户故事 15）不受本链路影响。
+
+2026-11-11 复核补充：发布行的 centroid_x/y 原样使用 keypoints.json 中 v9 的 mask 像素质心；缺失或非有限值拒绝发布。tracking.json 的 center 来自轮廓矩且已舍入，不作为替代；contour_area 仍直接保留追踪产物值。

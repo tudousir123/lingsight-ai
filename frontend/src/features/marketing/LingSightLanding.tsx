@@ -4,10 +4,8 @@ import {
   Check,
   ChevronDown,
   CircleDot,
-  Crosshair,
   Database,
   FileText,
-  FileVideo,
   FolderOpen,
   MessageSquare,
   MoreHorizontal,
@@ -16,6 +14,7 @@ import {
   ScanLine,
   Search,
 } from "lucide-react"
+import type { CSSProperties } from "react"
 import { flagshipVisionModel } from "@/features/research/vision-model"
 import acquisitionHeatmaps from "./assets/literature/02-acquisition-heatmaps.webp"
 import learningCurves from "./assets/literature/06-learning-curves-5xfad.webp"
@@ -23,6 +22,11 @@ import quadrantResults from "./assets/literature/07-probe-quadrant-results.webp"
 import searchStrategies from "./assets/literature/08-strategy-distribution-5xfad.webp"
 import { InstitutionMarquee } from "./InstitutionMarquee"
 import { InView } from "./InView"
+import {
+  type LandingLang,
+  LandingLangProvider,
+  useLandingCopy,
+} from "./landing-copy"
 import { RealResearchPreview } from "./RealResearchPreview"
 
 import "./landing.css"
@@ -30,6 +34,7 @@ import "./research-window.css"
 import "./landing-motion.css"
 import "./ethos.css"
 import "./research-showcase.css"
+import "./assistant.css"
 
 const Link = "a" as const
 
@@ -60,21 +65,30 @@ function LiteratureFigure({
 }
 
 function Header() {
+  const { c, setLang, lang } = useLandingCopy()
   return (
     <header className="marketing-header">
       <Link
         className="site-wordmark"
         href="/welcome"
-        aria-label="LingSight Science home"
+        aria-label={c.header.home}
       >
         <span>LingSight</span> <span className="wordmark-light">Science</span>
       </Link>
-      <nav className="header-actions" aria-label="Main navigation">
+      <nav className="header-actions" aria-label={c.header.nav}>
+        <button
+          type="button"
+          className="pill pill-dark lang-toggle"
+          onClick={() => setLang(lang === "en" ? "zh" : "en")}
+          aria-label={c.header.switchAria}
+        >
+          {c.header.switchTo}
+        </button>
         <Link className="pill pill-dark" href="/login">
-          Sign in
+          {c.header.signIn}
         </Link>
         <Link className="pill pill-white" href="/onboarding">
-          Get started
+          {c.header.getStarted}
         </Link>
       </nav>
     </header>
@@ -82,43 +96,49 @@ function Header() {
 }
 
 function FlagshipModel() {
+  const { c } = useLandingCopy()
   return (
     <section
       className="section-shell intro-features ethos-section"
       id="ethos"
       aria-labelledby="ethos-title"
     >
-      <div className="ethos-intro">
-        <div>
-          <div className="ethos-identity">
-            <ScanLine
-              className="ethos-symbol"
-              size={24}
-              strokeWidth={1.25}
-              aria-hidden="true"
-            />
-            <h2 id="ethos-title">{flagshipVisionModel.name}</h2>
-            <span className="ethos-label mono">FLAGSHIP VISION MODEL</span>
+      <InView className="landing-reveal">
+        <div className="ethos-intro">
+          <div>
+            <div className="ethos-identity">
+              <ScanLine
+                className="ethos-symbol"
+                size={24}
+                strokeWidth={1.25}
+                aria-hidden="true"
+              />
+              <h2 id="ethos-title">{flagshipVisionModel.name}</h2>
+              <span className="ethos-label mono">{c.ethos.label}</span>
+            </div>
+            <p className="ethos-tagline">{c.ethos.tagline}</p>
           </div>
-          <p className="ethos-tagline">Make every frame count.</p>
+          <div className="ethos-training">
+            <p>
+              {c.ethos.trainedPrefix}{" "}
+              <strong>
+                {flagshipVisionModel.trainingImageCount.toLocaleString("en-US")}
+              </strong>{" "}
+              {c.ethos.trainedSuffix}
+            </p>
+            <span>{c.ethos.builtFor}</span>
+          </div>
         </div>
-        <div className="ethos-training">
-          <p>
-            Trained on{" "}
-            <strong>
-              {flagshipVisionModel.trainingImageCount.toLocaleString("en-US")}
-            </strong>
-            <br />
-            human-annotated images.
-          </p>
-          <span>Built for animal behavior research.</span>
-        </div>
-      </div>
-      <RealResearchPreview />
+      </InView>
+      <InView className="landing-reveal">
+        <RealResearchPreview />
+      </InView>
     </section>
   )
 }
 
+// The product window mock mirrors the real (English) workspace UI and is
+// wrapped aria-hidden in the hero, so it stays untranslated.
 function ResearchWorkspacePreview() {
   return (
     <div className="research-window">
@@ -306,53 +326,41 @@ function ResearchWorkspacePreview() {
   )
 }
 
-const researchFigures = [
-  {
-    title: "Spatial occupancy",
-    src: acquisitionHeatmaps,
-    alt: "Research example: spatial occupancy heatmaps across training days and the probe trial",
-    width: 1512,
-    height: 687,
-  },
-  {
-    title: "Search strategies",
-    src: searchStrategies,
-    alt: "Research example: search strategy distributions across training and probe trials",
-    width: 1530,
-    height: 1170,
-  },
-  {
-    title: "Learning curves",
-    src: learningCurves,
-    alt: "Research example: escape latency and swimming speed across training days for three age groups",
-    width: 1230,
-    height: 1407,
-  },
-  {
-    title: "Probe performance",
-    src: quadrantResults,
-    alt: "Research example: quadrant occupancy and swimming speed in probe trials for three age groups",
-    width: 1530,
-    height: 1119,
-  },
+const figureAssets = [
+  acquisitionHeatmaps,
+  searchStrategies,
+  learningCurves,
+  quadrantResults,
+]
+const figureSizes: Array<[number, number]> = [
+  [1512, 687],
+  [1530, 1170],
+  [1230, 1407],
+  [1530, 1119],
 ]
 
 function ResearchShowcase() {
+  const { c } = useLandingCopy()
   return (
     <section
       id="capabilities"
       className="section-shell research-showcase"
       aria-labelledby="research-showcase-title"
     >
-      <h2 id="research-showcase-title">From movement to meaning.</h2>
+      <h2 id="research-showcase-title">{c.showcase.heading}</h2>
       <div className="research-figures-grid">
-        {researchFigures.map(({ title, ...figure }) => (
-          <InView key={title} className="research-figure-card">
+        {c.showcase.figures.map((figure, index) => (
+          <InView key={figure.title} className="research-figure-card">
             <figure>
               <figcaption>
-                <h3>{title}</h3>
+                <h3>{figure.title}</h3>
               </figcaption>
-              <LiteratureFigure {...figure} />
+              <LiteratureFigure
+                src={figureAssets[index]}
+                alt={figure.alt}
+                width={figureSizes[index][0]}
+                height={figureSizes[index][1]}
+              />
             </figure>
           </InView>
         ))}
@@ -361,72 +369,229 @@ function ResearchShowcase() {
   )
 }
 
-const workflowSteps = [
-  {
-    title: "Prepare",
-    description: "Bring videos, annotations, and experiment records together.",
-    Icon: FileVideo,
-  },
-  {
-    title: "Analyze",
-    description: "Explore movement, heading, and behavioral patterns.",
-    Icon: ChartNoAxesCombined,
-  },
-  {
-    title: "Review",
-    description: "Keep figures, data, and notes connected to their sources.",
-    Icon: Crosshair,
-  },
-]
-
 function ResearchWorkflow() {
+  const { c } = useLandingCopy()
   return (
     <section
       id="workflow"
       className="section-shell research-workflow"
       aria-labelledby="research-workflow-title"
     >
-      <h2 id="research-workflow-title">One connected research workflow.</h2>
-      <div className="research-workflow-steps">
-        {workflowSteps.map(({ title, description, Icon }) => (
-          <InView className="research-workflow-step" key={title}>
-            <Icon size={24} strokeWidth={1.25} aria-hidden="true" />
-            <h3>{title}</h3>
-            <p>{description}</p>
+      <h2 id="research-workflow-title">{c.workflow.heading}</h2>
+      <AgentTimeline />
+      <InView className="landing-reveal">
+        <div id="deliverables" className="research-materials">
+          <h3>{c.materials.heading}</h3>
+          <ul aria-label={c.materials.aria}>
+            {c.materials.formats.map((format) => (
+              <li key={format}>{format}</li>
+            ))}
+          </ul>
+        </div>
+      </InView>
+    </section>
+  )
+}
+
+/** Staggered hero rise: words in English, single characters in Chinese. */
+function HeroWords({ text, lang }: { text: string; lang: LandingLang }) {
+  const units = lang === "zh" ? Array.from(text) : text.split(" ")
+  const step = lang === "zh" ? 0.045 : 0.06
+  return (
+    <span aria-hidden="true">
+      {units.map((unit, index) => (
+        <span
+          key={`${unit}-${String(index)}`}
+          className="hero-word"
+          style={{ "--d": `${0.35 + index * step}s` } as CSSProperties}
+        >
+          {unit}
+        </span>
+      ))}
+    </span>
+  )
+}
+
+function TrackingMock() {
+  return (
+    <svg
+      className="feature-mock-canvas"
+      viewBox="0 0 320 180"
+      role="img"
+      aria-label="Per-frame mouse trajectory inside the pool with heading vector"
+    >
+      <circle
+        cx="160"
+        cy="92"
+        r="72"
+        fill="none"
+        stroke="#2c3138"
+        strokeWidth="1.5"
+      />
+      <circle
+        cx="196"
+        cy="64"
+        r="16"
+        fill="none"
+        stroke="#3b424b"
+        strokeWidth="1"
+        strokeDasharray="3 3"
+      />
+      <polyline
+        points="52,150 78,138 96,120 118,104 142,92 166,84 188,72 204,58 216,44"
+        fill="none"
+        stroke="#00d8ff"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <g transform="translate(216 44) rotate(-40)">
+        <line x1="0" y1="-9" x2="0" y2="9" stroke="#fa5f29" strokeWidth="2" />
+        <polygon points="0,-13 4,-5 -4,-5" fill="#fa5f29" />
+      </g>
+      <circle cx="52" cy="150" r="4.5" fill="#ff3c6a" />
+      <text x="18" y="24" className="mono" fill="#5f6a76" fontSize="9">
+        frame 2412 / 2853 · heading −38.2°
+      </text>
+    </svg>
+  )
+}
+
+function ProvenanceMock() {
+  const { c } = useLandingCopy()
+  return (
+    <div className="feature-mock feature-mock--report" aria-hidden="true">
+      <p className="report-line">{c.features.reportLine1}</p>
+      <p className="report-line report-line--dim">{c.features.reportLine2}</p>
+      <div className="report-chips">
+        <span>water_maze_v3 · read-only</span>
+        <span>heading v9 · frozen</span>
+        <span>figures sha256 3f2a…</span>
+      </div>
+      <div className="report-figure" />
+    </div>
+  )
+}
+
+function TranscriptMock() {
+  const { c } = useLandingCopy()
+  const chat = c.features.chat
+  return (
+    <div className="feature-mock feature-mock--chat" aria-hidden="true">
+      <p className="chat-time mono">{chat.time}</p>
+      <p className="chat-bubble chat-bubble--user">{chat.question}</p>
+      <div className="chat-status">
+        <span>{chat.status1}</span>
+        <span>{chat.status2}</span>
+      </div>
+      <p className="chat-bubble chat-bubble--agent">{chat.clarify}</p>
+      <p className="chat-bubble chat-bubble--reply">{chat.reply}</p>
+    </div>
+  )
+}
+
+function AssistantFeatures() {
+  const { c } = useLandingCopy()
+  return (
+    <section
+      id="assistant"
+      className="section-shell assistant-features"
+      aria-labelledby="assistant-title"
+    >
+      <h2 id="assistant-title">{c.features.heading}</h2>
+      <p className="example-caption">{c.features.exampleCaption}</p>
+      <div className="assistant-cards">
+        {c.features.cards.map((card, index) => (
+          <InView
+            key={card.title}
+            className={`assistant-card delay-${index + 1}`}
+          >
+            <h3>{card.title}</h3>
+            <p>{card.description}</p>
+            {card.mock === "tracking" && <TrackingMock />}
+            {card.mock === "provenance" && <ProvenanceMock />}
+            {card.mock === "transcript" && <TranscriptMock />}
           </InView>
         ))}
-      </div>
-      <div id="deliverables" className="research-materials">
-        <h3>Videos. Figures. Data.</h3>
-        <ul aria-label="Research material formats">
-          <li>MP4</li>
-          <li>PNG / SVG</li>
-          <li>CSV</li>
-          <li>JSON</li>
-        </ul>
       </div>
     </section>
   )
 }
 
-export default function LandingPage() {
+function AgentTimeline() {
+  const { c } = useLandingCopy()
   return (
-    <div className="landing" lang="en">
+    <div className="agent-timeline">
+      <p className="example-caption">{c.features.exampleCaption}</p>
+      {c.workflow.steps.map((step) => (
+        <InView key={step.time} className="agent-step">
+          <span className="agent-rail" aria-hidden="true" />
+          <span className="agent-dot" aria-hidden="true" />
+          <p className="agent-time mono">{step.time}</p>
+          <h3>{step.title}</h3>
+          <p className="agent-note">{step.note}</p>
+          {step.bubbles.map((bubble, index) =>
+            bubble.side === "chips" ? (
+              <p
+                key={String(index)}
+                className="agent-chips ilo-item"
+                style={{ animationDelay: `${bubble.delay}s` }}
+              >
+                {bubble.words.split(" · ").map((chip) => (
+                  <span key={chip}>{chip}</span>
+                ))}
+              </p>
+            ) : (
+              <p
+                key={String(index)}
+                className={`chat-bubble chat-bubble--${bubble.side} ilo-item`}
+                style={{ animationDelay: `${bubble.delay}s` }}
+              >
+                {bubble.words.split(" ").map((word, wordIndex) => (
+                  <span
+                    key={`${word}-${String(wordIndex)}`}
+                    className="ilo-word"
+                    style={{
+                      animationDelay: `${bubble.delay + wordIndex * 0.03}s`,
+                    }}
+                  >
+                    {word}{" "}
+                  </span>
+                ))}
+              </p>
+            ),
+          )}
+        </InView>
+      ))}
+    </div>
+  )
+}
+
+function Landing() {
+  const { c, lang } = useLandingCopy()
+  return (
+    <div className="landing" lang={lang}>
       <Header />
       <main>
         <section className="hero-section">
-          <div className="hero-copy hero-rise">
-            <Link className="hero-eyebrow" href="#ethos">
-              MEET {flagshipVisionModel.name} · FLAGSHIP VISION MODEL{" "}
-              <ArrowUpRight size={13} />
+          <div className="hero-copy">
+            <Link className="hero-eyebrow hero-rise" href="#ethos">
+              {c.hero.eyebrowLead} {flagshipVisionModel.name}{" "}
+              {c.hero.eyebrowTail} <ArrowUpRight size={13} />
             </Link>
-            <h1>Decode animal behavior, frame by frame.</h1>
-            <div className="hero-buttons">
+            <h1>
+              <span className="sr-only">{c.hero.title}</span>
+              <HeroWords text={c.hero.title} lang={lang} />
+            </h1>
+            <div
+              className="hero-buttons hero-drop"
+              style={{ "--hero-delay": "0.95s" } as CSSProperties}
+            >
               <Link href="/onboarding" className="pill pill-white">
-                Get started
+                {c.hero.getStarted}
               </Link>
               <Link href="#capabilities" className="pill pill-secondary">
-                Explore the science <ArrowUpRight size={14} />
+                {c.hero.explore} <ArrowUpRight size={14} />
               </Link>
             </div>
           </div>
@@ -434,18 +599,25 @@ export default function LandingPage() {
             <ResearchWorkspacePreview />
           </div>
         </section>
-        <InstitutionMarquee />
+        <InView className="landing-reveal">
+          <InstitutionMarquee />
+        </InView>
+        <AssistantFeatures />
         <FlagshipModel />
         <ResearchShowcase />
         <ResearchWorkflow />
         <section className="closing-section section-shell">
-          <div>
-            <span className="mono muted tiny-overline">LING SIGHT SCIENCE</span>
-            <h2>Discover the patterns behind behavior.</h2>
-            <Link className="pill pill-white" href="/onboarding">
-              Get started <ArrowUpRight size={14} />
-            </Link>
-          </div>
+          <InView className="landing-reveal">
+            <div>
+              <span className="mono muted tiny-overline">
+                {c.closing.overline}
+              </span>
+              <h2>{c.closing.heading}</h2>
+              <Link className="pill pill-white" href="/onboarding">
+                {c.closing.cta} <ArrowUpRight size={14} />
+              </Link>
+            </div>
+          </InView>
           <div className="closing-orbit" aria-hidden="true">
             <span />
             <span />
@@ -456,18 +628,26 @@ export default function LandingPage() {
       <footer className="marketing-footer">
         <div>
           <strong>LingSight Science</strong>
-          <span>Frame by frame · Precise recognition · Live analysis</span>
+          <span>{c.footer.tagline}</span>
         </div>
         <div>
-          <a href="#capabilities">Features</a>
-          <a href="#workflow">Workflow</a>
-          <a href="#deliverables">Outputs</a>
+          <a href="#capabilities">{c.footer.features}</a>
+          <a href="#workflow">{c.footer.workflow}</a>
+          <a href="#deliverables">{c.footer.outputs}</a>
         </div>
         <div>
-          <Link href="/">Open workspace</Link>
+          <Link href="/">{c.footer.openWorkspace}</Link>
           <small>© 2026 LingSight</small>
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function LandingPage() {
+  return (
+    <LandingLangProvider>
+      <Landing />
+    </LandingLangProvider>
   )
 }

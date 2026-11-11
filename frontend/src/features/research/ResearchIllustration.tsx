@@ -9,7 +9,7 @@ export function ResearchIllustration({
       <svg
         viewBox="0 0 400 300"
         role="img"
-        aria-label="Illustrative water maze trajectory, not measured experimental data"
+        aria-label="示意水迷宫轨迹，非实测实验数据"
       >
         <defs>
           <pattern

@@ -1,5 +1,6 @@
 import { Pause, Play } from "lucide-react"
 import { useState } from "react"
+import { useLandingCopy } from "./landing-copy"
 import "./institution-marquee.css"
 
 // Visual examples selected by the user, not a list of customers or partners.
@@ -53,6 +54,7 @@ const institutions = [
 
 export function InstitutionMarquee() {
   const [paused, setPaused] = useState(false)
+  const { c } = useLandingCopy()
 
   return (
     <section
@@ -60,14 +62,12 @@ export function InstitutionMarquee() {
       aria-labelledby="institution-heading"
     >
       <div className="institution-heading-row">
-        <h2 id="institution-heading">For researchers around the world</h2>
+        <h2 id="institution-heading">{c.marquee.heading}</h2>
         <button
           type="button"
           className="institution-motion-toggle"
           onClick={() => setPaused((value) => !value)}
-          aria-label={
-            paused ? "Resume institution marquee" : "Pause institution marquee"
-          }
+          aria-label={paused ? c.marquee.resumeAria : c.marquee.pauseAria}
           aria-pressed={paused}
           aria-controls="institution-track"
         >
@@ -76,7 +76,7 @@ export function InstitutionMarquee() {
           ) : (
             <Pause size={13} aria-hidden />
           )}
-          <span>{paused ? "Resume" : "Pause"}</span>
+          <span>{paused ? c.marquee.resume : c.marquee.pause}</span>
         </button>
       </div>
       <div className="institution-viewport" data-paused={paused}>

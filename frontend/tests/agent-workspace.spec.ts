@@ -116,27 +116,25 @@ test("引导完成携带问题和范围但不自动提交", async ({ page }) => 
   await page.goto("/")
   await expect(page).toHaveURL(/onboarding/)
   for (let step = 2; step <= 4; step++) {
-    await page.getByRole("button", { name: "Next step" }).click()
+    await page.getByRole("button", { name: "下一步" }).click()
     await expect(page.locator(".research-progress")).toContainText(
       `0${step} / 04`,
     )
   }
   await page
     .getByRole("button", {
-      name: "Explore trajectories & headings",
+      name: "探索轨迹与朝向",
       exact: true,
     })
     .click()
   await page.locator("summary").click()
   await page
-    .getByLabel("Data scope", { exact: false })
+    .getByLabel("数据范围", { exact: false })
     .fill("同一批次的视频 test-001")
   await page
-    .getByLabel("Research question", { exact: true })
+    .getByLabel("研究问题", { exact: true })
     .fill("核对指定视频的有效轨迹")
-  await page
-    .getByRole("button", { name: "Enter workspace", exact: true })
-    .click()
+  await page.getByRole("button", { name: "进入工作台", exact: true }).click()
   await expect(
     page.getByRole("textbox", { name: "研究问题", exact: true }),
   ).toHaveValue(/核对指定视频的有效轨迹/)
