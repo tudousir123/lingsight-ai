@@ -1,0 +1,11 @@
+{
+  "platform_private_env_exists": false,
+  "agent_private_env_exists": true,
+  "agent_application_dbhub_configured": false,
+  "agent_configured_data_dir_exists": true,
+  "production_analysis_image_present": false,
+  "gpu_ssh_readonly_probe_reachable": true,
+  "gpu_http_health_successful_in_probe": false,
+  "existing_runtime_modified": false,
+  "real_video_researcher_review_completed_this_run": false
+}

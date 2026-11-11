@@ -1,0 +1,8 @@
+{
+  "command": "uv run --extra test pytest -q",
+  "repository": "lingsight-inference",
+  "exit_code": 0,
+  "observed_summary": "21 passed, 1 warning in 72.93s",
+  "source": "Observed Codex exec session 46185; summary recorded after completion",
+  "gpu_execution": false
+}

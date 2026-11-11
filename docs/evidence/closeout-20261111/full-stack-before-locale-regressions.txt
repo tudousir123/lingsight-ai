@@ -1,0 +1,568 @@
+Running isolated stack: lingsight-e2e-lingsight-e2e-cguqd1uw
+ Image lingsight-e2e-lingsight-e2e-cguqd1uw-backend:local Building 
+ Image lingsight-e2e-lingsight-e2e-cguqd1uw-playwright:local Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.51kB done
+#1 DONE 0.0s
+
+#2 [backend internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.90kB done
+#2 DONE 0.0s
+
+#3 [playwright internal] load build definition from Dockerfile.playwright
+#3 transferring dockerfile: 691B done
+#3 DONE 0.0s
+
+#4 [playwright internal] load metadata for docker.io/oven/bun:1.3.12
+#4 ...
+
+#5 [backend internal] load metadata for docker.io/library/python:3.14
+#5 DONE 0.0s
+
+#6 [playwright internal] load metadata for mcr.microsoft.com/playwright:v1.63.0-noble
+#6 ...
+
+#4 [backend internal] load metadata for docker.io/oven/bun:1.3.12
+#4 DONE 2.5s
+
+#7 [backend internal] load metadata for ghcr.io/astral-sh/uv:0.9.26
+#7 ...
+
+#6 [playwright internal] load metadata for mcr.microsoft.com/playwright:v1.63.0-noble
+#6 DONE 3.7s
+
+#8 [playwright internal] load .dockerignore
+#8 transferring context: 227B done
+#8 DONE 0.0s
+
+#9 [playwright stage-0  1/11] FROM mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+#9 resolve mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27 0.0s done
+#9 DONE 0.0s
+
+#10 [playwright] FROM docker.io/oven/bun:1.3.12@sha256:8956c7667fa17beb6e3c664115e66bdacfe502da5d99603626e74c197bdef160
+#10 resolve docker.io/oven/bun:1.3.12@sha256:8956c7667fa17beb6e3c664115e66bdacfe502da5d99603626e74c197bdef160 0.0s done
+#10 DONE 0.0s
+
+#11 [playwright internal] load build context
+#11 transferring context: 37.42kB 0.0s done
+#11 DONE 0.0s
+
+#12 [playwright stage-0  7/11] COPY packages/react-email/package.json /app/packages/react-email/
+#12 CACHED
+
+#13 [playwright stage-0  8/11] WORKDIR /app/frontend
+#13 CACHED
+
+#14 [playwright stage-0  6/11] COPY frontend/package.json /app/frontend/
+#14 CACHED
+
+#15 [playwright stage-0  2/11] WORKDIR /app
+#15 CACHED
+
+#16 [playwright stage-0  5/11] COPY package.json bun.lock /app/
+#16 CACHED
+
+#17 [playwright stage-0  3/11] COPY --from=oven/bun:1.3.12 /usr/local/bin/bun /usr/local/bin/bun
+#17 CACHED
+
+#18 [playwright stage-0  4/11] RUN ln -s /usr/local/bin/bun /usr/local/bin/bunx
+#18 CACHED
+
+#19 [playwright stage-0  9/11] RUN bun ci
+#19 CACHED
+
+#20 [playwright stage-0 10/11] COPY ./frontend /app/frontend
+#20 DONE 0.1s
+
+#7 [backend internal] load metadata for ghcr.io/astral-sh/uv:0.9.26
+#7 ...
+
+#21 [playwright stage-0 11/11] RUN chmod a+rwx /app/frontend && mkdir -p playwright/.auth && chmod -R a+rwX playwright
+#21 DONE 0.1s
+
+#22 [playwright] exporting to image
+#22 exporting layers
+#22 ...
+
+#7 [backend internal] load metadata for ghcr.io/astral-sh/uv:0.9.26
+#7 DONE 4.8s
+
+#8 [backend internal] load .dockerignore
+#8 transferring context: 227B done
+#8 DONE 0.0s
+
+#10 [backend] FROM docker.io/oven/bun:1.3.12@sha256:8956c7667fa17beb6e3c664115e66bdacfe502da5d99603626e74c197bdef160
+#10 resolve docker.io/oven/bun:1.3.12@sha256:8956c7667fa17beb6e3c664115e66bdacfe502da5d99603626e74c197bdef160 0.0s done
+#10 DONE 0.0s
+
+#23 [backend] FROM ghcr.io/astral-sh/uv:0.9.26@sha256:9a23023be68b2ed09750ae636228e903a54a05ea56ed03a934d00fe9fbeded4b
+#23 resolve ghcr.io/astral-sh/uv:0.9.26@sha256:9a23023be68b2ed09750ae636228e903a54a05ea56ed03a934d00fe9fbeded4b 0.0s done
+#23 DONE 0.0s
+
+#24 [backend stage-1  1/10] FROM docker.io/library/python:3.14@sha256:d18055009f327b22993de14458aa5a6bac032cdf459ea2a2e9bbdc3d3d49e4fb
+#24 resolve docker.io/library/python:3.14@sha256:d18055009f327b22993de14458aa5a6bac032cdf459ea2a2e9bbdc3d3d49e4fb 0.0s done
+#24 DONE 0.0s
+
+#25 [backend internal] load build context
+#25 transferring context: 47.01kB 0.0s done
+#25 DONE 0.0s
+
+#26 [backend frontend-build 2/9] WORKDIR /app
+#26 CACHED
+
+#27 [backend frontend-build 5/9] COPY packages/react-email/package.json /app/packages/react-email/
+#27 CACHED
+
+#28 [backend frontend-build 3/9] COPY package.json bun.lock /app/
+#28 CACHED
+
+#29 [backend frontend-build 4/9] COPY frontend/package.json /app/frontend/
+#29 CACHED
+
+#30 [backend frontend-build 6/9] WORKDIR /app/frontend
+#30 CACHED
+
+#31 [backend frontend-build 7/9] RUN bun ci
+#31 CACHED
+
+#32 [backend frontend-build 8/9] COPY ./frontend /app/frontend
+#32 DONE 0.1s
+
+#22 [playwright] exporting to image
+#22 exporting layers 1.2s done
+#22 exporting manifest sha256:c435265f7cb90ad6031056063a19c8943060c4b9b8922017c90d67c7e4361c34 done
+#22 exporting config sha256:19d19cd2323b921160b1e25bd61427c5895cd7bb87be4a0c5f957c89d2b6c10c done
+#22 exporting attestation manifest sha256:def88e31f28e4f0b8ef1e92dbf35fced9fbc5c7ce9c0378ca5664630cd87bae3 0.0s done
+#22 exporting manifest list sha256:ea0a949ca2655ec18b5ea88a058dbc42ac01b0fc1ad412ac9032db72b63d0e18 done
+#22 naming to docker.io/library/lingsight-e2e-lingsight-e2e-cguqd1uw-playwright:local done
+#22 unpacking to docker.io/library/lingsight-e2e-lingsight-e2e-cguqd1uw-playwright:local
+#22 ...
+
+#33 [backend frontend-build 9/9] RUN bun run build
+#33 0.113 $ tsc -p tsconfig.build.json && vite build
+#33 11.45 vite v8.3.1 building client environment for production...
+#33 11.47 transforming...
+#33 12.23 ✓ 2491 modules transformed.
+#33 12.40 rendering chunks...
+#33 12.59 computing gzip size...
+#33 12.60 ../backend/app/frontend/index.html                                             1.83 kB │ gzip:  0.69 kB
+#33 12.60 ../backend/app/frontend/assets/06-learning-curves-5xfad-BccWZhVI.webp        150.78 kB
+#33 12.60 ../backend/app/frontend/assets/07-probe-quadrant-results-CCx4BqaF.webp       193.75 kB
+#33 12.60 ../backend/app/frontend/assets/08-strategy-distribution-5xfad-HKYsuHKX.webp  384.55 kB
+#33 12.60 ../backend/app/frontend/assets/02-acquisition-heatmaps-C8Ik0x7b.webp         836.84 kB
+#33 12.60 ../backend/app/frontend/assets/_layout-CSrGBrem.css                            4.58 kB │ gzip:  1.34 kB
+#33 12.60 ../backend/app/frontend/assets/Workspace-C5lLbz76.css                          5.57 kB │ gzip:  1.65 kB
+#33 12.60 ../backend/app/frontend/assets/onboarding-BIhGuVaT.css                         7.55 kB │ gzip:  2.02 kB
+#33 12.60 ../backend/app/frontend/assets/welcome-DhXBzc1x.css                           44.56 kB │ gzip:  9.78 kB
+#33 12.60 ../backend/app/frontend/assets/index-DNQFNwDV.css                             77.04 kB │ gzip: 14.54 kB
+#33 12.60 ../backend/app/frontend/assets/_layout-9B1u9W3E.js                             0.07 kB │ gzip:  0.08 kB
+#33 12.60 ../backend/app/frontend/assets/analysis-P_Biwc3X.js                            0.07 kB │ gzip:  0.09 kB
+#33 12.60 ../backend/app/frontend/assets/annotations-CUt_WDkq.js                         0.07 kB │ gzip:  0.08 kB
+#33 12.60 ../backend/app/frontend/assets/experiments.index-CUt_WDkq.js                   0.07 kB │ gzip:  0.08 kB
+#33 12.60 ../backend/app/frontend/assets/check-Ch3i76Sx.js                               0.16 kB │ gzip:  0.16 kB
+#33 12.60 ../backend/app/frontend/assets/chevron-down-CNUXZg7I.js                        0.16 kB │ gzip:  0.16 kB
+#33 12.60 ../backend/app/frontend/assets/plus-S-QSLQeG.js                                0.19 kB │ gzip:  0.17 kB
+#33 12.60 ../backend/app/frontend/assets/arrow-up-right-DiClziNN.js                      0.20 kB │ gzip:  0.18 kB
+#33 12.60 ../backend/app/frontend/assets/search-DXbUuEFz.js                              0.21 kB │ gzip:  0.19 kB
+#33 12.60 ../backend/app/frontend/assets/project-research._projectId-BIg6STGR.js         0.23 kB │ gzip:  0.19 kB
+#33 12.60 ../backend/app/frontend/assets/useNavigate-TgQsUvxv.js                         0.23 kB │ gzip:  0.19 kB
+#33 12.60 ../backend/app/frontend/assets/tasks._taskId-B50aG_8V.js                       0.23 kB │ gzip:  0.19 kB
+#33 12.60 ../backend/app/frontend/assets/panel-left-BTisn8B4.js                          0.24 kB │ gzip:  0.21 kB
+#33 12.60 ../backend/app/frontend/assets/folder-open--o0fJ8dX.js                         0.33 kB │ gzip:  0.24 kB
+#33 12.60 ../backend/app/frontend/assets/arrow-up-CCQwXnUv.js                            0.33 kB │ gzip:  0.23 kB
+#33 12.60 ../backend/app/frontend/assets/scan-line-q9SoOjR3.js                           0.37 kB │ gzip:  0.24 kB
+#33 12.60 ../backend/app/frontend/assets/file-text-k5TwxNOx.js                           0.42 kB │ gzip:  0.27 kB
+#33 12.60 ../backend/app/frontend/assets/chart-no-axes-combined-OsiWviFG.js              0.43 kB │ gzip:  0.28 kB
+#33 12.60 ../backend/app/frontend/assets/trash-JVmTx83_.js                               0.63 kB │ gzip:  0.37 kB
+#33 12.60 ../backend/app/frontend/assets/message-square-BPIwGgXz.js                      0.65 kB │ gzip:  0.37 kB
+#33 12.60 ../backend/app/frontend/assets/useMatch-Dv27Sc23.js                            0.68 kB │ gzip:  0.42 kB
+#33 12.60 ../backend/app/frontend/assets/useAuth-BtFHS5zm.js                             1.07 kB │ gzip:  0.60 kB
+#33 12.60 ../backend/app/frontend/assets/queries-Cx7XnfCk.js                             1.27 kB │ gzip:  0.82 kB
+#33 12.60 ../backend/app/frontend/assets/recover-password-C-qI1dPJ.js                    1.71 kB │ gzip:  0.85 kB
+#33 12.60 ../backend/app/frontend/assets/useSelector-BQZJn2cB.js                         1.89 kB │ gzip:  0.83 kB
+#33 12.60 ../backend/app/frontend/assets/password-input-CRR-Grgu.js                      2.04 kB │ gzip:  1.02 kB
+#33 12.60 ../backend/app/frontend/assets/login-B2f2oAJc.js                               2.14 kB │ gzip:  0.91 kB
+#33 12.60 ../backend/app/frontend/assets/reset-password-D2uW_4J0.js                      2.42 kB │ gzip:  1.03 kB
+#33 12.60 ../backend/app/frontend/assets/dialog-Dp6yqLLj.js                              2.47 kB │ gzip:  0.90 kB
+#33 12.60 ../backend/app/frontend/assets/signup-DzbjS9Vz.js                              2.75 kB │ gzip:  1.00 kB
+#33 12.60 ../backend/app/frontend/assets/AuthLayout-BcRSY481.js                          3.46 kB │ gzip:  1.32 kB
+#33 12.60 ../backend/app/frontend/assets/dist-C35I1Pb5.js                                4.19 kB │ gzip:  1.84 kB
+#33 12.60 ../backend/app/frontend/assets/projects-DoIKyvcj.js                            4.40 kB │ gzip:  1.55 kB
+#33 12.60 ../backend/app/frontend/assets/dist-Cr77GPjD.js                                4.91 kB │ gzip:  1.81 kB
+#33 12.60 ../backend/app/frontend/assets/preload-helper-CSVEnwiU.js                      5.14 kB │ gzip:  2.00 kB
+#33 12.60 ../backend/app/frontend/assets/input-XVBzqHgv.js                               8.09 kB │ gzip:  3.00 kB
+#33 12.60 ../backend/app/frontend/assets/directory-CNIDnskg.js                           9.05 kB │ gzip:  3.21 kB
+#33 12.60 ../backend/app/frontend/assets/link-BXnxpSvL.js                                9.38 kB │ gzip:  4.31 kB
+#33 12.60 ../backend/app/frontend/assets/settings-BfsjNGwK.js                           10.47 kB │ gzip:  3.52 kB
+#33 12.60 ../backend/app/frontend/assets/projects._projectId-BXdVjh5G.js                10.95 kB │ gzip:  3.69 kB
+#33 12.60 ../backend/app/frontend/assets/onboarding-BNjZrAZD.js                         11.79 kB │ gzip:  4.51 kB
+#33 12.60 ../backend/app/frontend/assets/createLucideIcon-BXLm2Wke.js                   11.93 kB │ gzip:  4.69 kB
+#33 12.60 ../backend/app/frontend/assets/inference-DFjRc5VE.js                          12.32 kB │ gzip:  4.57 kB
+#33 12.60 ../backend/app/frontend/assets/skeleton-CpI3T49z.js                           13.97 kB │ gzip:  4.78 kB
+#33 12.60 ../backend/app/frontend/assets/_layout-CT8Mncyn.js                            14.71 kB │ gzip:  5.33 kB
+#33 12.60 ../backend/app/frontend/assets/useQuery-B0qopTas.js                           15.53 kB │ gzip:  5.22 kB
+#33 12.60 ../backend/app/frontend/assets/Appearance-EjcCUEbn.js                         22.02 kB │ gzip:  7.07 kB
+#33 12.60 ../backend/app/frontend/assets/Workspace-Dk6DV40U.js                          22.67 kB │ gzip:  8.15 kB
+#33 12.60 ../backend/app/frontend/assets/table-0wKsvG7T.js                              25.19 kB │ gzip:  8.30 kB
+#33 12.60 ../backend/app/frontend/assets/welcome-DkyU25Jc.js                            27.24 kB │ gzip:  8.93 kB
+#33 12.60 ../backend/app/frontend/assets/dist-DBj_2f08.js                               27.62 kB │ gzip: 10.59 kB
+#33 12.60 ../backend/app/frontend/assets/Combination-ChSH6x9N.js                        30.43 kB │ gzip: 10.69 kB
+#33 12.60 ../backend/app/frontend/assets/utils-D4MtPf17.js                              30.59 kB │ gzip:  9.93 kB
+#33 12.60 ../backend/app/frontend/assets/useCustomToast-C4Y1JA5w.js                     39.84 kB │ gzip: 11.28 kB
+#33 12.60 ../backend/app/frontend/assets/loading-button-Bf7DonzX.js                     42.44 kB │ gzip: 14.87 kB
+#33 12.60 ../backend/app/frontend/assets/admin-OYpq5gXI.js                              48.86 kB │ gzip: 14.00 kB
+#33 12.60 ../backend/app/frontend/assets/client-D2GANpgd.js                             75.10 kB │ gzip: 25.97 kB
+#33 12.60 ../backend/app/frontend/assets/schemas-D3tkzAe4.js                            80.24 kB │ gzip: 22.98 kB
+#33 12.60 ../backend/app/frontend/assets/index-DSTBTP8z.js                             298.26 kB │ gzip: 96.26 kB
+#33 12.60 
+#33 12.62 ✓ built in 1.17s
+#33 DONE 13.2s
+
+#22 [playwright] exporting to image
+#22 ...
+
+#34 [backend stage-1  6/10] COPY ./backend/pyproject.toml ./backend/alembic.ini /app/backend/
+#34 CACHED
+
+#35 [backend stage-1  3/10] WORKDIR /app/
+#35 CACHED
+
+#36 [backend stage-1  7/10] COPY ./backend/app /app/backend/app
+#36 CACHED
+
+#37 [backend stage-1  8/10] COPY --from=frontend-build /app/backend/app/frontend /app/backend/app/frontend
+#37 CACHED
+
+#38 [backend stage-1  9/10] RUN --mount=type=cache,target=/root/.cache/uv     --mount=type=bind,source=uv.lock,target=uv.lock     --mount=type=bind,source=pyproject.toml,target=pyproject.toml     uv sync --frozen --package app
+#38 CACHED
+
+#39 [backend stage-1  4/10] RUN --mount=type=cache,target=/root/.cache/uv     --mount=type=bind,source=uv.lock,target=uv.lock     --mount=type=bind,source=pyproject.toml,target=pyproject.toml     uv sync --frozen --no-install-workspace --package app
+#39 CACHED
+
+#40 [backend stage-1  5/10] COPY ./backend/scripts /app/backend/scripts
+#40 CACHED
+
+#41 [backend stage-1  2/10] COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /uvx /bin/
+#41 CACHED
+
+#42 [backend stage-1 10/10] WORKDIR /app/backend/
+#42 CACHED
+
+#43 [backend] exporting to image
+#43 exporting layers done
+#43 exporting manifest sha256:43054cf8954b688ae6f280cadb49b732db61e22d4738fb3cc21630bae31dbec6 0.0s done
+#43 exporting config sha256:f320e16f9f06547409eb6219a4673856418e3397b3f430afda6928a3ac2c504f done
+#43 exporting attestation manifest sha256:67798e51a8925d73f398656d4469590697d9eb9af27f2c916fe64d1680221d52 0.0s done
+#43 exporting manifest list sha256:ab1072864fe4adec11268cd7e9a7e6c7c09a4b227eed7dc8edb3196872aa1a39 done
+#43 naming to docker.io/library/lingsight-e2e-lingsight-e2e-cguqd1uw-backend:local
+#43 naming to docker.io/library/lingsight-e2e-lingsight-e2e-cguqd1uw-backend:local done
+#43 unpacking to docker.io/library/lingsight-e2e-lingsight-e2e-cguqd1uw-backend:local
+#43 unpacking to docker.io/library/lingsight-e2e-lingsight-e2e-cguqd1uw-backend:local 6.1s done
+#43 DONE 6.3s
+
+#44 [backend] resolving provenance for metadata file
+#44 DONE 0.0s
+
+#22 [playwright] exporting to image
+#22 unpacking to docker.io/library/lingsight-e2e-lingsight-e2e-cguqd1uw-playwright:local 30.8s done
+#22 DONE 32.1s
+
+#45 [playwright] resolving provenance for metadata file
+#45 DONE 0.0s
+ Image lingsight-e2e-lingsight-e2e-cguqd1uw-backend:local Built 
+ Image lingsight-e2e-lingsight-e2e-cguqd1uw-playwright:local Built 
+ Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Creating 
+ Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Creating 
+ Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Creating 
+ Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Creating 
+ Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Created 
+ Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Created 
+ Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Created 
+ Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Created 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Creating 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Created 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Starting 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Started 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Waiting 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Healthy 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-run-3152d76a6c27 Creating 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-run-3152d76a6c27 Created 
++ alembic upgrade head
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> da969c656440, initial schema for mysql
+INFO  [alembic.runtime.migration] Running upgrade da969c656440 -> b19a1e7c90a1, Store per-user experiment access for the trial catalog.
+INFO  [alembic.runtime.migration] Running upgrade b19a1e7c90a1 -> c3f8a1d204b7, Store human preparation reviews per trial (ticket #21).
+INFO  [alembic.runtime.migration] Running upgrade c3f8a1d204b7 -> d4e5f6a7b8c9, Keep preparation reviews for each version of trial materials.
+INFO  [alembic.runtime.migration] Running upgrade d4e5f6a7b8c9 -> a1b2c3d4e5f6, Project entity: user-owned research organization unit (ticket #42).
+INFO  [alembic.runtime.migration] Running upgrade a1b2c3d4e5f6 -> b7d8e9f0a1c2, Published inference results: v3-form summary + per-frame rows (ticket #43).
++ python app/initial_data.py
+INFO:__main__:Creating initial data
+INFO:__main__:Initial data created
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Running 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Creating 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Creating 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Created 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Created 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Waiting 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Starting 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Started 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Healthy 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Starting 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Started 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Waiting 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Waiting 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Waiting 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Healthy 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Healthy 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Healthy 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Running 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Running 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Running 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Waiting 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Healthy 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Waiting 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Healthy 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-playwright-run-b7fe51988505 Creating 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-playwright-run-b7fe51988505 Created 
+◇ injected env (0) from ../.env
+
+Running 102 tests using 1 worker
+◇ injected env (0) from ../.env
+·◇ injected env (0) from ../.env
+····································××F◇ injected env (0) from ../.env
+······················××F···············
+············◇ injected env (0) from ../.env
+··············
+
+  1) [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  getByRole('heading', { level: 1 })
+    Expected: "Decode animal behavior, frame by frame."
+    Received: "Decode animal behavior, frame by frame.Decodeanimalbehavior,framebyframe."
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" getByRole('heading', { level: 1 }) with timeout 5000ms
+      - waiting for getByRole('heading', { level: 1 })
+        14 × locator resolved to <h1>…</h1>
+           - unexpected value "Decode animal behavior, frame by frame.Decodeanimalbehavior,framebyframe."
+
+
+      44 |   await page.goto("/welcome")
+      45 |   await expect(page.locator("html")).toHaveAttribute("lang", "en")
+    > 46 |   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+         |                                                         ^
+      47 |     "Decode animal behavior, frame by frame.",
+      48 |   )
+      49 |   expect(await page.locator("body").innerText()).not.toMatch(/\p{Script=Han}/u)
+        at /app/frontend/tests/landing-navigation.spec.ts:46:57
+
+    Error Context: test-results/landing-navigation-the-pub-4f0e9-glish-on-desktop-and-mobile-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/landing-navigation-the-pub-4f0e9-glish-on-desktop-and-mobile-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/landing-navigation-the-pub-4f0e9-glish-on-desktop-and-mobile-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  getByRole('heading', { level: 1 })
+    Expected: "Decode animal behavior, frame by frame."
+    Received: "Decode animal behavior, frame by frame.Decodeanimalbehavior,framebyframe."
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" getByRole('heading', { level: 1 }) with timeout 5000ms
+      - waiting for getByRole('heading', { level: 1 })
+        14 × locator resolved to <h1>…</h1>
+           - unexpected value "Decode animal behavior, frame by frame.Decodeanimalbehavior,framebyframe."
+
+
+      44 |   await page.goto("/welcome")
+      45 |   await expect(page.locator("html")).toHaveAttribute("lang", "en")
+    > 46 |   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+         |                                                         ^
+      47 |     "Decode animal behavior, frame by frame.",
+      48 |   )
+      49 |   expect(await page.locator("body").innerText()).not.toMatch(/\p{Script=Han}/u)
+        at /app/frontend/tests/landing-navigation.spec.ts:46:57
+
+    Error Context: test-results/landing-navigation-the-pub-4f0e9-glish-on-desktop-and-mobile-chromium-retry1/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/landing-navigation-the-pub-4f0e9-glish-on-desktop-and-mobile-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/landing-navigation-the-pub-4f0e9-glish-on-desktop-and-mobile-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  getByRole('heading', { level: 1 })
+    Expected: "Decode animal behavior, frame by frame."
+    Received: "Decode animal behavior, frame by frame.Decodeanimalbehavior,framebyframe."
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" getByRole('heading', { level: 1 }) with timeout 5000ms
+      - waiting for getByRole('heading', { level: 1 })
+        14 × locator resolved to <h1>…</h1>
+           - unexpected value "Decode animal behavior, frame by frame.Decodeanimalbehavior,framebyframe."
+
+
+      44 |   await page.goto("/welcome")
+      45 |   await expect(page.locator("html")).toHaveAttribute("lang", "en")
+    > 46 |   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+         |                                                         ^
+      47 |     "Decode animal behavior, frame by frame.",
+      48 |   )
+      49 |   expect(await page.locator("body").innerText()).not.toMatch(/\p{Script=Han}/u)
+        at /app/frontend/tests/landing-navigation.spec.ts:46:57
+
+    Error Context: test-results/landing-navigation-the-pub-4f0e9-glish-on-desktop-and-mobile-chromium-retry2/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/landing-navigation-the-pub-4f0e9-glish-on-desktop-and-mobile-chromium-retry2/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/landing-navigation-the-pub-4f0e9-glish-on-desktop-and-mobile-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('.research-guide-scene').first().locator('.research-typewriter-ink')
+    Expected: "true"
+    Received: "false"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveAttribute" locator('.research-guide-scene').first().locator('.research-typewriter-ink') with timeout 5000ms
+      - waiting for locator('.research-guide-scene').first().locator('.research-typewriter-ink')
+        14 × locator resolved to <span aria-hidden="true" data-typing="false" class="research-typewriter-ink">…</span>
+           - unexpected value "false"
+
+
+      314 |   await expect(ink).toHaveAttribute("data-typing", "true")
+      315 |   await page.clock.runFor(2000)
+    > 316 |   await expect(ink).toHaveAttribute("data-typing", "true")
+          |                     ^
+      317 |   expect(await ink.locator('[data-visible="true"]').count()).toBeGreaterThan(0)
+      318 |   await expect(scene.locator(".research-scene-support")).toBeHidden()
+      319 |   await page.emulateMedia({ reducedMotion: "reduce" })
+        at /app/frontend/tests/onboarding.spec.ts:316:21
+
+    Error Context: test-results/onboarding-typing-leaves-t-ddcd8-s-the-full-text-immediately-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/onboarding-typing-leaves-t-ddcd8-s-the-full-text-immediately-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/onboarding-typing-leaves-t-ddcd8-s-the-full-text-immediately-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('.research-guide-scene').first().locator('.research-typewriter-ink')
+    Expected: "true"
+    Received: "false"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveAttribute" locator('.research-guide-scene').first().locator('.research-typewriter-ink') with timeout 5000ms
+      - waiting for locator('.research-guide-scene').first().locator('.research-typewriter-ink')
+        14 × locator resolved to <span aria-hidden="true" data-typing="false" class="research-typewriter-ink">…</span>
+           - unexpected value "false"
+
+
+      314 |   await expect(ink).toHaveAttribute("data-typing", "true")
+      315 |   await page.clock.runFor(2000)
+    > 316 |   await expect(ink).toHaveAttribute("data-typing", "true")
+          |                     ^
+      317 |   expect(await ink.locator('[data-visible="true"]').count()).toBeGreaterThan(0)
+      318 |   await expect(scene.locator(".research-scene-support")).toBeHidden()
+      319 |   await page.emulateMedia({ reducedMotion: "reduce" })
+        at /app/frontend/tests/onboarding.spec.ts:316:21
+
+    Error Context: test-results/onboarding-typing-leaves-t-ddcd8-s-the-full-text-immediately-chromium-retry1/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/onboarding-typing-leaves-t-ddcd8-s-the-full-text-immediately-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/onboarding-typing-leaves-t-ddcd8-s-the-full-text-immediately-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('.research-guide-scene').first().locator('.research-typewriter-ink')
+    Expected: "true"
+    Received: "false"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveAttribute" locator('.research-guide-scene').first().locator('.research-typewriter-ink') with timeout 5000ms
+      - waiting for locator('.research-guide-scene').first().locator('.research-typewriter-ink')
+        14 × locator resolved to <span aria-hidden="true" data-typing="false" class="research-typewriter-ink">…</span>
+           - unexpected value "false"
+
+
+      314 |   await expect(ink).toHaveAttribute("data-typing", "true")
+      315 |   await page.clock.runFor(2000)
+    > 316 |   await expect(ink).toHaveAttribute("data-typing", "true")
+          |                     ^
+      317 |   expect(await ink.locator('[data-visible="true"]').count()).toBeGreaterThan(0)
+      318 |   await expect(scene.locator(".research-scene-support")).toBeHidden()
+      319 |   await page.emulateMedia({ reducedMotion: "reduce" })
+        at /app/frontend/tests/onboarding.spec.ts:316:21
+
+    Error Context: test-results/onboarding-typing-leaves-t-ddcd8-s-the-full-text-immediately-chromium-retry2/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/onboarding-typing-leaves-t-ddcd8-s-the-full-text-immediately-chromium-retry2/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/onboarding-typing-leaves-t-ddcd8-s-the-full-text-immediately-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile 
+    [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately 
+  100 passed (3.0m)
+
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Stopping 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Stopping 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Stopped 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Removing 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-mailpit-1 Removed 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Stopped 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Removing 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-backend-1 Removed 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Stopping 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Stopped 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Removing 
+ Container lingsight-e2e-lingsight-e2e-cguqd1uw-db-1 Removed 
+ Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Removing 
+ Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Removing 
+ Volume lingsight-e2e-lingsight-e2e-cguqd1uw_app-db-data Removed 
+ Network lingsight-e2e-lingsight-e2e-cguqd1uw_default Removed 

@@ -1,0 +1,94 @@
+
+Running 19 tests using 1 worker
+
+(node:512942) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/19] [chromium] › tests/landing-navigation.spec.ts:5:1 › refreshing the model section returns to the homepage hero
+[2/19] [chromium] › tests/landing-navigation.spec.ts:26:1 › refreshing after manual scrolling returns to the homepage hero
+[3/19] [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile
+  1) [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  getByRole('heading', { level: 1 })
+    Expected: "Decode animal behavior, frame by frame."
+    Received: "Decode animal behavior, frame by frame.Decodeanimalbehavior,framebyframe."
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" getByRole('heading', { level: 1 }) with timeout 5000ms
+      - waiting for getByRole('heading', { level: 1 })
+        12 × locator resolved to <h1>…</h1>
+           - unexpected value "Decode animal behavior, frame by frame.Decodeanimalbehavior,framebyframe."
+
+
+      44 |   await page.goto("/welcome")
+      45 |   await expect(page.locator("html")).toHaveAttribute("lang", "en")
+    > 46 |   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+         |                                                         ^
+      47 |     "Decode animal behavior, frame by frame.",
+      48 |   )
+      49 |   expect(await page.locator("body").innerText()).not.toMatch(/\p{Script=Han}/u)
+        at /home/x/Documents/Codex/2026-11-11/wo-de/work/integration/frontend/tests/landing-navigation.spec.ts:46:57
+
+    Error Context: test-results/landing-navigation-the-pub-4f0e9-glish-on-desktop-and-mobile-chromium/error-context.md
+
+
+(node:513307) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[4/19] [chromium] › tests/onboarding.spec.ts:26:1 › the final desktop screen offers examples and optional scope
+[5/19] [chromium] › tests/onboarding.spec.ts:58:3 › 探索轨迹与朝向: saves and restores the question and optional scope
+[6/19] [chromium] › tests/onboarding.spec.ts:58:3 › 比较训练日: saves and restores the question and optional scope
+[7/19] [chromium] › tests/onboarding.spec.ts:58:3 › 起草研究报告: saves and restores the question and optional scope
+[8/19] [chromium] › tests/onboarding.spec.ts:83:1 › a custom question needs no example or scope
+[9/19] [chromium] › tests/onboarding.spec.ts:101:1 › switching examples keeps the scope and does not submit a task
+[10/19] [chromium] › tests/onboarding.spec.ts:132:1 › empty input and blocked storage preserve the recovery download
+[11/19] [chromium] › tests/onboarding.spec.ts:171:1 › keyboard selection works with invalid saved data
+[12/19] [chromium] › tests/onboarding.spec.ts:189:1 › entering without a question marks onboarding seen without saving a brief
+[13/19] [chromium] › tests/onboarding.spec.ts:209:1 › a long question scrolls inside its editor
+[14/19] [chromium] › tests/onboarding.spec.ts:227:1 › the guide types its introduction and shows completed text when revisiting
+[15/19] [chromium] › tests/onboarding.spec.ts:247:1 › the mouse wheel advances one scene at a time and can go back
+[16/19] [chromium] › tests/onboarding.spec.ts:271:1 › every introduction scene is Chinese and fits a narrow viewport
+[17/19] [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately
+  2) [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately 
+
+    Error: expect(locator).toBeHidden() failed
+
+    Locator:  locator('.research-guide-scene').first().locator('.research-scene-support')
+    Expected: hidden
+    Received: visible
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeHidden" locator('.research-guide-scene').first().locator('.research-scene-support') with timeout 5000ms
+      - waiting for locator('.research-guide-scene').first().locator('.research-scene-support')
+        14 × locator resolved to <div class="research-scene-support">…</div>
+           - unexpected value "visible"
+
+
+      316 |   await expect(ink).toHaveAttribute("data-typing", "true")
+      317 |   expect(await ink.locator('[data-visible="true"]').count()).toBeGreaterThan(0)
+    > 318 |   await expect(scene.locator(".research-scene-support")).toBeHidden()
+          |                                                          ^
+      319 |   await page.emulateMedia({ reducedMotion: "reduce" })
+      320 |   await expect(ink).toHaveAttribute("data-typing", "false")
+      321 |   await expect(scene.locator(".research-scene-support")).toBeVisible()
+        at /home/x/Documents/Codex/2026-11-11/wo-de/work/integration/frontend/tests/onboarding.spec.ts:318:58
+
+    Error Context: test-results/onboarding-typing-leaves-t-ddcd8-s-the-full-text-immediately-chromium/error-context.md
+
+
+(node:514276) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[18/19] [chromium] › tests/onboarding.spec.ts:329:3 › characters fade in without shifting while typing at 1440px
+[19/19] [chromium] › tests/onboarding.spec.ts:329:3 › characters fade in without shifting while typing at 390px
+  2 failed
+    [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile 
+    [chromium] › tests/onboarding.spec.ts:306:1 › typing leaves time to read and reduced motion reveals the full text immediately 
+  17 passed (49.1s)
