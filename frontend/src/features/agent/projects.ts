@@ -316,10 +316,14 @@ export function useLegacyProjectImport() {
         })),
       },
     })
-      .then(() => {
+      .then(async () => {
+        const queryKey = [...projectsKey, userId]
+        // An initial read can still contain the pre-import snapshot. Invalidation
+        // alone reuses that pending fetch when the query has no cached data.
+        await client.cancelQueries({ queryKey, exact: true })
         localStorage.setItem(migratedKey(userId), "1")
         localStorage.removeItem(legacyKey(userId))
-        void client.invalidateQueries({ queryKey: projectsKey })
+        await client.invalidateQueries({ queryKey, exact: true })
       })
       .catch(() => {
         // Flag stays unset so a transient failure retries on the next load.

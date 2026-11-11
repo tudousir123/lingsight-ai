@@ -1,0 +1,54 @@
+
+Running 10 tests using 1 worker
+
+(node:598483) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/10] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+(node:598752) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[2/10] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+(node:599006) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[3/10] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+(node:599386) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[4/10] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+(node:599717) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[5/10] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+(node:599995) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[6/10] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+(node:600299) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[7/10] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+(node:600584) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[8/10] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+(node:600958) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[9/10] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+(node:601249) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[10/10] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+  10 passed (38.1s)

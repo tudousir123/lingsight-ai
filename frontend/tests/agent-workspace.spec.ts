@@ -513,6 +513,28 @@ test("项目接口失败不阻塞科研任务", async ({ page }) => {
 
 test("localStorage 旧项目一次性迁移导入且重放幂等", async ({ page }) => {
   const state = stubProjectsApi(page, [])
+  let releaseInitialList!: () => void
+  const initialListPending = new Promise<void>((resolve) => {
+    releaseInitialList = resolve
+  })
+  let markInitialListStarted!: () => void
+  const initialListStarted = new Promise<void>((resolve) => {
+    markInitialListStarted = resolve
+  })
+  let initialList = true
+  await page.route("**/api/v1/projects/", async (route) => {
+    if (route.request().method() !== "GET" || !initialList)
+      return route.fallback()
+    initialList = false
+    // The first read began before import: its empty snapshot arrives afterward.
+    markInitialListStarted()
+    await initialListPending
+    return route.fulfill({ json: { data: [], count: 0 } })
+  })
+  await page.route("**/api/v1/projects/import", async (route) => {
+    await initialListStarted
+    return route.fallback()
+  })
   await page.addInitScript(() => {
     localStorage.setItem(
       "lingsight.workspace-projects.v1:user",
@@ -527,6 +549,12 @@ test("localStorage 旧项目一次性迁移导入且重放幂等", async ({ page
     )
   })
   await page.goto("/")
+  await page.waitForFunction(
+    () =>
+      localStorage.getItem("lingsight.workspace-projects.migrated.v1:user") ===
+      "1",
+  )
+  releaseInitialList()
   await expect(
     page.getByRole("link", { name: "学习与记忆", exact: true }),
   ).toBeVisible()
