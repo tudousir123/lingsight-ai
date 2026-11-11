@@ -1,0 +1,45 @@
+[WebServer] $ vite
+
+[WebServer] (node:363371) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] [vite:react-swc] We recommend switching to `@vitejs/plugin-react` for improved performance as no swc plugins are used. More information at https://vite.dev/rolldown
+
+
+Running 1 test using 1 worker
+
+(node:363572) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] [chromium] › tests/onboarding.spec.ts:250:1 › the mouse wheel advances one scene at a time and can go back
+  1) [chromium] › tests/onboarding.spec.ts:250:1 › the mouse wheel advances one scene at a time and can go back
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('.research-progress')
+    Expected substring: "02 / 04"
+    Received string:    "01 / 04 Meet your assistant"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" locator('.research-progress') with timeout 5000ms
+      - waiting for locator('.research-progress')
+        13 × locator resolved to <span aria-live="polite" class="research-progress">…</span>
+           - unexpected value "01 / 04 Meet your assistant"
+
+
+      256 |   for (const next of [2, 3, 4]) {
+      257 |     await page.mouse.wheel(0, 120)
+    > 258 |     await expect(page.locator(".research-progress")).toContainText(
+          |                                                      ^
+      259 |       `0${next} / 04`,
+      260 |     )
+      261 |     await page.waitForTimeout(900)
+        at /home/x/Documents/Codex/2026-11-11/wo-de/work/project-ci/frontend/tests/onboarding.spec.ts:258:54
+
+    Error Context: test-results/onboarding-the-mouse-wheel-bbe25-e-at-a-time-and-can-go-back-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › tests/onboarding.spec.ts:250:1 › the mouse wheel advances one scene at a time and can go back

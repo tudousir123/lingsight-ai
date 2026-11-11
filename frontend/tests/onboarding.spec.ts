@@ -252,13 +252,20 @@ test("the mouse wheel advances one scene at a time and can go back", async ({
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto("/onboarding")
-  await page.mouse.move(700, 400)
+  // Wait for the rendered guide before dispatching a native wheel event;
+  // goto alone can finish before Vite has mounted React and its listeners.
+  await expect(page.locator(".research-progress")).toContainText("01 / 04")
+  await page
+    .locator(".research-guide-main")
+    .hover({ position: { x: 20, y: 20 } })
+  await page.clock.install()
   for (const next of [2, 3, 4]) {
     await page.mouse.wheel(0, 120)
     await expect(page.locator(".research-progress")).toContainText(
       `0${next} / 04`,
     )
-    await page.waitForTimeout(900)
+    // Advance the real gesture cooldown deterministically, without sleeping.
+    await page.clock.fastForward(900)
   }
   await page.mouse.wheel(0, -120)
   await expect(page.locator(".research-progress")).toContainText("03 / 04")

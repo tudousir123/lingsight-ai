@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import { SidebarAppearance } from "@/components/Common/Appearance"
 import {
   Dialog,
   DialogContent,
@@ -297,6 +298,9 @@ export function AppSidebar() {
           <CircleDot size={12} />
           让研究与发现相连
         </div>
+        <SidebarMenu>
+          <SidebarAppearance />
+        </SidebarMenu>
         <User user={user} />
       </SidebarFooter>
       <Dialog open={creatingProject} onOpenChange={setCreatingProject}>

@@ -1,0 +1,8 @@
+containers_checked=11
+before_sha256=77e770d8fa397e356af059a936f5765b522a5d9984dd1f0e760e89381c9cd312
+after_sha256=77e770d8fa397e356af059a936f5765b522a5d9984dd1f0e760e89381c9cd312
+comparison=IDENTICAL
+remaining_test_containers=0
+remaining_test_volumes=0
+report_directory_owner=x:x
+repository_dotenv=ABSENT
