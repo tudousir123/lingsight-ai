@@ -2,18 +2,20 @@ FROM mcr.microsoft.com/playwright:v1.63.0-noble
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y unzip \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:$PATH"
+# Use the pinned toolchain directly; no mutable apt mirror or install script.
+COPY --from=oven/bun:1.3.12 /usr/local/bin/bun /usr/local/bin/bun
+RUN ln -s /usr/local/bin/bun /usr/local/bin/bunx
 
 COPY package.json bun.lock /app/
 
 COPY frontend/package.json /app/frontend/
+COPY packages/react-email/package.json /app/packages/react-email/
 
 WORKDIR /app/frontend
 
-RUN bun install
+RUN bun ci
 
 COPY ./frontend /app/frontend
+
+# The disposable local runner uses the host UID so bind-mounted reports stay writable.
+RUN chmod a+rwx /app/frontend && mkdir -p playwright/.auth && chmod -R a+rwX playwright

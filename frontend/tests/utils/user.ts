@@ -17,6 +17,9 @@ export async function signUpNewUser(
 }
 
 export async function logInUser(page: Page, email: string, password: string) {
+  await page.addInitScript(() =>
+    localStorage.setItem("lingsight.onboarding-seen.v1", "1"),
+  )
   await page.goto("/login")
 
   await page.getByTestId("email-input").fill(email)
@@ -24,12 +27,12 @@ export async function logInUser(page: Page, email: string, password: string) {
   await page.getByRole("button", { name: "Log In" }).click()
   await page.waitForURL("/")
   await expect(
-    page.getByRole("heading", { name: "实验与视频管理" }),
+    page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
   ).toBeVisible()
 }
 
 export async function logOutUser(page: Page) {
   await page.getByTestId("user-menu").click()
-  await page.getByRole("menuitem", { name: "Log out" }).click()
+  await page.getByRole("menuitem", { name: "退出登录" }).click()
   await page.goto("/login")
 }

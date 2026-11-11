@@ -1,43 +1,57 @@
-#! /usr/bin/env bash
-# Local full-stack Playwright runner (trial-flow and friends).
-#
-# CI gets a fresh stack per shard (docker compose down -v); locally the
-# persisted trial_review rows from the previous run would fail the
-# confirmation flow, and the backend needs the fixture env from .env.
-# See docs/agents/local-e2e.md for the traps this script encodes.
+#!/usr/bin/env bash
+# Disposable full-stack Playwright. No developer .env, host ports or data reused.
 set -euo pipefail
-
 cd "$(dirname "$0")/.."
 
-if [[ "${LINGSIGHT_E2E_ALLOW_REVIEW_DELETE:-}" != "1" ]]; then
-  echo "此脚本会删除目标栈的全部试次核对记录。请先使用隔离栈；仅在确认目标库可清空后设置 LINGSIGHT_E2E_ALLOW_REVIEW_DELETE=1。" >&2
-  exit 1
+keep_stack=0
+if [[ "${1:-}" == "--keep" ]]; then
+  keep_stack=1
+  shift
 fi
-
-if ! grep -q "^TRIALS_FIXTURE_DIR=" .env; then
-  echo "TRIALS_FIXTURE_DIR 未在 .env 中启用（backend 会以研究库模式启动，测试全部 503）。" >&2
-  echo "在根 .env 取消注释 TRIALS_FIXTURE_DIR=/app/backend/app/trials/fixtures 后重试。" >&2
-  exit 1
-fi
-
-echo "==> rebuilding the playwright image (tests are baked in, not mounted)"
-docker compose build playwright >/dev/null
-
-# The app under test (backend + built frontend) is baked into the backend
-# image too — without this rebuild, source changes silently test stale code
-# (bit twice on 2026-10-14: SSE endpoint and /qa page both 404'd).
-echo "==> rebuilding the backend image (app + frontend are baked in)"
-docker compose build backend >/dev/null
-
-echo "==> ensuring backend matches the current .env (fixture/research mode)"
-docker compose up -d --wait backend db mailpit >/dev/null
-
-echo "==> applying application migrations and ensuring the first superuser exists"
-docker compose run --rm backend bash scripts/prestart.sh >/dev/null
-
-echo "==> clearing persisted trial reviews from the local stack"
-docker compose exec -T db sh -c \
-  'mysql -uapp -p"$MYSQL_PASSWORD" app -e "delete from trial_review;"'
-
-echo "==> running playwright against the compose stack"
-exec docker compose run --rm playwright bunx playwright test "$@"
+run_dir=$(mktemp -d "${TMPDIR:-/tmp}/lingsight-e2e-XXXXXXXX")
+chmod 700 "$run_dir"
+export COMPOSE_PROJECT_NAME="lingsight-e2e-$(basename "$run_dir" | tr '[:upper:]' '[:lower:]')"
+# Explicit exports also override ambient developer credentials/remote endpoints.
+export PROJECT_NAME="LingSight E2E"
+export LINGSIGHT_E2E_UID LINGSIGHT_E2E_GID
+LINGSIGHT_E2E_UID=$(id -u)
+LINGSIGHT_E2E_GID=$(id -g)
+mkdir -p frontend/blob-report frontend/test-results
+export SECRET_KEY FIRST_SUPERUSER_PASSWORD MYSQL_PASSWORD MYSQL_ROOT_PASSWORD
+SECRET_KEY=$(openssl rand -hex 32)
+FIRST_SUPERUSER_PASSWORD=$(openssl rand -hex 24)
+MYSQL_PASSWORD=$(openssl rand -hex 24)
+MYSQL_ROOT_PASSWORD=$(openssl rand -hex 24)
+export FIRST_SUPERUSER="e2e@example.com"
+export SMTP_HOST=mailpit SMTP_USER= SMTP_PASSWORD= EMAILS_FROM_EMAIL=e2e@example.com
+export AGENT_BASE_URL=http://unconfigured-agent:19100 AGENT_API_TOKEN= AGENT_WORKSPACE_EMAIL=
+export INFERENCE_BASE_URL=http://unconfigured-inference:19200 INFERENCE_API_TOKEN= SENTRY_DSN=
+# --env-file prevents Compose from loading the repository's developer .env.
+: > "$run_dir/env"
+compose=(docker compose --env-file "$run_dir/env" -p "$COMPOSE_PROJECT_NAME" -f compose.yml -f compose.e2e.yml)
+cleanup() {
+  result=$?
+  trap - EXIT
+  if [[ "$keep_stack" == 1 ]]; then
+    echo "Kept isolated stack: $COMPOSE_PROJECT_NAME (environment: $run_dir)"
+    echo "Remove with: docker compose --env-file $run_dir/env -p $COMPOSE_PROJECT_NAME -f compose.yml -f compose.e2e.yml down -v --remove-orphans"
+  else
+    "${compose[@]}" down -v --remove-orphans >/dev/null
+    docker image rm "${COMPOSE_PROJECT_NAME}-backend:local" "${COMPOSE_PROJECT_NAME}-playwright:local" >/dev/null 2>&1 || true
+    rm -rf "$run_dir"
+  fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+# Persist only synthetic settings so --keep can be inspected after this shell exits.
+for name in LINGSIGHT_E2E_UID LINGSIGHT_E2E_GID COMPOSE_PROJECT_NAME PROJECT_NAME SECRET_KEY FIRST_SUPERUSER FIRST_SUPERUSER_PASSWORD MYSQL_PASSWORD MYSQL_ROOT_PASSWORD SMTP_HOST SMTP_USER SMTP_PASSWORD EMAILS_FROM_EMAIL AGENT_BASE_URL AGENT_API_TOKEN AGENT_WORKSPACE_EMAIL INFERENCE_BASE_URL INFERENCE_API_TOKEN SENTRY_DSN; do
+  printf '%s=%s\n' "$name" "${!name}" >> "$run_dir/env"
+done
+chmod 600 "$run_dir/env"
+echo "Running isolated stack: $COMPOSE_PROJECT_NAME"
+"${compose[@]}" build backend playwright
+"${compose[@]}" run --rm backend bash scripts/prestart.sh
+"${compose[@]}" up -d --wait backend mailpit
+"${compose[@]}" run --rm playwright bunx playwright test --fail-on-flaky-tests --trace=retain-on-failure "$@"
