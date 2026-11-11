@@ -26,12 +26,14 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import uuid
 from dataclasses import dataclass
 from typing import Any
 
 from fastapi import HTTPException
-from sqlmodel import Session, col, delete, select
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, col, select
 
 from app.inference_client import (
     JSON_ARTIFACTS,
@@ -50,7 +52,13 @@ RLE_FORMAT = "coco_counts_column_major"  # same convention as water_maze_v3.fram
 READBACK_SEGMENT_ROWS = 2000
 WRITE_BATCH_ROWS = 500
 FLOAT_TOLERANCE = 1e-6
-KEYPOINT_CORRECTION_MAX = 32
+HEADING_ALGORITHM = "frozen-ball-chord-7px-v1"
+PRIMARY_RADIUS_PX = 7
+KEYPOINT_PROTOCOL = "fixed-mask-centroid-crop256-fp32-v9"
+HEADING_STATUSES = frozenset(("ok", "ok_proposal", "missing_mask", "no_heading"))
+KEYPOINT_CORRECTIONS = frozenset(
+    ("", "head_tail_swapped", "flip_unresolved", "flip_kept_by_trajectory")
+)
 
 GATE_DETAIL = "只有通过人工复核（tracking_ok）的推理任务才能发布"
 CONSISTENCY_DETAIL = "推理产物与来源记录不一致：{reason}"
@@ -105,7 +113,10 @@ def _finite(value: Any) -> float | None:
     """Accept a JSON number (not bool) within sane image-coordinate bounds."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    number = float(value)
+    try:
+        number = float(value)
+    except OverflowError:
+        return None
     return number if -1e18 < number < 1e18 else None
 
 
@@ -185,7 +196,7 @@ def _load_artifacts(
         tracking = json.loads(artifacts["tracking.json"])
         keypoints = json.loads(artifacts["keypoints.json"])
         provenance = json.loads(artifacts["provenance.json"])
-    except (json.JSONDecodeError, KeyError) as exc:
+    except (ValueError, UnicodeError, KeyError) as exc:
         raise _reject(
             422, CONSISTENCY_DETAIL.format(reason="产物不是合法 JSON")
         ) from exc
@@ -200,9 +211,13 @@ def _load_artifacts(
 
 def _provenance_hash(provenance: dict[str, Any], key: str) -> str:
     value = provenance.get(key)
-    _require(isinstance(value, str) and len(value) == 64, f"来源记录缺少 {key}")
+    _require(_is_sha256(value), f"来源记录缺少合法 {key}")
     assert isinstance(value, str)
     return value
+
+
+def _is_sha256(value: Any) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
 
 
 def _prepare(
@@ -214,15 +229,16 @@ def _prepare(
 ) -> PreparedPublish:
     """Validate task/artifact mutual consistency and convert to DB rows."""
     _gate(task)
+    _require(task.get("id") == task_id, "上游返回的任务标识与请求不一致")
     candidate = task.get("candidate")
     _require(isinstance(candidate, dict), "任务缺少候选视频元数据")
     assert isinstance(candidate, dict)
     video_sha256 = candidate.get("video_sha256")
     frame_count = candidate.get("frame_count")
-    fps = candidate.get("fps")
+    fps = _finite(candidate.get("fps"))
     video_id = task.get("video_id")
     _require(
-        isinstance(video_sha256, str) and len(video_sha256) == 64,
+        _is_sha256(video_sha256),
         "候选视频缺少 sha256",
     )
     assert isinstance(video_sha256, str)
@@ -234,7 +250,7 @@ def _prepare(
     )
     assert isinstance(frame_count, int)
     _require(
-        isinstance(fps, (int, float)) and not isinstance(fps, bool) and fps > 0,
+        fps is not None and fps > 0,
         "候选视频帧率不可用",
     )
     assert isinstance(fps, (int, float))
@@ -242,6 +258,11 @@ def _prepare(
     assert isinstance(video_id, str)
 
     tracking, keypoints, provenance = _load_artifacts(artifacts)
+    _require(
+        isinstance(task.get("confirmed"), dict)
+        and provenance.get("confirmed") == task["confirmed"],
+        "人工确认参数与来源记录不一致",
+    )
 
     # Cross-artifact hash and lineage checks.
     _require(
@@ -258,17 +279,23 @@ def _prepare(
     )
     heading_algorithm = keypoints.get("heading_algorithm")
     _require(
-        isinstance(heading_algorithm, str) and bool(heading_algorithm),
+        heading_algorithm == HEADING_ALGORITHM,
         "关键点产物缺少朝向算法标识（需含朝向阶段的新版结果）",
     )
     assert isinstance(heading_algorithm, str)
+    parameters = keypoints.get("heading_parameters")
+    _require(
+        isinstance(parameters, dict)
+        and parameters.get("primary_radius_px") == PRIMARY_RADIUS_PX,
+        "朝向参数不符合冻结 7px 协议",
+    )
     _require(
         heading_algorithm == provenance.get("heading_algorithm"),
         "朝向算法标识与来源记录不一致",
     )
     keypoint_protocol = keypoints.get("protocol")
     _require(
-        isinstance(keypoint_protocol, str)
+        keypoint_protocol == KEYPOINT_PROTOCOL
         and keypoint_protocol == provenance.get("keypoint_protocol"),
         "关键点协议与来源记录不一致",
     )
@@ -293,11 +320,14 @@ def _prepare(
         assert isinstance(row, dict)
         idx = row.get("frame")
         _require(
-            isinstance(idx, int) and not isinstance(idx, bool) and idx >= 0,
+            isinstance(idx, int)
+            and not isinstance(idx, bool)
+            and 0 <= idx < frame_count,
             "追踪帧序不合法",
         )
         assert isinstance(idx, int)
         _require(idx not in tracking_by_idx, "追踪帧重复")
+        _require(isinstance(row.get("valid"), bool), "追踪有效位不合法")
         tracking_by_idx[idx] = row
         if row.get("valid") is True:
             valid_frames += 1
@@ -313,26 +343,48 @@ def _prepare(
     for index, row in enumerate(kp_frames):
         _require(isinstance(row, dict), "关键点帧结构不合法")
         assert isinstance(row, dict)
-        _require(row.get("frame") == index, "关键点帧序与视频帧不一致")
+        _require(
+            type(row.get("frame")) is int and row["frame"] == index,
+            "关键点帧序与视频帧不一致",
+        )
         status = row.get("heading_status")
-        _require(isinstance(status, str), f"第 {index} 帧缺少朝向状态")
+        _require(
+            isinstance(status, str) and status in HEADING_STATUSES,
+            f"第 {index} 帧缺少合法朝向状态",
+        )
         assert isinstance(status, str)
         status_counts[status] = status_counts.get(status, 0) + 1
         heading = _finite(row.get("heading_angle_deg"))
-        if heading is None:
+        tracking_row = tracking_by_idx.get(index)
+        has_mask = tracking_row is not None and tracking_row.get("valid") is True
+        if status in ("missing_mask", "no_heading"):
             # ok 与提案均入、无效帧不入：无朝向的帧不产生行。
+            _require(
+                row.get("heading_angle_deg") is None
+                and row.get("is_proposal") is None
+                and (status == "no_heading") == has_mask,
+                f"第 {index} 帧无朝向状态与 mask/数值不一致",
+            )
             continue
+        _require(
+            # Upstream rounds to six decimal places and can emit exactly 360.
+            heading is not None and 0 <= heading <= 360,
+            f"第 {index} 帧朝向角不合法",
+        )
+        assert heading is not None
         proposal = row.get("is_proposal")
         _require(isinstance(proposal, bool), f"第 {index} 帧缺少提案标记")
         assert isinstance(proposal, bool)
-        _require(status in ("ok", "ok_proposal"), f"第 {index} 帧朝向状态异常")
+        _require(
+            proposal == (status == "ok_proposal"),
+            f"第 {index} 帧朝向状态与提案标记不一致",
+        )
         correction = row.get("keypoint_correction", "")
         _require(
-            isinstance(correction, str) and len(correction) <= KEYPOINT_CORRECTION_MAX,
+            isinstance(correction, str) and correction in KEYPOINT_CORRECTIONS,
             f"第 {index} 帧极性标记不合法",
         )
         assert isinstance(correction, str)
-        tracking_row = tracking_by_idx.get(index)
         _require(
             tracking_row is not None and tracking_row.get("valid") is True,
             f"第 {index} 帧有朝向但缺少有效 mask",
@@ -407,7 +459,7 @@ def _prepare(
         ).encode()
     )
     review_note = (
-        task["review"]["note"] if isinstance(task.get("review"), dict) else None
+        task["review"].get("note") if isinstance(task.get("review"), dict) else None
     )
     if not isinstance(review_note, str):
         review_note = None
@@ -472,13 +524,9 @@ def _write_whole_version(
         review_note=prepared.review_note,
     )
     try:
-        # Whole-version semantics: any previous rows for this task go first,
-        # so the version is replaced atomically, never merged.
-        session.exec(
-            delete(PublishedFrame).where(
-                col(PublishedFrame.task_id) == prepared.task_id
-            )
-        )
+        # Claim the unique task before writing any frames. Deleting frame rows
+        # first takes MySQL gap locks and can deadlock simultaneous publishers.
+        # Published versions are immutable; the FK forbids orphan old frames.
         session.add(result)
         session.flush()
         for start in range(0, len(prepared.frames), WRITE_BATCH_ROWS):
@@ -488,6 +536,11 @@ def _write_whole_version(
         session.commit()
     except PublishRejected:
         session.rollback()
+        raise
+    except IntegrityError:
+        session.rollback()
+        # Preserve the driver's duplicate key code for the caller to settle
+        # a simultaneous publication after the winning transaction commits.
         raise
     except Exception:
         # Driver/ORM detail goes to the log, never into the API response.
@@ -515,6 +568,9 @@ def _verify_readback(session: Session, prepared: PreparedPublish) -> None:
             .order_by(col(PublishedFrame.frame_idx))
             .offset(offset)
             .limit(READBACK_SEGMENT_ROWS)
+            # A SELECT alone can return the just-inserted ORM objects from
+            # the identity map. Reload persisted cells to verify the database.
+            .execution_options(populate_existing=True)
         ).all()
         if not rows:
             break
@@ -587,7 +643,7 @@ def publish_task_results(
         return _settle_existing(existing, prepared, project_id)
     try:
         return _write_whole_version(session, prepared, project_id, user_id), False
-    except Exception as exc:
+    except IntegrityError as exc:
         # A concurrent publish of the same task hit the unique constraint
         # after our select: re-read and settle as replay or conflict.
         if _is_unique_violation(exc):
@@ -596,12 +652,12 @@ def publish_task_results(
             ).first()
             if existing is not None:
                 return _settle_existing(existing, prepared, project_id)
-        raise
+        logger.exception("publish integrity failure for task %s", prepared.task_id)
+        raise _reject(500, WRITE_FAILED_DETAIL) from None
 
 
-def _is_unique_violation(exc: Exception) -> bool:
-    message = str(exc.orig) if hasattr(exc, "orig") else str(exc)
-    return "Duplicate entry" in message
+def _is_unique_violation(exc: IntegrityError) -> bool:
+    return exc.orig is not None and bool(exc.orig.args) and exc.orig.args[0] == 1062
 
 
 def result_public(

@@ -1,0 +1,62 @@
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> da969c656440, initial schema for mysql
+INFO  [alembic.runtime.migration] Running upgrade da969c656440 -> b19a1e7c90a1, Store per-user experiment access for the trial catalog.
+INFO  [alembic.runtime.migration] Running upgrade b19a1e7c90a1 -> c3f8a1d204b7, Store human preparation reviews per trial (ticket #21).
+INFO  [alembic.runtime.migration] Running upgrade c3f8a1d204b7 -> d4e5f6a7b8c9, Keep preparation reviews for each version of trial materials.
+INFO  [alembic.runtime.migration] Running upgrade d4e5f6a7b8c9 -> a1b2c3d4e5f6, Project entity: user-owned research organization unit (ticket #42).
+INFO  [alembic.runtime.migration] Running upgrade a1b2c3d4e5f6 -> b7d8e9f0a1c2, Published inference results: v3-form summary + per-frame rows (ticket #43).
+============================= test session starts ==============================
+platform linux -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /home/x/Documents/Codex/2026-11-11/wo-de/work/inference-publish/backend
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+collected 39 items / 38 deselected / 1 selected
+
+tests/api/routes/test_publish.py F                                       [100%]
+
+=================================== FAILURES ===================================
+____________ test_publish_readback_detects_database_payload_changes ____________
+
+client = <starlette.testclient.TestClient object at 0x7bf8e7e5e3c0>
+workspace_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3OTUwOTcyNDEsInN1YiI6IjU1YzlmMDc1LTE1YTQtNGMyZC1iMzA4LTNjMWU0NTFkNDFhZCJ9.rK0RyZ1AKMvRZZXQTzkS65y5e-_6Jl7ftcda8qKaMu0'}
+db = <sqlmodel.orm.session.Session object at 0x7bf8e9c5f8c0>
+
+    def test_publish_readback_detects_database_payload_changes(
+        client: TestClient, workspace_headers: dict[str, str], db: Session
+    ) -> None:
+        project_id = _create_project(client, workspace_headers)
+        task_id, task = fresh_task()
+        verify = publishing._verify_readback
+    
+        def changed_database(
+            session: Session, prepared: publishing.PreparedPublish
+        ) -> None:
+            # Simulate a database-side mutation, bypassing the ORM identity map.
+            session.connection().execute(
+                update(PublishedFrame)
+                .where(PublishedFrame.task_id == task_id, PublishedFrame.frame_idx == 0)
+                .values(centroid_x=99.0)
+            )
+            verify(session, prepared)
+    
+        with (
+            fake_inference(FakeUpstream(task, default_artifacts())),
+            patch.object(publishing, "_verify_readback", changed_database),
+        ):
+            response = _publish(client, workspace_headers, project_id, task_id)
+>       assert response.status_code == 500, response.text
+E       AssertionError: {"task_id":"99e23a15-21f1-4134-af62-2b18166d85ce","project_id":"5ed7d765-ace6-4728-9e87-b5722696ead0","video_id":"day01/maze-clip.mp4","fps":30.0,"total_frames":6,"valid_frames":5,"frames_with_heading":4,"proposal_frames":1,"heading_algorithm":"frozen-ball-chord-7px-v1","keypoint_protocol":"fixed-mask-centroid-crop256-fp32-v9","video_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","content_fingerprint":"4ce317720dad2ade96d6bc6c7983074607fa0565317e7ac628a8787b7244c676","review_note":"看过叠加视频","published_at":"2026-11-11T14:07:22Z","replayed":false}
+E       assert 201 == 500
+E        +  where 201 = <Response [201 Created]>.status_code
+
+tests/api/routes/test_publish.py:738: AssertionError
+=============================== warnings summary ===============================
+../.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /home/x/Documents/Codex/2026-11-11/wo-de/work/inference-publish/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/api/routes/test_publish.py::test_publish_readback_detects_database_payload_changes
+================= 1 failed, 38 deselected, 1 warning in 2.22s ==================

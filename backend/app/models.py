@@ -397,6 +397,12 @@ class PublishRequest(SQLModel):
 
     task_id: str = Field(min_length=36, max_length=36)
 
+    @field_validator("task_id")
+    @classmethod
+    def canonical_task_id(cls, value: str) -> str:
+        # This identifier enters a service URL; length alone allows traversal.
+        return str(uuid.UUID(value))
+
 
 class PublishedResultPublic(SQLModel):
     task_id: str

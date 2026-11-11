@@ -11,19 +11,23 @@ import hashlib
 import json
 import re
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from threading import Barrier
 from typing import Any
 from unittest.mock import patch
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import update
 from sqlmodel import Session, select
 
 from app import publishing
 from app.core.config import settings
-from app.models import PublishedFrame, PublishedResult, Project
+from app.models import Project, PublishedFrame, PublishedResult
+from app.publishing import HEADING_ALGORITHM, KEYPOINT_PROTOCOL, PRIMARY_RADIUS_PX
 from tests.utils.user import (
     authentication_token_from_email,
     create_random_user,
@@ -35,9 +39,6 @@ FIRST_HASH = "d" * 64
 MARK_HASH = "e" * 64
 VIDEO_SHA = "a" * 64
 OVERLAY_BYTES = b"\x00\x01overlay-video-bytes"
-
-HEADING_ALGORITHM = "frozen-ball-chord-7px-v1"
-KEYPOINT_PROTOCOL = "fixed-mask-centroid-crop256-fp32-v9"
 
 ARTIFACT_NAMES = ("tracking.json", "keypoints.json", "provenance.json")
 
@@ -119,9 +120,7 @@ def default_artifacts() -> dict[str, dict[str, Any]]:
                 head=[95.0, 85.0],
                 tail=[115.0, 125.0],
             ),
-            _kp_frame(
-                3, heading_status="ok_proposal", heading=270.0, proposal=True
-            ),
+            _kp_frame(3, heading_status="ok_proposal", heading=270.0, proposal=True),
             _kp_frame(
                 4,
                 heading_status="ok",
@@ -135,7 +134,7 @@ def default_artifacts() -> dict[str, dict[str, Any]]:
         "model_sha256": V9_HASH,
         "protocol": KEYPOINT_PROTOCOL,
         "heading_algorithm": HEADING_ALGORITHM,
-        "heading_parameters": {"primary_radius_px": 7},
+        "heading_parameters": {"primary_radius_px": PRIMARY_RADIUS_PX},
     }
     provenance = {
         "first_frame_sha256": FIRST_HASH,
@@ -202,6 +201,7 @@ class FakeUpstream:
     artifact_status: dict[str, int] = field(default_factory=dict)
     overlay_bytes: bytes = OVERLAY_BYTES
     transport_error: Exception | None = None
+    task_body: bytes | None = None
     requests: list[httpx.Request] = field(default_factory=list)
 
     @property
@@ -227,6 +227,8 @@ def fake_inference(upstream: FakeUpstream):
         if name is None:
             if upstream.task_status != 200:
                 return httpx.Response(upstream.task_status, json={"detail": "x"})
+            if upstream.task_body is not None:
+                return httpx.Response(200, content=upstream.task_body)
             return httpx.Response(200, json=upstream.task)
         if name == "overlay.mp4":
             status = upstream.artifact_status.get(name, 200)
@@ -277,9 +279,7 @@ def _publish(
 
 def _result_rows(db: Session, task_id: str) -> list[PublishedResult]:
     return list(
-        db.exec(
-            select(PublishedResult).where(PublishedResult.task_id == task_id)
-        ).all()
+        db.exec(select(PublishedResult).where(PublishedResult.task_id == task_id)).all()
     )
 
 
@@ -411,9 +411,12 @@ def test_publish_writes_v3_shaped_summary_and_frame_rows(
     assert result.overlay_bytes == len(OVERLAY_BYTES)
     assert result.tracking_model_sha256 == TRACK_HASH
     assert result.v9_model_sha256 == V9_HASH
-    assert result.provenance_json_sha256 == hashlib.sha256(
-        json.dumps(default_artifacts()["provenance.json"]).encode()
-    ).hexdigest()
+    assert (
+        result.provenance_json_sha256
+        == hashlib.sha256(
+            json.dumps(default_artifacts()["provenance.json"]).encode()
+        ).hexdigest()
+    )
 
     frames = _frame_rows(db, task_id)
     assert [frame.frame_idx for frame in frames] == [0, 2, 3, 4]
@@ -452,6 +455,138 @@ def test_publish_replays_identical_version_without_rewriting(
     assert len(_frame_rows(db, task_id)) == 4
 
 
+@pytest.mark.parametrize("same_project", [True, False])
+def test_concurrent_publication_replays_or_refuses_the_winning_version(
+    client: TestClient,
+    workspace_headers: dict[str, str],
+    db: Session,
+    same_project: bool,
+) -> None:
+    project_id = _create_project(client, workspace_headers)
+    second_project_id = (
+        project_id if same_project else _create_project(client, workspace_headers)
+    )
+    task_id, task = fresh_task()
+    ready = Barrier(2, timeout=15)
+    writer = publishing._write_whole_version
+
+    def simultaneous_write(*args: Any, **kwargs: Any) -> PublishedResult:
+        ready.wait()
+        return writer(*args, **kwargs)
+
+    with (
+        fake_inference(FakeUpstream(task, default_artifacts())),
+        patch.object(publishing, "_write_whole_version", simultaneous_write),
+        ThreadPoolExecutor(max_workers=2) as workers,
+    ):
+        pending = [
+            workers.submit(_publish, client, workspace_headers, project_id, task_id)
+            for project_id in (project_id, second_project_id)
+        ]
+        responses = [future.result(timeout=30) for future in pending]
+    expected_statuses = [200, 201] if same_project else [201, 409]
+    assert (
+        sorted(response.status_code for response in responses) == expected_statuses
+    ), [response.text for response in responses]
+    if same_project:
+        assert sorted(response.json()["replayed"] for response in responses) == [
+            False,
+            True,
+        ]
+    else:
+        conflict = next(
+            response for response in responses if response.status_code == 409
+        )
+        assert conflict.json()["detail"] == publishing.CROSS_PROJECT_DETAIL
+    assert len(_result_rows(db, task_id)) == 1
+    assert len(_frame_rows(db, task_id)) == 4
+
+
+@pytest.mark.parametrize(
+    ("artifact", "path", "value"),
+    [
+        ("tracking.json", ("frames",), []),
+        ("tracking.json", ("frames", 5, "frame"), 6),
+        ("keypoints.json", ("frames", 0, "frame"), False),
+        ("keypoints.json", ("frames", 5, "heading_status"), "unknown"),
+        ("keypoints.json", ("frames", 0, "heading_angle_deg"), -1),
+        ("keypoints.json", ("frames", 0, "heading_angle_deg"), float("nan")),
+        ("keypoints.json", ("frames", 0, "is_proposal"), True),
+        ("keypoints.json", ("frames", 0, "keypoint_correction"), "invented"),
+        ("keypoints.json", ("heading_parameters", "primary_radius_px"), 4),
+        ("provenance.json", ("first_frame_sha256",), "z" * 64),
+        ("provenance.json", ("confirmed", "seed", "x"), 100),
+    ],
+)
+def test_publish_refuses_malformed_scientific_contract(
+    client: TestClient,
+    workspace_headers: dict[str, str],
+    db: Session,
+    artifact: str,
+    path: tuple[str | int, ...],
+    value: Any,
+) -> None:
+    project_id = _create_project(client, workspace_headers)
+    task_id, task = fresh_task()
+    artifacts = default_artifacts()
+    parent: Any = artifacts[artifact]
+    for key in path[:-1]:
+        parent = parent[key]
+    parent[path[-1]] = value
+    with fake_inference(FakeUpstream(task, artifacts)):
+        response = _publish(client, workspace_headers, project_id, task_id)
+    assert response.status_code == 422, response.text
+    assert _result_rows(db, task_id) == []
+    assert _frame_rows(db, task_id) == []
+
+
+def test_publish_refuses_path_shaped_task_id_before_upstream_access(
+    client: TestClient, workspace_headers: dict[str, str]
+) -> None:
+    project_id = _create_project(client, workspace_headers)
+    _, task = fresh_task()
+    upstream = FakeUpstream(task, default_artifacts())
+    with fake_inference(upstream):
+        response = _publish(client, workspace_headers, project_id, "../" * 12)
+    assert response.status_code == 422
+    assert upstream.requests == []
+
+
+@pytest.mark.parametrize("body", [b"not-json", b"[]", b"\xff"])
+def test_publish_handles_malformed_upstream_task(
+    client: TestClient, workspace_headers: dict[str, str], body: bytes
+) -> None:
+    project_id = _create_project(client, workspace_headers)
+    task_id, task = fresh_task()
+    upstream = FakeUpstream(task, default_artifacts(), task_body=body)
+    with fake_inference(upstream):
+        response = _publish(client, workspace_headers, project_id, task_id)
+    assert response.status_code == 502
+    assert response.json()["detail"] == "视频推理服务暂时不可用"
+    assert len(upstream.requests) == 1
+
+
+def test_publish_preserves_preseed_missing_masks_and_optional_review_note(
+    client: TestClient, workspace_headers: dict[str, str], db: Session
+) -> None:
+    project_id = _create_project(client, workspace_headers)
+    task_id, task = fresh_task(review={"tracking_ok": True})
+    artifacts = default_artifacts()
+    # Tracking begins at the confirmed seed, while keypoints cover the video.
+    artifacts["tracking.json"]["frames"] = artifacts["tracking.json"]["frames"][2:]
+    artifacts["keypoints.json"]["frames"][0] = _kp_frame(
+        0, heading_status="missing_mask", heading=None, proposal=None
+    )
+    artifacts["provenance.json"]["heading_summary"].update(ok=2, missing_mask=2)
+    with fake_inference(FakeUpstream(task, artifacts)):
+        response = _publish(client, workspace_headers, project_id, task_id)
+    assert response.status_code == 201, response.text
+    assert response.json()["valid_frames"] == 4
+    assert response.json()["frames_with_heading"] == 3
+    assert response.json()["review_note"] is None
+    assert [frame.frame_idx for frame in _frame_rows(db, task_id)] == [2, 3, 4]
+
+
 def test_publish_refuses_changed_content_after_publication(
     client: TestClient, workspace_headers: dict[str, str], db: Session
 ) -> None:
@@ -460,8 +595,7 @@ def test_publish_refuses_changed_content_after_publication(
     upstream = FakeUpstream(task, default_artifacts())
     with fake_inference(upstream):
         assert (
-            _publish(client, workspace_headers, project_id, task_id).status_code
-            == 201
+            _publish(client, workspace_headers, project_id, task_id).status_code == 201
         )
         fingerprint_before = _result_rows(db, task_id)[0].content_fingerprint
         upstream.artifacts["keypoints.json"]["frames"][0]["heading_angle_deg"] = 11.5
@@ -578,6 +712,61 @@ def test_publish_rolls_back_whole_version_on_readback_failure(
     assert _frame_rows(db, task_id) == []
 
 
+def test_publish_readback_detects_database_payload_changes(
+    client: TestClient, workspace_headers: dict[str, str], db: Session
+) -> None:
+    project_id = _create_project(client, workspace_headers)
+    task_id, task = fresh_task()
+    verify = publishing._verify_readback
+
+    def changed_database(
+        session: Session, prepared: publishing.PreparedPublish
+    ) -> None:
+        # Simulate a database-side mutation, bypassing the ORM identity map.
+        session.connection().execute(
+            update(PublishedFrame)
+            .where(PublishedFrame.task_id == task_id, PublishedFrame.frame_idx == 0)
+            .values(centroid_x=99.0)
+        )
+        verify(session, prepared)
+
+    with (
+        fake_inference(FakeUpstream(task, default_artifacts())),
+        patch.object(publishing, "_verify_readback", changed_database),
+    ):
+        response = _publish(client, workspace_headers, project_id, task_id)
+    assert response.status_code == 500, response.text
+    assert response.json()["detail"] == publishing.READBACK_DETAIL
+    assert _result_rows(db, task_id) == []
+    assert _frame_rows(db, task_id) == []
+
+
+def test_publish_round_trips_multiple_readback_segments(
+    client: TestClient, workspace_headers: dict[str, str], db: Session
+) -> None:
+    project_id = _create_project(client, workspace_headers)
+    task_id, task = fresh_task()
+    count = publishing.READBACK_SEGMENT_ROWS + 3
+    task["candidate"]["frame_count"] = count
+    artifacts = default_artifacts()
+    artifacts["tracking.json"]["frames"] = [
+        _tracking_frame(i, True) for i in range(count)
+    ]
+    artifacts["tracking.json"]["summary"]["valid"] = count
+    artifacts["keypoints.json"]["frames"] = [
+        _kp_frame(i, heading_status="ok", heading=360.0, proposal=False)
+        for i in range(count)
+    ]
+    artifacts["provenance.json"]["heading_summary"].update(
+        ok=count, ok_proposal=0, missing_mask=0, no_heading=0
+    )
+    with fake_inference(FakeUpstream(task, artifacts)):
+        response = _publish(client, workspace_headers, project_id, task_id)
+    assert response.status_code == 201, response.text
+    assert response.json()["frames_with_heading"] == count
+    assert [frame.frame_idx for frame in _frame_rows(db, task_id)] == list(range(count))
+
+
 def test_readback_detects_digest_mismatch(db: Session) -> None:
     task_id, task = fresh_task()
     upstream = FakeUpstream(task, default_artifacts())
@@ -603,8 +792,7 @@ def test_project_results_listing_and_frame_rows(
     task_id, task = fresh_task()
     with fake_inference(FakeUpstream(task, default_artifacts())):
         assert (
-            _publish(client, workspace_headers, project_id, task_id).status_code
-            == 201
+            _publish(client, workspace_headers, project_id, task_id).status_code == 201
         )
 
     listing = client.get(
@@ -653,8 +841,7 @@ def test_results_listing_scoped_to_owner(
     task_id, task = fresh_task()
     with fake_inference(FakeUpstream(task, default_artifacts())):
         assert (
-            _publish(client, workspace_headers, project_id, task_id).status_code
-            == 201
+            _publish(client, workspace_headers, project_id, task_id).status_code == 201
         )
 
     outsider = create_random_user(db)
@@ -681,8 +868,7 @@ def test_project_deletion_cascades_published_rows(
     task_id, task = fresh_task()
     with fake_inference(FakeUpstream(task, default_artifacts())):
         assert (
-            _publish(client, workspace_headers, project_id, task_id).status_code
-            == 201
+            _publish(client, workspace_headers, project_id, task_id).status_code == 201
         )
     assert _frame_rows(db, task_id)
 

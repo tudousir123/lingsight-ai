@@ -121,8 +121,17 @@ class InferenceClient:
 
         def handle(client: httpx.Client) -> dict[str, Any]:
             with self._get(client, f"tasks/{task_id}") as response:
-                task = json.loads(response.read())
-            assert isinstance(task, dict)
+                payload = bytearray()
+                for chunk in response.iter_bytes(STREAM_CHUNK_BYTES):
+                    payload.extend(chunk)
+                    if len(payload) > JSON_ARTIFACT_CAP_BYTES:
+                        raise InferenceArtifactTooLarge("task")
+            try:
+                task = json.loads(payload)
+            except ValueError, UnicodeError:
+                raise InferenceUpstreamError(502) from None
+            if not isinstance(task, dict):
+                raise InferenceUpstreamError(502)
             return task
 
         return self._send(handle)
