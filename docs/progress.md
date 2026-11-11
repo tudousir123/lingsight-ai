@@ -1,6 +1,6 @@
 # LingSight AI 进度（事实优先）
 
-**2026-11-11 提交前独立复审**：Standards/Spec 两轴 subagent 复审均 0 遗留问题。发布质心改为原样保留 v9 mask 像素质心，非法值拒绝（修前新增用例 5 失败、修后全量 **241 passed / 6 research-live skipped，coverage 91%**）。首页补中英文合成演示标注、准确碰台口径及浏览器存储受限回退，最后首页/引导 **20 passed**；旧 E2E 配置向导安全退役。Agent PR #2 的固定生产依赖镜像与 Docker 测试已在 GitHub CI 通过并合并，推理文档 PR #2 已通过 CI 并合并；平台汇总 PR 等待远端 CI 后合并。新证据见 [独立复审](evidence/review-20261111/README.md)。正式配置、部署和真实视频人工验收仍在 #45，未改动现役服务。
+**2026-11-11 提交前独立复审**：Standards/Spec 两轴 subagent 复审均 0 遗留问题。发布质心改为原样保留 v9 mask 像素质心，非法值拒绝（修前新增用例 5 失败、修后全量 **241 passed / 6 research-live skipped，coverage 91%**）。首页补中英文合成演示标注、准确碰台口径及浏览器存储受限回退，最后首页/引导 **20 passed**；旧 E2E 配置向导安全退役。Agent PR #2 的固定生产依赖镜像与 Docker 测试已在 GitHub CI 通过并合并，推理文档 PR #2 已通过 CI 并合并；平台汇总与远端 CI 的实时状态见 [PR #49](https://github.com/tudousir123/lingsight-ai/pull/49)。新证据见 [独立复审](evidence/review-20261111/README.md)。正式配置、部署和真实视频人工验收仍在 #45，未改动现役服务。
 
 **2026-11-11 并行收尾与最终整合**：项目实体（#42）、推理结果发布（#43）和 Agent 项目范围消费（#44）已完成本地实现、修复与整合。新增项目内分析入口及旧 Agent 能力门禁（ADR-0018）；发布链路补并发幂等、严格产物校验和真正的数据库逐帧回读；E2E 使用独立合成 Compose 栈。叠加原有未提交首页/中文引导后，最终后端 **236 passed / 6 research-live skipped**、mypy/ty/ruff 全绿、完整浏览器 **102 passed（2.3m，退出 0、无 flaky）**；Agent Docker **27/27**、真实临时 MySQL + DBHub 权限/协议验证通过；推理仓 **21/21**，本轮未跑 GPU。原有改动保留并补齐对应本地化测试。Agent Docker 使用缓存科学依赖镜像，生产固定依赖镜像仍待构建核验。主站私有配置与 Agent 应用库只读源尚未配置，正式部署和用户真实视频人工验收（#45）仍待完成；本轮正在完成独立审核与 GitHub PR 合并收口，正式部署状态仍以 #45 为准。完整证据与可重放命令见 [本轮验收](evidence/closeout-20261111/README.md)。
 
