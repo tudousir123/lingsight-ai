@@ -16,6 +16,7 @@
 |---|---|---|
 | 平台隔离 MySQL + 真实 Node HTTP 契约 | 236 passed / 6 research-live skipped，退出 0 | backend-tests-final.txt |
 | 平台 mypy / ty / ruff | 全通过 | backend-lint.txt |
+| 桌面项目原路径 TypeScript / Vite 构建 | 退出 0，已刷新本机前端构建产物 | frontend-build-final.txt |
 | 最终组合代码的完整 Compose / Playwright | 102 passed，2.3 分钟，退出 0；无 flaky，已清理自建卷/网络/镜像 | full-stack-final.txt |
 | 独立 Agent Docker 全量测试 | 27 passed / 0 skipped | Agent 仓 docs/evidence/project-data/docker-tests.txt |
 | 新应用源真实协议与权限 | 临时 MySQL 8.4 + 平台 Alembic + DBHub 1.5.1 通过 | Agent 仓 docs/evidence/project-data/mysql-dbhub.json |

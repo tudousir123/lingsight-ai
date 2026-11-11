@@ -1,0 +1,77 @@
+$ tsc -p tsconfig.build.json && vite build
+vite v8.3.1 building client environment for production...
+transforming...
+✓ 2491 modules transformed.
+rendering chunks...
+computing gzip size...
+../backend/app/frontend/index.html                                             1.83 kB │ gzip:  0.70 kB
+../backend/app/frontend/assets/06-learning-curves-5xfad-BccWZhVI.webp        150.78 kB
+../backend/app/frontend/assets/07-probe-quadrant-results-CCx4BqaF.webp       193.75 kB
+../backend/app/frontend/assets/08-strategy-distribution-5xfad-HKYsuHKX.webp  384.55 kB
+../backend/app/frontend/assets/02-acquisition-heatmaps-C8Ik0x7b.webp         836.84 kB
+../backend/app/frontend/assets/_layout-CSrGBrem.css                            4.58 kB │ gzip:  1.34 kB
+../backend/app/frontend/assets/Workspace-C5lLbz76.css                          5.57 kB │ gzip:  1.65 kB
+../backend/app/frontend/assets/onboarding-BIhGuVaT.css                         7.55 kB │ gzip:  2.02 kB
+../backend/app/frontend/assets/welcome-DhXBzc1x.css                           44.56 kB │ gzip:  9.78 kB
+../backend/app/frontend/assets/index-DNQFNwDV.css                             77.04 kB │ gzip: 14.54 kB
+../backend/app/frontend/assets/_layout-DfbCwhwE.js                             0.07 kB │ gzip:  0.08 kB
+../backend/app/frontend/assets/analysis-BaMzVP-q.js                            0.07 kB │ gzip:  0.09 kB
+../backend/app/frontend/assets/annotations-Coe15GWr.js                         0.07 kB │ gzip:  0.08 kB
+../backend/app/frontend/assets/experiments.index-Coe15GWr.js                   0.07 kB │ gzip:  0.08 kB
+../backend/app/frontend/assets/check-Ch3i76Sx.js                               0.16 kB │ gzip:  0.16 kB
+../backend/app/frontend/assets/chevron-down-CNUXZg7I.js                        0.16 kB │ gzip:  0.16 kB
+../backend/app/frontend/assets/plus-S-QSLQeG.js                                0.19 kB │ gzip:  0.17 kB
+../backend/app/frontend/assets/arrow-up-right-DiClziNN.js                      0.20 kB │ gzip:  0.18 kB
+../backend/app/frontend/assets/search-DXbUuEFz.js                              0.21 kB │ gzip:  0.19 kB
+../backend/app/frontend/assets/project-research._projectId-dEhtmqeG.js         0.23 kB │ gzip:  0.19 kB
+../backend/app/frontend/assets/useNavigate-TgQsUvxv.js                         0.23 kB │ gzip:  0.19 kB
+../backend/app/frontend/assets/tasks._taskId-C9JWCfDh.js                       0.23 kB │ gzip:  0.19 kB
+../backend/app/frontend/assets/panel-left-BTisn8B4.js                          0.24 kB │ gzip:  0.21 kB
+../backend/app/frontend/assets/folder-open--o0fJ8dX.js                         0.33 kB │ gzip:  0.24 kB
+../backend/app/frontend/assets/arrow-up-CCQwXnUv.js                            0.33 kB │ gzip:  0.23 kB
+../backend/app/frontend/assets/scan-line-q9SoOjR3.js                           0.37 kB │ gzip:  0.24 kB
+../backend/app/frontend/assets/file-text-k5TwxNOx.js                           0.42 kB │ gzip:  0.27 kB
+../backend/app/frontend/assets/chart-no-axes-combined-OsiWviFG.js              0.43 kB │ gzip:  0.28 kB
+../backend/app/frontend/assets/trash-JVmTx83_.js                               0.63 kB │ gzip:  0.37 kB
+../backend/app/frontend/assets/message-square-BPIwGgXz.js                      0.65 kB │ gzip:  0.37 kB
+../backend/app/frontend/assets/useMatch-Dv27Sc23.js                            0.68 kB │ gzip:  0.42 kB
+../backend/app/frontend/assets/useAuth-BtFHS5zm.js                             1.07 kB │ gzip:  0.60 kB
+../backend/app/frontend/assets/queries-Cx7XnfCk.js                             1.27 kB │ gzip:  0.82 kB
+../backend/app/frontend/assets/recover-password-BjSLo18M.js                    1.71 kB │ gzip:  0.85 kB
+../backend/app/frontend/assets/useSelector-BQZJn2cB.js                         1.89 kB │ gzip:  0.83 kB
+../backend/app/frontend/assets/password-input-BT_NP2_i.js                      2.04 kB │ gzip:  1.02 kB
+../backend/app/frontend/assets/login-BBsGhdyU.js                               2.14 kB │ gzip:  0.91 kB
+../backend/app/frontend/assets/reset-password-CpzEORaZ.js                      2.42 kB │ gzip:  1.03 kB
+../backend/app/frontend/assets/dialog-Dp6yqLLj.js                              2.47 kB │ gzip:  0.90 kB
+../backend/app/frontend/assets/signup-CFYfMeJ9.js                              2.75 kB │ gzip:  1.00 kB
+../backend/app/frontend/assets/AuthLayout-ClXSlIgx.js                          3.46 kB │ gzip:  1.32 kB
+../backend/app/frontend/assets/dist-C35I1Pb5.js                                4.19 kB │ gzip:  1.84 kB
+../backend/app/frontend/assets/projects-DoIKyvcj.js                            4.40 kB │ gzip:  1.55 kB
+../backend/app/frontend/assets/dist-Cr77GPjD.js                                4.91 kB │ gzip:  1.81 kB
+../backend/app/frontend/assets/preload-helper-DvNEyq3Q.js                      5.13 kB │ gzip:  2.00 kB
+../backend/app/frontend/assets/input-XVBzqHgv.js                               8.09 kB │ gzip:  3.00 kB
+../backend/app/frontend/assets/directory-NmvWVViT.js                           9.05 kB │ gzip:  3.21 kB
+../backend/app/frontend/assets/link-BXnxpSvL.js                                9.38 kB │ gzip:  4.31 kB
+../backend/app/frontend/assets/settings-CKVOJsrJ.js                           10.47 kB │ gzip:  3.51 kB
+../backend/app/frontend/assets/projects._projectId-BFHK5IR2.js                10.95 kB │ gzip:  3.69 kB
+../backend/app/frontend/assets/onboarding-7tLSGce3.js                         11.81 kB │ gzip:  4.53 kB
+../backend/app/frontend/assets/createLucideIcon-BXLm2Wke.js                   11.93 kB │ gzip:  4.69 kB
+../backend/app/frontend/assets/inference-DFjRc5VE.js                          12.32 kB │ gzip:  4.57 kB
+../backend/app/frontend/assets/skeleton-CpI3T49z.js                           13.97 kB │ gzip:  4.78 kB
+../backend/app/frontend/assets/_layout-C1kNDKzU.js                            14.71 kB │ gzip:  5.33 kB
+../backend/app/frontend/assets/useQuery-B0qopTas.js                           15.53 kB │ gzip:  5.22 kB
+../backend/app/frontend/assets/Appearance-tTEf83DS.js                         22.02 kB │ gzip:  7.07 kB
+../backend/app/frontend/assets/Workspace-ljgRq0FC.js                          22.67 kB │ gzip:  8.15 kB
+../backend/app/frontend/assets/table-CLJmjVdK.js                              25.19 kB │ gzip:  8.30 kB
+../backend/app/frontend/assets/welcome-DkyU25Jc.js                            27.24 kB │ gzip:  8.93 kB
+../backend/app/frontend/assets/dist-DBj_2f08.js                               27.62 kB │ gzip: 10.59 kB
+../backend/app/frontend/assets/Combination-ChSH6x9N.js                        30.43 kB │ gzip: 10.69 kB
+../backend/app/frontend/assets/utils-D4MtPf17.js                              30.59 kB │ gzip:  9.93 kB
+../backend/app/frontend/assets/useCustomToast-C4Y1JA5w.js                     39.84 kB │ gzip: 11.28 kB
+../backend/app/frontend/assets/loading-button-NDClkbuu.js                     42.44 kB │ gzip: 14.87 kB
+../backend/app/frontend/assets/admin-B4AG8fbP.js                              48.86 kB │ gzip: 14.00 kB
+../backend/app/frontend/assets/client-D2GANpgd.js                             75.10 kB │ gzip: 25.97 kB
+../backend/app/frontend/assets/schemas-D3tkzAe4.js                            80.24 kB │ gzip: 22.98 kB
+../backend/app/frontend/assets/index-D7rimVD_.js                             298.28 kB │ gzip: 96.26 kB
+
+✓ built in 1.14s
