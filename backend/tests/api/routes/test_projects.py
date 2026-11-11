@@ -59,7 +59,7 @@ def test_blank_project_name_is_rejected(
 
 
 def test_create_rename_delete_project(
-    client: TestClient, db: Session, normal_user_token_headers: dict[str, str]
+    client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
     name = _unique_name("归组")
     project = _create_project(client, normal_user_token_headers, name)
