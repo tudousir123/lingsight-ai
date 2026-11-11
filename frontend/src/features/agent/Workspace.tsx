@@ -18,6 +18,7 @@ import {
   Video,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 import { consumeBrief, pendingBriefPrompt } from "@/features/research/entry"
 import { flagshipVisionModel } from "@/features/research/vision-model"
 import { agentRoutes } from "@/lib/upstreamRoutes.gen"
@@ -36,6 +37,7 @@ import {
   tasksKey,
 } from "./api"
 import { useTaskEvents } from "./events"
+import { useAddProjectMember, useWorkspaceProjects } from "./projects"
 import { useTasks } from "./queries"
 import { WorkspaceHome } from "./WorkspaceHome"
 import "./workspace.css"
@@ -196,8 +198,17 @@ function Clarification({
     </form>
   )
 }
-export function AgentWorkspace({ taskId = "" }: { taskId?: string }) {
+export function AgentWorkspace({
+  taskId = "",
+  projectId,
+}: {
+  taskId?: string
+  projectId?: string
+}) {
   const tasks = useTasks()
+  const projects = useWorkspaceProjects()
+  const addMember = useAddProjectMember()
+  const project = projects.data?.find((item) => item.id === projectId)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [draft, setDraft] = useState("")
@@ -220,17 +231,22 @@ export function AgentWorkspace({ taskId = "" }: { taskId?: string }) {
   })
   const stream = useTaskEvents(taskId)
   const run = task.data?.runs[task.data.runs.length - 1]
+  const scopeId = projectId ?? task.data?.project_id
   useEffect(() => {
-    setDraft(taskId ? "" : pendingBriefPrompt())
+    setDraft(taskId || projectId ? "" : pendingBriefPrompt())
     setError("")
     setArtifact(null)
-  }, [taskId])
+  }, [taskId, projectId])
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: tasksKey })
     void queryClient.invalidateQueries({ queryKey: taskKey(taskId) })
   }
   const send = async () => {
     if (!draft.trim() || pending) return
+    if (!taskId && projectId && !project) {
+      setError("项目不可用，请返回项目页重试。你的问题已保留。")
+      return
+    }
     const text = draft.trim()
     setPending(true)
     setError("")
@@ -240,7 +256,22 @@ export function AgentWorkspace({ taskId = "" }: { taskId?: string }) {
       else {
         const created = await agentJson<{ task: Task }>(agentRoutes.tasks(), {
           goal: text,
+          ...(projectId ? { project_id: projectId } : {}),
         })
+        if (projectId) {
+          try {
+            await addMember.mutateAsync({
+              projectId,
+              kind: "agent_task",
+              id: created.task.id,
+              label: created.task.title,
+            })
+          } catch {
+            toast.error(
+              "任务已创建，项目列表归组失败。请在项目页整理任务，无需重新发送。",
+            )
+          }
+        }
         await navigate({
           to: "/tasks/$taskId",
           params: { taskId: created.task.id },
@@ -286,6 +317,14 @@ export function AgentWorkspace({ taskId = "" }: { taskId?: string }) {
       <div className="agent-workspace">
         <div className="agent-scroll-area">
           <div className="agent-content">
+            {scopeId && (
+              <p className="research-history-note" role="status">
+                分析范围：当前项目的已发布推理数据。
+                <Link to="/projects/$projectId" params={{ projectId: scopeId }}>
+                  {project?.name ?? "查看项目"}
+                </Link>
+              </p>
+            )}
             {!taskId ? (
               <WorkspaceHome recentTask={tasks.data?.[0]} onStart={start} />
             ) : task.isPending ? (

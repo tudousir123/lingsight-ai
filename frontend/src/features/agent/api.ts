@@ -34,6 +34,7 @@ export type Artifact = {
 }
 export type Task = {
   id: string
+  project_id?: string | null
   title: string
   goal: string
   created_at: string

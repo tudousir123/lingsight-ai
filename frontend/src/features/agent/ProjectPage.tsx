@@ -337,6 +337,13 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       <p>
         项目归集科研任务与视频引用，保存在你的平台账号中；移出项目不会删除任务或视频本体。
       </p>
+      <Link
+        className="project-action"
+        to="/project-research/$projectId"
+        params={{ projectId }}
+      >
+        分析本项目数据
+      </Link>
       <button
         type="button"
         className="project-action"
@@ -364,7 +371,9 @@ export function ProjectPage({ projectId }: { projectId: string }) {
               <p>
                 点击“整理任务”添加已有任务，或在“视频推理”页把视频归入项目。
               </p>
-              <Link to="/">新建科研任务</Link>
+              <Link to="/project-research/$projectId" params={{ projectId }}>
+                新建项目科研任务
+              </Link>
             </div>
           )}
         </>

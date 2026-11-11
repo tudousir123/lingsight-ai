@@ -1,14 +1,18 @@
 """Authenticated gateway to the personal research service; state remains in Agent."""
 
-from fastapi import APIRouter, Request, Response
+import json
+import uuid
 
-from app.api.deps import CurrentUser, ensure_workspace_user
+from fastapi import APIRouter, HTTPException, Request, Response
+
+from app.api.deps import CurrentUser, SessionDep, ensure_workspace_user, owned_project
 from app.api.gateway import (
     UUID_PATTERN,
     GatewayPolicy,
     OperationTable,
     UpstreamService,
     forward,
+    read_payload,
 )
 from app.core.config import settings
 
@@ -64,8 +68,22 @@ def _service() -> UpstreamService:
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PATCH"])
 async def agent_gateway(
-    path: str, request: Request, current_user: CurrentUser
+    path: str, request: Request, current_user: CurrentUser, session: SessionDep
 ) -> Response:
     ensure_workspace_user(current_user)
     OPERATIONS.check(request.method, path, UNKNOWN_OPERATION)
-    return await forward(request, path, _service(), POLICY)
+    service = _service()
+    payload = None
+    if request.method == "POST" and path == "tasks" and service.api_token:
+        payload = await read_payload(request, POLICY)
+        try:
+            body = json.loads(payload)
+        except ValueError, UnicodeDecodeError:
+            body = None  # Upstream retains validation of non-project payloads.
+        if isinstance(body, dict) and body.get("project_id") is not None:
+            try:
+                project_id = uuid.UUID(body["project_id"])
+            except ValueError, TypeError, AttributeError:
+                raise HTTPException(422, "Invalid project_id") from None
+            owned_project(session, current_user, project_id)
+    return await forward(request, path, service, POLICY, payload=payload)

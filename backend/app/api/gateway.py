@@ -120,17 +120,31 @@ class GatewayPolicy:
     forward_path_query_routes: frozenset[str] = frozenset()
 
 
-async def forward(
-    request: Request, path: str, upstream: UpstreamService, policy: GatewayPolicy
-) -> StreamingResponse:
-    """Forward one whitelisted request upstream under the platform policy."""
-    if not upstream.api_token:
-        raise HTTPException(503, upstream.unconfigured_detail)
+async def read_payload(request: Request, policy: GatewayPolicy) -> bytes:
+    """Read a bounded request body, including when Content-Length is absent."""
     payload = bytearray()
     async for chunk in request.stream():
         payload.extend(chunk)
         if len(payload) > policy.body_cap_bytes:
             raise HTTPException(413, "Request body too large")
+    return bytes(payload)
+
+
+async def forward(
+    request: Request,
+    path: str,
+    upstream: UpstreamService,
+    policy: GatewayPolicy,
+    *,
+    payload: bytes | None = None,
+) -> StreamingResponse:
+    """Forward one whitelisted request upstream under the platform policy."""
+    if not upstream.api_token:
+        raise HTTPException(503, upstream.unconfigured_detail)
+    if payload is None:
+        payload = await read_payload(request, policy)
+    elif len(payload) > policy.body_cap_bytes:
+        raise HTTPException(413, "Request body too large")
     headers = {
         "Authorization": f"Bearer {upstream.api_token}",
         "Content-Type": "application/json",
@@ -164,7 +178,7 @@ async def forward(
                 f"{upstream.base_url.rstrip('/')}/v1/{path}",
                 headers=headers,
                 params=params,
-                content=bytes(payload),
+                content=payload,
             ),
             stream=True,
         )
