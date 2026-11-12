@@ -16,6 +16,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlmodel import Field, SQLModel
 
+VIDEO_ID_MAX_LENGTH = 4096
+
 
 def get_datetime_utc() -> datetime:
     return datetime.now(UTC)
@@ -233,7 +235,7 @@ class PublishedResult(SQLModel, table=True):
         ondelete="CASCADE",
         sa_type=Char36UUID,
     )
-    video_id: str = Field(nullable=False, max_length=4096)
+    video_id: str = Field(nullable=False, max_length=VIDEO_ID_MAX_LENGTH)
     fps: float = Field(nullable=False)
     total_frames: int = Field(nullable=False)
     valid_frames: int = Field(nullable=False)
@@ -352,7 +354,7 @@ class ProjectRename(ProjectNameBase):
 
 class ProjectMemberAdd(SQLModel):
     kind: ProjectMemberKind
-    id: str = Field(min_length=1, max_length=4096)
+    id: str = Field(min_length=1, max_length=VIDEO_ID_MAX_LENGTH)
     label: str | None = Field(default=None, max_length=255)
 
 

@@ -22,6 +22,7 @@ from app.inference_client import (
     InferenceUpstreamError,
 )
 from app.models import (
+    VIDEO_ID_MAX_LENGTH,
     Message,
     Project,
     ProjectCreate,
@@ -194,7 +195,7 @@ def remove_project_member(
     current_user: CurrentUser,
     project_id: uuid.UUID,
     member_kind: ProjectMemberKind,
-    member_id: Annotated[str, Path(min_length=1, max_length=4096)],
+    member_id: Annotated[str, Path(min_length=1, max_length=VIDEO_ID_MAX_LENGTH)],
 ) -> None:
     """Remove one member reference; the referenced item itself is untouched."""
     project = owned_project(session, current_user, project_id)

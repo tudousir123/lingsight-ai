@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router"
 import { FolderOpen } from "lucide-react"
 import { useState } from "react"
 import { ProjectsService } from "@/client"
-import type { Entry } from "@/features/inference/contract"
+import type { Entry, VideoSource } from "@/features/inference/contract"
 import useAuth from "@/hooks/useAuth"
 import { authHeaders } from "@/lib/credentials"
 import { inferenceGatewayBase, inferenceRoutes } from "@/lib/upstreamRoutes.gen"
@@ -13,14 +13,6 @@ import {
   useAddProjectMember,
   type WorkspaceProject,
 } from "./projects"
-
-type Source = {
-  id: string
-  label: string
-  kind: string
-  available: boolean
-  error?: { code: string; message: string }
-}
 
 async function json<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(path, {
@@ -76,7 +68,7 @@ function FolderBrowser({
     queryKey: ["video-sources", userId],
     enabled: !!userId,
     queryFn: ({ signal }) =>
-      json<{ items: Source[] }>(
+      json<{ items: VideoSource[] }>(
         `${inferenceGatewayBase}/${inferenceRoutes.sources()}`,
         { signal },
       ),
