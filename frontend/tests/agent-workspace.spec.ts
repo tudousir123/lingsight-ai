@@ -428,6 +428,7 @@ test("项目可新建、归组任务、刷新保留并清空，不写 Agent 服�
     page.getByRole("heading", { name: "Spatial learning pilot" }),
   ).toBeVisible()
   await page.getByRole("link", { name: "项目资料" }).click()
+  await page.getByText("项目设置", { exact: true }).click()
   await page.getByRole("button", { name: "整理对话" }).click()
   await page.getByRole("checkbox", { name: task.title }).check()
   await page.getByRole("button", { name: "保存项目" }).click()
@@ -444,6 +445,7 @@ test("项目可新建、归组任务、刷新保留并清空，不写 Agent 服�
       .getByRole("link", { name: new RegExp(task.title) }),
   ).toBeVisible()
   await page.getByRole("link", { name: "项目资料" }).click()
+  await page.getByText("项目设置", { exact: true }).click()
   await page.getByRole("button", { name: "整理对话" }).click()
   await page.getByRole("checkbox", { name: task.title }).uncheck()
   await page.getByRole("button", { name: "保存项目" }).click()
@@ -462,13 +464,14 @@ test("项目可改名与删除，删除后任务保留", async ({ page }) => {
   await page.getByRole("link", { name: "学习与记忆", exact: true }).click()
   await expect(page).toHaveURL(/\/projects\/learning-memory/)
   await page.getByRole("link", { name: "项目资料" }).click()
+  await page.getByText("项目设置", { exact: true }).click()
   await page.getByRole("button", { name: "重命名项目" }).click()
   const dialog = page.getByRole("dialog")
   await dialog.getByLabel("项目名称").fill("空间学习试点")
   await dialog.getByRole("button", { name: "保存名称" }).click()
   await expect(dialog).toBeHidden()
   await expect(
-    page.getByRole("heading", { name: /空间学习试点/ }),
+    page.getByRole("main").getByText("空间学习试点", { exact: true }),
   ).toBeVisible()
   await expect(
     page.getByRole("link", { name: "空间学习试点", exact: true }),
@@ -673,6 +676,7 @@ test("项目页查看已发布推理结果的逐帧行摘要", async ({ page }) 
     },
   )
   await page.goto("/projects/learning-memory?view=details")
+  await page.getByRole("tab", { name: "数据库" }).click()
   await expect(
     page.getByRole("heading", { name: "已发布推理结果" }),
   ).toBeVisible()
@@ -688,4 +692,39 @@ test("项目页查看已发布推理结果的逐帧行摘要", async ({ page }) 
   await expect(page.getByText("第 1–3 行，共 53 行")).toBeVisible()
   await page.getByRole("button", { name: "下一页" }).click()
   await expect(page.getByText("第 51–53 行，共 53 行")).toBeVisible()
+
+  await page.getByRole("tab", { name: "推理可视化视频" }).click()
+  const overlayPath = `/api/v1/inference/tasks/${taskId}/artifacts/overlay.mp4`
+  await page.route(`**${overlayPath}?*`, (route) =>
+    route.fulfill({ status: 404 }),
+  )
+  const media = page.waitForRequest(
+    (request) => new URL(request.url()).pathname === overlayPath,
+  )
+  await page.getByRole("button", { name: "播放 day01/maze.mp4" }).click()
+  expect(new URL((await media).url()).searchParams.has("token")).toBe(true)
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+    "暂时无法播放",
+  )
+})
+
+test("项目资料中的分析产物可打开原对话报告", async ({ page }) => {
+  stubProjectsApi(page, [
+    {
+      id: "learning-memory",
+      name: "学习与记忆",
+      members: [{ kind: "agent_task", id, label: task.title }],
+    },
+  ])
+  await page.goto("/projects/learning-memory?view=details")
+  await expect(page.getByRole("tab", { name: "原始视频" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  )
+  await expect(page.getByLabel("视频来源", { exact: true })).toHaveCount(0)
+  await page.getByRole("tab", { name: "分析产物" }).click()
+  await page.getByRole("button", { name: /report.md/ }).click()
+  await expect(
+    page.getByRole("dialog").getByText("研究报告", { exact: true }),
+  ).toBeVisible()
 })

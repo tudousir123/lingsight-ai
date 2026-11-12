@@ -110,12 +110,10 @@ test("视频目录浏览可归入项目并从项目页移出", async ({ page }) 
   ).toBeVisible()
   await page.goto("/projects/learning-memory?view=details")
   await expect(
-    page.getByRole("heading", { name: "归入项目的视频" }),
+    page.getByRole("tabpanel").getByText("Day5-Trial3.mp4", { exact: true }),
   ).toBeVisible()
   await page.getByRole("button", { name: "移出视频 Day5-Trial3.mp4" }).click()
-  await expect(
-    page.getByRole("heading", { name: "归入项目的视频" }),
-  ).toBeHidden()
+  await expect(page.getByText("暂无原始视频。")).toBeVisible()
 })
 
 const publishedResult = (taskId: string) => ({
