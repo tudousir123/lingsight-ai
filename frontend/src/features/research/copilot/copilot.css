@@ -1,0 +1,480 @@
+.copilot {
+  --copilot-line: #343a34;
+  --copilot-surface: #202420;
+  --copilot-muted: #a8b1a7;
+  --copilot-accent: #cee4cb;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 238px;
+  height: 100%;
+  min-height: 0;
+  background: #171917;
+  color: #e8ece7;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.copilot-chat {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.copilot-thread {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.copilot-inner,
+.copilot-bottom {
+  width: min(780px, calc(100% - 60px));
+  margin-inline: auto;
+}
+
+.copilot-inner {
+  padding: 26px 0 20px;
+}
+
+.copilot-intro {
+  padding-top: clamp(32px, 15dvh, 142px);
+}
+
+.copilot-emblem {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 17px;
+  border: 1px solid #465545;
+  border-radius: 14px;
+  background: #293329;
+  color: var(--copilot-accent);
+}
+
+.copilot-intro h1 {
+  font-size: clamp(27px, 4vw, 41px);
+  font-weight: 520;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.copilot-intro > p {
+  margin: 9px 0 22px;
+  color: var(--copilot-muted);
+}
+
+.copilot-thread-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.copilot-thread-title {
+  color: #e6ede5;
+  font-size: 20px;
+  font-weight: 520;
+  overflow-wrap: anywhere;
+}
+
+.copilot-thread-header button {
+  flex-shrink: 0;
+}
+
+.copilot-message {
+  width: fit-content;
+  max-width: 100%;
+  margin: 12px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.copilot-user {
+  max-width: min(88%, 620px);
+  margin-left: auto;
+  padding: 11px 15px;
+  border: 1px solid #424d41;
+  border-radius: 14px 14px 4px 14px;
+  background: #2b332b;
+  color: #ebf0e9;
+}
+
+.copilot-tool {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #b0c8ad;
+  font-size: 13px;
+}
+
+.copilot-tool svg,
+.copilot-card-title svg,
+.copilot-context svg,
+.copilot-file svg {
+  flex-shrink: 0;
+}
+
+.copilot-agent {
+  padding-inline: 2px;
+  color: #dce4db;
+}
+
+.copilot-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--copilot-line);
+  border-radius: 13px;
+  background: var(--copilot-surface);
+}
+
+.copilot-card h2 {
+  font-size: 15px;
+  font-weight: 550;
+}
+
+.copilot-card > h2,
+.copilot-card-title {
+  margin-bottom: 10px;
+}
+
+.copilot-card-title,
+.copilot-card-footer,
+.copilot-controls,
+.copilot-running > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copilot-card-title {
+  color: #dbe8d9;
+}
+
+.copilot-card-title > span {
+  margin-left: auto;
+  color: var(--copilot-muted);
+  font-size: 12px;
+}
+
+.copilot-card-footer {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.copilot-card-footer > span,
+.copilot-card > p,
+.copilot-local > p {
+  color: var(--copilot-muted);
+  font-size: 12px;
+}
+
+.copilot-card > p {
+  margin-bottom: 10px;
+}
+
+.copilot-controls {
+  flex-wrap: wrap;
+}
+
+.copilot-intro > .copilot-controls {
+  margin-top: 12px;
+}
+
+.copilot-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid #444c43;
+  border-radius: 8px;
+  background: #252a25;
+  color: #e1e8df;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.copilot-button:hover:not(:disabled),
+.copilot-button[aria-pressed="true"] {
+  border-color: #839d80;
+  background: #343f33;
+}
+
+.copilot-primary,
+.copilot-primary:hover:not(:disabled) {
+  border-color: #c9dfc6;
+  background: var(--copilot-accent);
+  color: #202a20;
+}
+
+.copilot button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.copilot :is(button, input, select):focus-visible,
+.copilot-local-button:focus-within {
+  outline: 2px solid #c8e1c5;
+  outline-offset: 2px;
+}
+
+.copilot-file-list,
+.copilot-local {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  margin-top: 12px;
+}
+
+.copilot-file-list legend {
+  padding-bottom: 6px;
+  color: var(--copilot-muted);
+  font-size: 12px;
+}
+
+.copilot-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 6px 9px;
+  border: 1px solid #343c33;
+  border-radius: 7px;
+  background: #1a1e1a;
+  font-size: 13px;
+}
+
+.copilot-file > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.copilot-file > small,
+.copilot-file > select {
+  margin-left: auto;
+  color: var(--copilot-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.copilot-file input {
+  accent-color: #c5dec0;
+}
+
+.copilot-local-button {
+  position: relative;
+  justify-self: start;
+  cursor: pointer;
+}
+
+.copilot-local-button input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.copilot-scope-list {
+  max-height: 155px;
+  overflow: auto;
+  padding-left: 20px;
+  color: var(--copilot-muted);
+  list-style-type: disc;
+  overflow-wrap: anywhere;
+}
+
+.copilot-running {
+  display: grid;
+  gap: 8px;
+}
+
+.copilot-running progress {
+  width: 100%;
+  height: 9px;
+  accent-color: #adcfaa;
+}
+
+.copilot-running small {
+  color: var(--copilot-muted);
+}
+
+.copilot-table-wrap {
+  overflow: auto;
+}
+
+.copilot-report table {
+  width: 100%;
+  min-width: 430px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.copilot-report :is(th, td) {
+  padding: 8px;
+  border-bottom: 1px solid var(--copilot-line);
+}
+
+.copilot-report th {
+  color: #c8d5c6;
+  font-weight: 500;
+}
+
+.copilot-error {
+  padding: 10px;
+  color: #f3ac96;
+}
+
+.copilot-bottom {
+  flex: none;
+  padding: 10px 0 14px;
+}
+
+.copilot-composer {
+  overflow: hidden;
+  border: 1px solid #4c594a;
+  border-radius: 14px;
+  background: #242a24;
+}
+
+.copilot-composer:focus-within {
+  border-color: #9eb69c;
+}
+
+.copilot-composer textarea {
+  display: block;
+  width: 100%;
+  min-height: 54px;
+  max-height: 170px;
+  padding: 13px 14px 4px;
+  resize: vertical;
+  border: 0;
+  outline: 0;
+  font-size: 15px;
+}
+
+.copilot-intro textarea {
+  min-height: 85px;
+}
+
+.copilot-composer textarea::placeholder {
+  color: var(--copilot-muted);
+}
+
+.copilot-composer > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 10px 9px 14px;
+}
+
+.copilot-composer span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--copilot-muted);
+  font-size: 12px;
+}
+
+.copilot-composer button {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: var(--copilot-accent);
+  color: #202a20;
+}
+
+.copilot-context {
+  min-width: 0;
+  overflow: auto;
+  padding: 21px 16px;
+  border-left: 1px solid var(--copilot-line);
+  background: #191d19;
+}
+
+.copilot-context-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #dce9da;
+  font-weight: 520;
+}
+
+.copilot-context ol {
+  display: grid;
+  gap: 8px;
+}
+
+.copilot-context li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--copilot-line);
+}
+
+.copilot-context li > svg {
+  margin-top: 4px;
+  color: #b5cfb2;
+}
+
+.copilot-context li strong,
+.copilot-context li small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.copilot-context li strong {
+  font-weight: 500;
+}
+
+.copilot-context li small {
+  color: var(--copilot-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+  .copilot {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .copilot-context {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .copilot-inner,
+  .copilot-bottom {
+    width: calc(100% - 28px);
+  }
+
+  .copilot-inner {
+    padding-top: 17px;
+  }
+
+  .copilot-intro {
+    padding-top: clamp(20px, 8dvh, 68px);
+  }
+
+  .copilot-card {
+    padding: 11px;
+  }
+
+  .copilot-file {
+    flex-wrap: wrap;
+  }
+}
