@@ -83,14 +83,30 @@ async function mock(page: Page) {
 }
 test.beforeEach(async ({ page }) => mock(page))
 
-test("默认进入对话，侧栏三个工具入口", async ({ page }) => {
+test("工作台首屏显示研究输入、最近任务和常用工具", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
   await page.goto("/")
   await expect(
     page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
   ).toBeVisible()
+  const composer = page.getByRole("textbox", { name: "研究问题", exact: true })
+  const recent = page.getByRole("region", { name: "最近科研任务" })
+  const tools = page.getByRole("region", { name: "常用工具" })
+  await expect(composer).toBeInViewport()
   await expect(
-    page.getByRole("textbox", { name: "研究问题", exact: true }),
-  ).toBeVisible()
+    recent.getByRole("link", { name: "水迷宫视频探索 已完成" }),
+  ).toBeInViewport()
+  await expect(tools.getByRole("link", { name: /^视频推理/ })).toHaveAttribute(
+    "href",
+    "/inference",
+  )
+  await expect(tools.getByRole("link", { name: /^视频标注/ })).toHaveAttribute(
+    "href",
+    "/annotations",
+  )
+  await expect(
+    tools.getByRole("link", { name: /^分析与报告/ }),
+  ).toBeInViewport()
   const navigation = page.getByRole("navigation", {
     name: "科研工作区导航",
   })

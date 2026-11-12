@@ -1,369 +1,295 @@
-.agent-home .agent-content,
-.agent-home .agent-composer-wrap {
-  width: min(740px, calc(100% - 64px));
-}
 .agent-home .agent-content {
-  padding: 0 0 28px;
+  container-type: inline-size;
+  width: min(1100px, calc(100% - 48px));
+  padding: clamp(26px, 7dvh, 76px) 0 36px;
 }
-.agent-home .agent-welcome {
-  padding-top: clamp(30px, 8dvh, 104px);
+
+.workspace-home-intro {
+  margin-bottom: 26px;
 }
-.agent-home-brand {
+.workspace-home-intro h1 {
+  color: #f0f0ec;
+  font-size: clamp(27px, 4cqi, 43px);
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.04em;
+}
+.workspace-home-intro p {
+  margin-top: 10px;
+  color: #a5aaa5;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.workspace-home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+.workspace-home-start,
+.workspace-home-panel {
+  min-width: 0;
+  border: 1px solid #343a35;
+  border-radius: 18px;
+}
+.workspace-home-start {
+  padding: 22px;
+  background: linear-gradient(150deg, #252c25, #202320 72%);
+}
+.workspace-home-start h2,
+.workspace-home-panel h2 {
   display: flex;
   align-items: center;
   gap: 9px;
-  color: #a7b7ae;
-  font-size: 12px;
-  margin-bottom: 20px;
-}
-.home-brand-divider {
-  height: 11px;
-  width: 1px;
-  background: #454545;
-  margin: 0 3px;
-}
-.home-brand-caption {
-  color: #929292;
-}
-.agent-home .agent-intro h1 {
-  font-size: clamp(25px, 2.3vw, 34px);
-  line-height: 1.3;
-  letter-spacing: -1px;
-  margin: 0 0 10px;
-}
-.agent-home .agent-intro > p {
-  font-size: 13px;
-  margin-bottom: 28px;
-  color: #a0a0a0;
-}
-.home-discovery-grid {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  grid-template-rows: repeat(2, 158px);
-  gap: 12px;
-}
-.home-discovery-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  overflow: hidden;
-  text-align: left;
-  padding: 23px;
-  border: 1px solid #2a2a2a;
-  border-radius: 22px;
-  background: #222222;
-  color: #e2e2e2;
-  transition:
-    background 160ms ease,
-    border-color 160ms ease;
-}
-.home-discovery-card:hover {
-  background: #292929;
-  border-color: #454c48;
-}
-.home-discovery-card:focus-visible,
-.agent-home button:focus-visible,
-.agent-home a:focus-visible {
-  outline: 2px solid #b2c8ba;
-  outline-offset: 4px;
-}
-.home-research-card {
-  grid-row: span 2;
-  background: #222624;
-  border-color: #2b322e;
-}
-.home-card-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
+  color: #efefeb;
+  font-size: 15px;
+  font-weight: 550;
   line-height: 1.5;
-  letter-spacing: -0.2px;
 }
-.home-card-heading > svg {
-  color: #999e9b;
-  flex-shrink: 0;
+.workspace-home-start h2 {
+  font-size: 17px;
 }
-.home-card-description {
-  display: block;
-  position: relative;
-  z-index: 1;
-  color: #a0a4a1;
-  font-size: 12px;
-  line-height: 1.8;
-  margin-top: 8px;
+.workspace-home-start h2 svg,
+.workspace-home-panel h2 svg {
+  color: #bdcdb5;
 }
-.home-maze-sketch {
-  color: #a0bba9;
-  width: 260px;
-  max-width: 100%;
-  min-height: 0;
-  flex: 1;
-  align-self: center;
-  margin: 0 0 1px;
+
+.agent-home .agent-composer-wrap {
+  width: 100%;
+  margin: 14px 0 0;
+  padding: 0;
 }
-.home-card-footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: #adbdaf;
+.agent-home .agent-composer {
+  border-color: #465045;
+  border-radius: 13px;
+  background: #1a1d1a;
 }
-.home-card-footer > svg {
-  margin-left: auto;
+.agent-home .agent-composer:focus-within {
+  border-color: #afc4a4;
 }
-.home-card-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #a7bfae;
+.agent-home .agent-composer textarea {
+  min-height: 96px;
+  padding: 15px 16px 6px;
 }
-.home-card-kicker {
-  font-size: 9px;
-  letter-spacing: 1.5px;
-  color: #b5ab8e;
-  margin-bottom: 8px;
+.agent-home .agent-composer textarea::placeholder {
+  color: #a0a8a0;
 }
-.home-outputs-card .home-card-kicker {
-  color: #9fadc1;
-}
-.home-card-sketch {
-  position: absolute;
-  right: 22px;
-  bottom: 13px;
-  color: #b9ac88;
-  opacity: 0.7;
-  transform: rotate(-12deg);
-}
-.home-outputs-card .home-card-sketch {
-  color: #9fadc1;
-  transform: rotate(9deg);
-  bottom: 10px;
-}
-.home-section-heading {
-  display: flex;
+.agent-home .agent-composer-toolbar {
+  min-height: 54px;
   justify-content: space-between;
-  gap: 12px;
-  margin: 23px 0 11px;
-  color: #a5a5a5;
-  font-size: 11px;
+  padding: 7px 10px 10px 15px;
 }
-.home-section-heading > span {
-  color: #818181;
+.workspace-home-shortcut {
+  color: #a7ada6;
+  font-size: 12px;
 }
-.agent-home .agent-workflow-options {
+.agent-home .agent-send {
+  width: auto;
+  height: 36px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  background: #c4d9b9;
+  color: #192019;
+  font-size: 13px;
+  font-weight: 550;
+}
+.agent-home .agent-send:not(:disabled):hover {
+  background: #d8e9d1;
+}
+.agent-home .agent-send:disabled {
+  opacity: 1;
+  background: #383e38;
+  color: #b0b8ae;
+}
+.agent-home :is(button, a):focus-visible {
+  outline: 2px solid #bcd3b2;
+  outline-offset: 3px;
+}
+.agent-home .agent-send:focus-visible {
+  outline-offset: 2px;
+}
+.agent-home .agent-connection-error {
+  margin-top: 12px;
+}
+
+.workspace-home-examples {
+  margin-top: 20px;
+}
+.workspace-home-examples h3 {
+  margin-bottom: 8px;
+  color: #acb3aa;
+  font-size: 13px;
+  font-weight: 450;
+}
+.workspace-home-suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
-.agent-home .agent-workflow-options button {
+.workspace-home-suggestions button {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 9px 12px;
-  border: 1px solid #323232;
-  border-radius: 20px;
-  color: #aaa;
-  font-size: 11px;
-  line-height: 1.4;
+  min-height: 34px;
+  padding: 5px 10px;
+  border: 1px solid #434b42;
+  border-radius: 8px;
+  background: #2a302a;
+  color: #d4dad0;
+  font-size: 13px;
 }
-.agent-home .agent-workflow-options button:hover {
-  color: #e2e2e2;
-  background: #262626;
+.workspace-home-suggestions button:hover {
+  border-color: #6f826c;
+  background: #363f36;
 }
-.agent-home .agent-continue-task {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-top: 24px;
-  padding: 16px 0 0;
-  border-top: 1px solid #2b2b2b;
-  color: #999;
+.workspace-home-suggestions button > svg {
+  color: #b8c7b4;
 }
-.home-recent-label {
-  flex-shrink: 0;
-  width: 114px;
-  font-size: 9px;
-  line-height: 1.8;
-  letter-spacing: 1px;
-  color: #858585;
-}
-.home-recent-title {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  align-items: center;
+
+.workspace-home-side {
+  display: grid;
   gap: 12px;
 }
-.home-recent-title strong {
+.workspace-home-panel {
+  background: #1e211e;
+  padding: 16px;
+}
+.workspace-home-panel h2 {
+  margin-bottom: 8px;
+}
+.workspace-home-panel li + li {
+  border-top: 1px solid #303630;
+}
+.workspace-home-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 0;
+  border-radius: 6px;
+}
+.workspace-home-row:hover {
+  background: #292e29;
+}
+.workspace-home-row > svg:last-child {
+  flex: none;
+  margin-left: auto;
+  color: #a7b1a6;
+}
+.workspace-home-task {
+  min-height: 42px;
+}
+.workspace-home-task-title {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 400;
+  color: #e1e6df;
+  font-size: 13px;
+}
+.workspace-home-task .agent-run-status {
+  flex: none;
   font-size: 12px;
-  color: #bcbcbc;
+  white-space: nowrap;
 }
-.home-recent-title small {
-  flex-shrink: 0;
-  font-size: 10px;
-  color: #95aa9b;
+.workspace-home-empty {
+  padding: 8px 0 4px;
+  color: #a7ada6;
+  font-size: 13px;
+  line-height: 1.6;
 }
-.agent-continue-task:hover strong {
-  color: #eee;
+.workspace-home-tool-icon {
+  flex: none;
+  display: grid;
+  width: 33px;
+  height: 33px;
+  place-items: center;
+  border-radius: 8px;
+  background: #2d352d;
+  color: #c5d7bd;
 }
-.agent-home .agent-composer-wrap {
-  padding-top: 16px;
+.workspace-home-tool-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: #abb3a9;
+  font-size: 12px;
+  line-height: 1.45;
 }
-.agent-home .agent-composer {
-  border-radius: 22px;
-  background: #222222;
-  border-color: #3a3a3a;
-  box-shadow: 0 8px 32px #00000014;
+.workspace-home-tool-text strong {
+  color: #e5e8e3;
+  font-size: 13px;
+  font-weight: 550;
 }
-.agent-home .agent-composer:focus-within {
-  border-color: #839c8c;
-}
-.agent-home .agent-composer-context {
-  padding: 13px 18px;
-  border-bottom: 1px solid #323232;
-  color: #a4aaa6;
-  background: #252525;
-}
-.agent-home .agent-send:not(:disabled) {
-  background: #bdd0c2;
+
+@container (max-width: 680px) {
+  .workspace-home-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 @media (max-width: 760px) {
-  .agent-home .agent-content,
-  .agent-home .agent-composer-wrap {
+  .agent-home .agent-content {
     width: calc(100% - 32px);
+    padding-top: 22px;
   }
-  .agent-home .agent-welcome {
-    padding-top: 24px;
+  .workspace-home-intro {
+    margin-bottom: 18px;
   }
-  .agent-home .agent-intro > p {
-    margin-bottom: 20px;
+  .workspace-home-start {
+    padding: 16px;
   }
-  .home-brand-caption,
-  .home-brand-divider {
+  .agent-home .agent-composer-toolbar {
+    justify-content: end;
+  }
+  .workspace-home-shortcut {
     display: none;
-  }
-  .home-discovery-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: 196px auto;
-    gap: 10px;
-  }
-  .home-research-card {
-    grid-column: span 2;
-    grid-row: auto;
-  }
-  .home-discovery-card {
-    padding: 18px;
-    border-radius: 18px;
-  }
-  .home-card-description {
-    font-size: 11px;
-  }
-  .home-research-card .home-card-description {
-    max-width: 54%;
-  }
-  .home-maze-sketch {
-    position: absolute;
-    width: 185px;
-    height: 139px;
-    right: -2px;
-    bottom: 19px;
-    opacity: 0.85;
-  }
-  .home-card-footer {
-    margin-top: auto;
-    font-size: 10px;
-    z-index: 1;
-  }
-  .home-card-heading {
-    font-size: 14px;
-    align-items: flex-start;
-  }
-  .home-card-kicker {
-    font-size: 8px;
-    letter-spacing: 1px;
-  }
-  .home-guide-card,
-  .home-outputs-card {
-    min-height: 190px;
-  }
-  .home-card-sketch {
-    height: 49px;
-    width: 49px;
-    right: 14px;
-    bottom: 12px;
-  }
-  .home-section-heading > span {
-    display: none;
-  }
-  .home-recent-title {
-    display: block;
-  }
-  .home-recent-title strong,
-  .home-recent-title small {
-    display: block;
-  }
-  .home-recent-title small {
-    margin-top: 4px;
-  }
-  .agent-home .agent-composer-note {
-    font-size: 9px;
-    padding: 0 12px;
   }
 }
 
-/* Keep the entry cards above the composer on shorter desktop displays. */
-@media (min-width: 761px) and (max-height: 820px) {
-  .agent-home .agent-welcome {
-    padding-top: 8px;
-  }
-  .agent-home .agent-home-brand {
-    margin-bottom: 12px;
-  }
-  .agent-home .agent-intro h1 {
-    font-size: 28px;
-    margin-bottom: 6px;
-  }
-  .agent-home .agent-intro > p {
-    margin-bottom: 16px;
-  }
-  .home-discovery-grid {
-    grid-template-rows: repeat(2, 94px);
-  }
-  .home-discovery-card {
-    padding: 16px 20px;
-  }
-  .home-card-kicker {
-    display: none;
-  }
-  .home-card-description {
-    margin-top: 4px;
-    line-height: 1.6;
-  }
-  .home-card-sketch {
-    width: 60px;
-    height: 60px;
-    bottom: 8px;
-  }
-  .home-section-heading {
-    margin-top: 10px;
-    margin-bottom: 8px;
-  }
-  .agent-home .agent-continue-task {
-    margin-top: 10px;
-    padding-top: 12px;
-  }
-  .agent-home .agent-composer-context {
-    padding-block: 9px;
-  }
+@container (max-width: 460px) {
   .agent-home .agent-composer textarea {
-    min-height: 58px;
-    padding-top: 10px;
+    min-height: 82px;
+  }
+  .workspace-home-examples {
+    margin-top: 16px;
+  }
+  .workspace-home-suggestions {
+    gap: 6px;
+  }
+  .workspace-home-suggestions button {
+    gap: 5px;
+    padding-inline: 7px;
+    font-size: 12px;
+  }
+  .workspace-home-suggestions button > svg {
+    width: 14px;
+    height: 14px;
+  }
+  .workspace-home-task {
+    min-height: 38px;
+  }
+  .workspace-home-tools ul {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .workspace-home-tools li + li {
+    border-top: 0;
+  }
+  .workspace-home-tools .workspace-home-tool {
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 0;
+    text-align: center;
+  }
+  .workspace-home-tool-text > span,
+  .workspace-home-tool > svg:last-child {
+    display: none;
   }
 }

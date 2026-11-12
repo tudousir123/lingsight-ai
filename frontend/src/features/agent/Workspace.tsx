@@ -328,7 +328,125 @@ export function AgentWorkspace({
     input.current?.focus()
   }
   const blocked = run?.status === "waiting_for_input"
+  const canSend =
+    !!draft.trim() && !pending && !blocked && !tasks.error && !task.error
   const serviceError = tasks.error?.message
+  const recentTasks = (tasks.data ?? [])
+    .filter((item) => !projectId || item.project_id === projectId)
+    .slice(0, 3)
+  const connectionError = (serviceError || task.error || stream.error) && (
+    <div className="agent-connection-error" role="alert">
+      <span>
+        {task.error?.message ||
+          serviceError ||
+          `进度连接已断开，正在重连： ${stream.error}`}
+      </span>
+      <button type="button" onClick={refresh}>
+        重试连接
+      </button>
+    </div>
+  )
+  const composer = (
+    <div className="agent-composer-wrap">
+      <form
+        className="agent-composer"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (canSend) void send()
+        }}
+      >
+        {taskId && (
+          <div className="agent-composer-context">
+            <Database size={13} />
+            <span>实验数据</span>
+            <span className="agent-context-dot" />
+            <span>科研任务</span>
+            <span className="agent-background-note">
+              离开页面后任务仍会继续运行
+            </span>
+          </div>
+        )}
+        <textarea
+          ref={input}
+          value={draft}
+          maxLength={12000}
+          onChange={(e) => setDraft(e.target.value)}
+          aria-label="研究问题"
+          placeholder={
+            blocked
+              ? "请先回答上方科研口径问题后继续"
+              : "描述你的研究问题，或提供需要分析的视频 ID…"
+          }
+          disabled={pending || blocked}
+          onKeyDown={(e) => {
+            if (
+              e.key === "Enter" &&
+              !e.shiftKey &&
+              !e.nativeEvent.isComposing
+            ) {
+              e.preventDefault()
+              if (canSend) void send()
+            }
+          }}
+        />
+        <div className="agent-composer-toolbar">
+          {taskId ? (
+            <>
+              <Link to="/annotations" title="浏览实验与视频">
+                <Video size={17} />
+                <span>浏览视频</span>
+              </Link>
+              <span className="agent-model-label">
+                <Sparkles size={14} />
+                灵视科研助手
+              </span>
+            </>
+          ) : (
+            <span className="workspace-home-shortcut">
+              Enter 发送 · Shift + Enter 换行
+            </span>
+          )}
+          <div className="agent-send-actions">
+            {run && (isActive(run.status) || run.status === "interrupted") && (
+              <button
+                type="button"
+                disabled={pending}
+                className="agent-stop"
+                onClick={() => void action("cancel")}
+              >
+                <Square size={11} />
+                停止
+              </button>
+            )}
+            <button
+              type="submit"
+              className="agent-send"
+              aria-label="发送研究问题"
+              disabled={!canSend}
+            >
+              {pending ? (
+                <LoaderCircle size={17} className="animate-spin" />
+              ) : (
+                <ArrowUp size={taskId ? 20 : 16} />
+              )}
+              {!taskId && (pending ? "正在提交" : "发送")}
+            </button>
+          </div>
+        </div>
+      </form>
+      {error && (
+        <p className="agent-error" role="alert">
+          {error}
+        </p>
+      )}
+      {taskId && (
+        <p className="agent-composer-note">
+          基于实验数据开展分析 · 关键科研口径由你确认
+        </p>
+      )}
+      {!taskId && connectionError}
+    </div>
+  )
   return (
     <div
       className={`agent-workbench ${taskId ? "" : "agent-home"}`}
@@ -346,7 +464,14 @@ export function AgentWorkspace({
               </p>
             )}
             {!taskId ? (
-              <WorkspaceHome recentTask={tasks.data?.[0]} onStart={start} />
+              <WorkspaceHome
+                composer={composer}
+                recentTasks={recentTasks}
+                recentState={
+                  tasks.isPending ? "loading" : tasks.error ? "error" : "ready"
+                }
+                onStart={start}
+              />
             ) : task.isPending ? (
               <div className="agent-empty">
                 <LoaderCircle className="animate-spin" />
@@ -415,114 +540,10 @@ export function AgentWorkspace({
                 )}
               </>
             ) : null}
-            {(serviceError || task.error || stream.error) && (
-              <div className="agent-connection-error" role="alert">
-                <span>
-                  {task.error?.message ||
-                    serviceError ||
-                    `进度连接已断开，正在重连： ${stream.error}`}
-                </span>
-                <button type="button" onClick={refresh}>
-                  重试连接
-                </button>
-              </div>
-            )}
+            {taskId && connectionError}
           </div>
         </div>
-        <div className="agent-composer-wrap">
-          <form
-            className="agent-composer"
-            onSubmit={(e) => {
-              e.preventDefault()
-              void send()
-            }}
-          >
-            <div className="agent-composer-context">
-              <Database size={13} />
-              <span>实验数据</span>
-              <span className="agent-context-dot" />
-              <span>科研任务</span>
-              {taskId && (
-                <span className="agent-background-note">
-                  离开页面后任务仍会继续运行
-                </span>
-              )}
-            </div>
-            <textarea
-              ref={input}
-              value={draft}
-              maxLength={12000}
-              onChange={(e) => setDraft(e.target.value)}
-              aria-label="研究问题"
-              placeholder={
-                blocked
-                  ? "请先回答上方科研口径问题后继续"
-                  : "描述你的研究问题，或提供需要分析的视频 ID…"
-              }
-              disabled={pending || blocked}
-              onKeyDown={(e) => {
-                if (
-                  e.key === "Enter" &&
-                  !e.shiftKey &&
-                  !e.nativeEvent.isComposing
-                ) {
-                  e.preventDefault()
-                  void send()
-                }
-              }}
-            />
-            <div className="agent-composer-toolbar">
-              <Link to="/annotations" title="浏览实验与视频">
-                <Video size={17} />
-                <span>浏览视频</span>
-              </Link>
-              <span className="agent-model-label">
-                <Sparkles size={14} />
-                灵视科研助手
-              </span>
-              <div className="agent-send-actions">
-                {run &&
-                  (isActive(run.status) || run.status === "interrupted") && (
-                    <button
-                      type="button"
-                      disabled={pending}
-                      className="agent-stop"
-                      onClick={() => void action("cancel")}
-                    >
-                      <Square size={11} />
-                      停止
-                    </button>
-                  )}
-                <button
-                  type="submit"
-                  className="agent-send"
-                  aria-label="发送研究问题"
-                  disabled={
-                    !draft.trim() ||
-                    pending ||
-                    blocked ||
-                    !!tasks.error ||
-                    !!task.error
-                  }
-                >
-                  {pending ? (
-                    <LoaderCircle size={19} className="animate-spin" />
-                  ) : (
-                    <ArrowUp size={20} />
-                  )}
-                </button>
-              </div>
-            </div>
-          </form>
-          {error && (
-            <p className="agent-error" role="alert">
-              {error}
-            </p>
-          )}
-          <p className="agent-composer-note">
-            基于实验数据开展分析 · 关键科研口径由你确认
-          </p>
-        </div>
+        {taskId && composer}
         {artifact && (
           <ArtifactViewer
             key={artifact.id}

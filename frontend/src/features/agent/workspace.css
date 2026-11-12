@@ -59,18 +59,6 @@
   color: #858585;
   letter-spacing: 1.4px;
 }
-.agent-intro h1 {
-  font-size: 28px;
-  font-weight: 400;
-  letter-spacing: -0.7px;
-  margin: 12px 0 8px;
-}
-.agent-intro > p {
-  font-size: 14px;
-  color: #959595;
-  line-height: 1.8;
-  margin-bottom: 30px;
-}
 .agent-top-tab {
   display: inline-flex;
   align-items: center;
@@ -635,12 +623,6 @@
   .agent-composer-wrap {
     width: calc(100% - 32px);
   }
-  .agent-welcome {
-    padding-top: 18px;
-  }
-  .agent-intro h1 {
-    font-size: 25px;
-  }
   .agent-shell-header > a.agent-top-tab {
     display: none;
   }
@@ -655,19 +637,6 @@
   .agent-guide-link {
     font-size: 10px;
     white-space: nowrap;
-  }
-  .agent-workflow-options small {
-    display: none;
-  }
-  .agent-workflow-heading {
-    margin-top: 24px;
-  }
-  .agent-home-brand {
-    font-size: 13px;
-    margin-bottom: 18px;
-  }
-  .agent-continue-task {
-    padding: 14px;
   }
   .agent-background-note {
     display: none;
