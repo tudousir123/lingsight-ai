@@ -5,7 +5,6 @@ import {
   ArrowUpRight,
   Check,
   ChevronDown,
-  Circle,
   CircleDot,
   Database,
   FileText,
@@ -325,10 +324,102 @@ export function AgentWorkspace({
   }
   const start = (text: string) => {
     setDraft(text)
-    input.current?.focus()
+    input.current?.focus({ preventScroll: true })
   }
   const blocked = run?.status === "waiting_for_input"
   const serviceError = tasks.error?.message
+  const composer = (
+    <div className="agent-composer-wrap">
+      <form
+        className="agent-composer"
+        onSubmit={(e) => {
+          e.preventDefault()
+          void send()
+        }}
+      >
+        <div className="agent-composer-context">
+          <Database size={13} />
+          <span>{scopeId ? "项目已发布数据" : "实验数据"}</span>
+          {taskId && (
+            <span className="agent-background-note">
+              离开页面后任务仍会继续运行
+            </span>
+          )}
+        </div>
+        <textarea
+          ref={input}
+          value={draft}
+          maxLength={12000}
+          onChange={(e) => setDraft(e.target.value)}
+          aria-label="研究问题"
+          placeholder={
+            blocked
+              ? "请先回答上方科研口径问题后继续"
+              : taskId
+                ? "继续追问，或补充分析要求…"
+                : "输入研究问题，可附上视频 ID 或实验范围…"
+          }
+          disabled={pending || blocked}
+          onKeyDown={(e) => {
+            if (
+              e.key === "Enter" &&
+              !e.shiftKey &&
+              !e.nativeEvent.isComposing
+            ) {
+              e.preventDefault()
+              void send()
+            }
+          }}
+        />
+        <div className="agent-composer-toolbar">
+          <Link to="/annotations" title="浏览实验与视频">
+            <Video size={17} />
+            <span>浏览视频</span>
+          </Link>
+          <span className="agent-model-label">
+            <Sparkles size={14} />
+            灵视科研助手
+          </span>
+          <div className="agent-send-actions">
+            {run && (isActive(run.status) || run.status === "interrupted") && (
+              <button
+                type="button"
+                disabled={pending}
+                className="agent-stop"
+                onClick={() => void action("cancel")}
+              >
+                <Square size={11} />
+                停止
+              </button>
+            )}
+            <button
+              type="submit"
+              className="agent-send"
+              aria-label="发送研究问题"
+              disabled={
+                !draft.trim() ||
+                pending ||
+                blocked ||
+                !!tasks.error ||
+                !!task.error
+              }
+            >
+              {pending ? (
+                <LoaderCircle size={19} className="animate-spin" />
+              ) : (
+                <ArrowUp size={20} />
+              )}
+            </button>
+          </div>
+        </div>
+      </form>
+      {error && (
+        <p className="agent-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  )
   return (
     <div
       className={`agent-workbench ${taskId ? "" : "agent-home"}`}
@@ -338,15 +429,26 @@ export function AgentWorkspace({
         <div className="agent-scroll-area">
           <div className="agent-content">
             {scopeId && (
-              <p className="research-history-note" role="status">
-                分析范围：当前项目的已发布推理数据。
+              <p className="workspace-scope" role="status">
+                分析范围为当前项目的已发布推理数据
                 <Link to="/projects/$projectId" params={{ projectId: scopeId }}>
                   {project?.name ?? "查看项目"}
                 </Link>
               </p>
             )}
             {!taskId ? (
-              <WorkspaceHome recentTask={tasks.data?.[0]} onStart={start} />
+              <WorkspaceHome
+                tasks={tasks.data ?? []}
+                tasksLoading={tasks.isPending}
+                tasksUnavailable={!!tasks.error}
+                projects={projects.data ?? []}
+                projectsLoading={projects.isPending}
+                projectsUnavailable={!!projects.error}
+                projectId={projectId}
+                onStart={start}
+              >
+                {composer}
+              </WorkspaceHome>
             ) : task.isPending ? (
               <div className="agent-empty">
                 <LoaderCircle className="animate-spin" />
@@ -429,100 +531,7 @@ export function AgentWorkspace({
             )}
           </div>
         </div>
-        <div className="agent-composer-wrap">
-          <form
-            className="agent-composer"
-            onSubmit={(e) => {
-              e.preventDefault()
-              void send()
-            }}
-          >
-            <div className="agent-composer-context">
-              <Database size={13} />
-              <span>实验数据</span>
-              <span className="agent-context-dot" />
-              <span>科研任务</span>
-              {taskId && (
-                <span className="agent-background-note">
-                  离开页面后任务仍会继续运行
-                </span>
-              )}
-            </div>
-            <textarea
-              ref={input}
-              value={draft}
-              maxLength={12000}
-              onChange={(e) => setDraft(e.target.value)}
-              aria-label="研究问题"
-              placeholder={
-                blocked
-                  ? "请先回答上方科研口径问题后继续"
-                  : "描述你的研究问题，或提供需要分析的视频 ID…"
-              }
-              disabled={pending || blocked}
-              onKeyDown={(e) => {
-                if (
-                  e.key === "Enter" &&
-                  !e.shiftKey &&
-                  !e.nativeEvent.isComposing
-                ) {
-                  e.preventDefault()
-                  void send()
-                }
-              }}
-            />
-            <div className="agent-composer-toolbar">
-              <Link to="/annotations" title="浏览实验与视频">
-                <Video size={17} />
-                <span>浏览视频</span>
-              </Link>
-              <span className="agent-model-label">
-                <Sparkles size={14} />
-                灵视科研助手
-              </span>
-              <div className="agent-send-actions">
-                {run &&
-                  (isActive(run.status) || run.status === "interrupted") && (
-                    <button
-                      type="button"
-                      disabled={pending}
-                      className="agent-stop"
-                      onClick={() => void action("cancel")}
-                    >
-                      <Square size={11} />
-                      停止
-                    </button>
-                  )}
-                <button
-                  type="submit"
-                  className="agent-send"
-                  aria-label="发送研究问题"
-                  disabled={
-                    !draft.trim() ||
-                    pending ||
-                    blocked ||
-                    !!tasks.error ||
-                    !!task.error
-                  }
-                >
-                  {pending ? (
-                    <LoaderCircle size={19} className="animate-spin" />
-                  ) : (
-                    <ArrowUp size={20} />
-                  )}
-                </button>
-              </div>
-            </div>
-          </form>
-          {error && (
-            <p className="agent-error" role="alert">
-              {error}
-            </p>
-          )}
-          <p className="agent-composer-note">
-            基于实验数据开展分析 · 关键科研口径由你确认
-          </p>
-        </div>
+        {taskId && composer}
         {artifact && (
           <ArtifactViewer
             key={artifact.id}
@@ -532,36 +541,29 @@ export function AgentWorkspace({
           />
         )}
       </div>
-      {taskId && (
-        <aside className="agent-overview" aria-label="研究概览">
+      {task.data && (
+        <aside className="agent-overview" aria-label="任务概览">
           <h2>
             <PanelRight size={16} strokeWidth={1.5} />
-            概览
+            任务概览
           </h2>
-          {run && (
+          <dl>
             <div className="agent-overview-status">
-              <span>当前任务</span>
-              <strong>{statusLabels[run.status]}</strong>
+              <dt>当前状态</dt>
+              <dd className={run ? `status-${run.status}` : undefined}>
+                {run ? statusLabels[run.status] : "新任务"}
+              </dd>
             </div>
+            <div className="agent-overview-status">
+              <dt>研究成果</dt>
+              <dd>{task.data.artifacts?.length ?? 0} 个文件</dd>
+            </div>
+          </dl>
+          {run && isActive(run.status) && (
+            <p className="agent-overview-note">
+              离开页面后，任务仍会保留，可从最近任务返回。
+            </p>
           )}
-          <p>科研流程</p>
-          <ol>
-            {[
-              "确定实验范围",
-              "核验数据来源",
-              "确认科研口径",
-              "分析行为指标",
-              "整理研究发现",
-            ].map((step) => (
-              <li key={step}>
-                <Circle size={11} strokeWidth={1.3} />
-                <span>{step}</span>
-              </li>
-            ))}
-          </ol>
-          <div className="agent-overview-note">
-            从问题出发，确认分析计划，跟进研究过程，保留全部成果。
-          </div>
         </aside>
       )}
     </div>
@@ -572,7 +574,6 @@ export function AnalysisPage() {
   const tasks = useTasks()
   return (
     <div className="agent-results-page">
-      <span className="agent-eyebrow">研究成果</span>
       <h1>分析与报告</h1>
       <p>查看研究进度、图表与报告，或回到任务继续分析。</p>
       {tasks.isPending ? (
@@ -591,6 +592,7 @@ export function AnalysisPage() {
                 <small>{new Date(t.created_at).toLocaleString("zh-CN")}</small>
               </span>
               <small>
+                {t.artifacts && `${t.artifacts.length} 个文件 · `}
                 {t.runs[t.runs.length - 1]
                   ? statusLabels[t.runs[t.runs.length - 1].status]
                   : "新任务"}

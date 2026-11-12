@@ -83,14 +83,21 @@ async function mock(page: Page) {
 }
 test.beforeEach(async ({ page }) => mock(page))
 
-test("默认进入对话，侧栏三个工具入口", async ({ page }) => {
+test("工作台可发起研究，并提供视频推理、标注和成果入口", async ({ page }) => {
   await page.goto("/")
-  await expect(
-    page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: "科研工作台" })).toBeVisible()
   await expect(
     page.getByRole("textbox", { name: "研究问题", exact: true }),
   ).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: /开始视频推理/ }),
+  ).toHaveAttribute("href", "/inference")
+  await expect(
+    page.getByRole("link", { name: /浏览视频与标注/ }),
+  ).toHaveAttribute("href", "/annotations")
+  await expect(
+    page.getByRole("link", { name: /查看图表与报告/ }),
+  ).toHaveAttribute("href", "/analysis")
   const navigation = page.getByRole("navigation", {
     name: "科研工作区导航",
   })
@@ -105,6 +112,25 @@ test("默认进入对话，侧栏三个工具入口", async ({ page }) => {
     page.getByRole("heading", { name: "分析与报告", exact: true }),
   ).toBeVisible()
 })
+test("待确认的研究任务在首屏优先显示", async ({ page }) => {
+  const waiting = {
+    ...task,
+    id: "waiting-task",
+    title: "等待确认视频范围",
+    runs: [{ ...task.runs[0], status: "waiting_for_input" }],
+  }
+  await page.route("**/api/v1/agent/tasks", (route) =>
+    route.fulfill({ json: [task, waiting] }),
+  )
+  await page.goto("/")
+  const recent = page.getByRole("region", { name: "最近任务" })
+  await expect(recent.getByText("1 项待确认")).toBeVisible()
+  await expect(recent.getByRole("link").first()).toHaveAttribute(
+    "href",
+    "/tasks/waiting-task",
+  )
+})
+
 test("引导完成携带问题和范围但不自动提交", async ({ page }) => {
   let creates = 0
   page.on("request", (r) => {
@@ -361,9 +387,7 @@ test("侧栏与首页使用中文，示例问题只填入草稿", async ({ page 
       writes++
   })
   await page.goto("/")
-  await expect(
-    page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: "科研工作台" })).toBeVisible()
   await expect(
     page.getByRole("navigation", { name: "科研工作区导航" }).getByRole("link"),
   ).toHaveText(["新建科研任务", "实验与数据", "视频与标注", "分析与报告"])
