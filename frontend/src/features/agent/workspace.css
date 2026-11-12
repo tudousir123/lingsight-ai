@@ -1,11 +1,14 @@
 .agent-shell {
-  --sidebar: #202020;
-  --sidebar-accent: #292929;
-  background: #202020;
+  --background: #000;
+  --card: #000;
+  --popover: #000;
+  --sidebar: #000;
+  --sidebar-accent: #000;
+  background: #000;
   color: #e5e5e5;
 }
 .agent-shell [data-slot="sidebar-inset"] {
-  background: #161616;
+  background: #000;
   border: 1px solid #303030;
   border-radius: 24px;
   margin: 8px 8px 8px 0;
@@ -18,8 +21,8 @@
   align-items: center;
   padding: 0 20px;
   gap: 14px;
-  border-bottom: 1px solid #2c2e2c;
-  color: #a8aea8;
+  border-bottom: 1px solid #2d2d2d;
+  color: #b6b6b6;
   font-size: 13px;
 }
 .agent-shell-path {
@@ -28,7 +31,7 @@
   gap: 8px;
 }
 .agent-shell-path [aria-current] {
-  color: #e2e7e1;
+  color: #ededed;
 }
 .agent-shell-header > .agent-guide-link {
   margin-left: auto;
@@ -37,7 +40,7 @@
 }
 .agent-guide-link:hover,
 .agent-shell-path a:hover {
-  color: #f2f4f2;
+  color: #f4f4f4;
 }
 .agent-layout-body {
   min-height: 0;
@@ -70,11 +73,11 @@
   align-items: center;
   gap: 6px 12px;
   margin-bottom: 14px;
-  color: #a8aea8;
+  color: #b6b6b6;
   font-size: 13px;
 }
 .workspace-scope a {
-  color: #d5e2d5;
+  color: #dedede;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -99,15 +102,15 @@
   width: 226px;
   flex-shrink: 0;
   padding: 24px 18px;
-  border-left: 1px solid #2c2e2c;
-  background: #191b19;
+  border-left: 1px solid #2d2d2d;
+  background: #000;
 }
 .agent-overview h2 {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 18px;
-  color: #e2e7e1;
+  color: #ededed;
   font-size: 14px;
   font-weight: 500;
 }
@@ -117,12 +120,12 @@
   justify-content: space-between;
   gap: 6px;
   padding: 10px 0;
-  border-top: 1px solid #303430;
-  color: #b7c0b7;
+  border-top: 1px solid #323232;
+  color: #c0c0c0;
   font-size: 13px;
 }
 .agent-overview-status dd {
-  color: #e2e7e1;
+  color: #ededed;
 }
 .agent-overview-status .status-waiting_for_input,
 .agent-run-status.status-waiting_for_input {
@@ -130,7 +133,7 @@
 }
 .agent-overview-note {
   margin-top: 12px;
-  color: #a8aea8;
+  color: #b6b6b6;
   font-size: 12px;
   line-height: 1.6;
 }
@@ -148,7 +151,7 @@
 .agent-composer {
   border: 1px solid #373737;
   border-radius: 16px;
-  background: #171717;
+  background: #000;
   overflow: hidden;
 }
 .agent-composer:focus-within {
@@ -250,11 +253,11 @@
 .agent-run-status {
   color: #ababab;
   padding: 3px 8px;
-  background: #292929;
+  background: #000;
   border-radius: 8px;
 }
 .status-succeeded {
-  color: #a2bba9;
+  color: #c5c5c5;
 }
 .status-failed,
 .status-interrupted {
@@ -264,9 +267,10 @@
   margin: 26px 0 36px;
 }
 .agent-user-message {
+  border: 1px solid #353535;
   margin: 22px 0 26px auto;
   max-width: 88%;
-  background: #292929;
+  background: #000;
   padding: 14px 18px;
   border-radius: 18px;
   font-size: 14px;
@@ -340,7 +344,7 @@
   line-height: 1.8;
   margin-top: 24px;
   border: 1px solid #4c3c31;
-  background: #28231f;
+  background: #000;
   color: #d2b292;
   border-radius: 12px;
   padding: 12px 16px;
@@ -351,7 +355,7 @@
 }
 .agent-question {
   padding: 20px;
-  background: #29261f;
+  background: #000;
   border: 1px solid #554b38;
   border-radius: 16px;
   font-size: 13px;
@@ -364,7 +368,7 @@
 .agent-question textarea {
   display: block;
   width: 100%;
-  background: #181818;
+  background: #000;
   border: 1px solid #454038;
   border-radius: 8px;
   padding: 12px;
@@ -403,12 +407,12 @@
   align-items: center;
   text-align: left;
   border: 1px solid #333;
-  background: #202020;
+  background: #000;
   border-radius: 12px;
   padding: 15px;
 }
 .agent-artifacts svg {
-  color: #a3b6ad;
+  color: #c0c0c0;
   flex-shrink: 0;
 }
 .agent-artifacts span {
@@ -432,7 +436,7 @@
   max-height: 90dvh;
   display: flex;
   flex-direction: column;
-  background: #191919;
+  background: #000;
   color: #ddd;
   border-color: #3b3b3b;
 }
@@ -466,7 +470,7 @@
 .agent-file-body textarea {
   width: 100%;
   height: 50vh;
-  background: #101010;
+  background: #000;
   border: 1px solid #444;
   padding: 16px;
   font: 13px monospace;
@@ -510,7 +514,7 @@
   padding: 20px;
   border: 1px solid #333;
   border-radius: 16px;
-  background: #222;
+  background: #000;
 }
 .agent-task-list :where(a) > span {
   flex: 1;
@@ -566,7 +570,7 @@
   border: 1px solid #333;
   border-radius: 20px;
   margin-top: 35px;
-  background: #202020;
+  background: #000;
 }
 .agent-sidebar-heading {
   margin: 25px 14px 10px;
@@ -593,7 +597,7 @@
 }
 .agent-history-link:hover,
 .agent-history-link[aria-current="page"] {
-  background: #333;
+  background: #000;
   color: #eee;
 }
 .agent-history-note {

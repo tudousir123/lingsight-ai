@@ -1,8 +1,8 @@
 .workspace-start {
-  --start-border: #343634;
-  --start-surface: #1d1f1d;
-  --start-secondary: #a8aea8;
-  --start-accent: #c5d8c6;
+  --start-border: #353535;
+  --start-surface: #000;
+  --start-secondary: #b6b6b6;
+  --start-accent: #eeeeee;
 }
 
 .agent-home .agent-content {
@@ -12,7 +12,7 @@
 
 .workspace-start h1 {
   margin-bottom: 24px;
-  color: #f1f2ef;
+  color: #f2f2f2;
   font-size: clamp(26px, 3vw, 36px);
   font-weight: 500;
   line-height: 1.25;
@@ -34,7 +34,7 @@
 }
 
 .workspace-start h2 {
-  color: #e2e7e1;
+  color: #ededed;
   font-size: 15px;
   font-weight: 500;
 }
@@ -45,13 +45,13 @@
 }
 
 .workspace-start .agent-composer {
-  border-color: #464e46;
+  border-color: #484848;
   border-radius: 14px;
-  background: #222622;
+  background: #000;
 }
 
 .workspace-start .agent-composer:focus-within {
-  border-color: #8ba78b;
+  border-color: #929292;
 }
 
 .workspace-start .agent-composer-context,
@@ -72,7 +72,7 @@
 
 .workspace-start .agent-send:not(:disabled) {
   background: var(--start-accent);
-  color: #202820;
+  color: #202020;
 }
 
 .workspace-examples {
@@ -93,8 +93,8 @@
 .workspace-examples button:hover,
 .workspace-panel-list a:hover,
 .workspace-tool:hover {
-  background: #282e28;
-  color: #f1f2ef;
+  border-color: #707070;
+  color: #f2f2f2;
 }
 
 .workspace-start a:focus-visible,
@@ -126,7 +126,7 @@
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  background: #2b342c;
+  background: #000;
   color: var(--start-accent);
 }
 
@@ -134,7 +134,7 @@
 .workspace-panel-list strong {
   display: block;
   overflow: hidden;
-  color: #e7eae6;
+  color: #ededed;
   font-size: 14px;
   font-weight: 500;
   text-overflow: ellipsis;
