@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router"
 import { ChevronRight, FolderOpen, MessageSquare } from "lucide-react"
 import { statusLabels, type Task } from "./api"
 import { membersOfKind, type WorkspaceProject } from "./projects"
+import { useVideoWorkflows, videoWorkflowTask } from "./videoWorkflow"
 import "./project-conversations.css"
 
 export function ProjectConversationHome({
@@ -16,7 +17,18 @@ export function ProjectConversationHome({
   tasksUnavailable: boolean
 }) {
   const tasksById = new Map(tasks.map((task) => [task.id, task]))
-  const conversations = membersOfKind(project, "agent_task")
+  const previewConversations = useVideoWorkflows()
+    .filter((flow) => flow.projectId === project.id)
+    .map(videoWorkflowTask)
+  const previewMembers = previewConversations.map((task) => ({
+    id: task.id,
+    label: task.title,
+    added_at: task.created_at,
+  }))
+  const conversations = [
+    ...membersOfKind(project, "agent_task"),
+    ...previewMembers,
+  ]
     .map((member) => ({ member, task: tasksById.get(member.id) }))
     .sort((a, b) =>
       (b.task?.created_at ?? b.member.added_at ?? "").localeCompare(

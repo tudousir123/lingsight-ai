@@ -44,6 +44,13 @@ import {
   useWorkspaceProjects,
 } from "./projects"
 import { useTasks } from "./queries"
+import { VideoAttachment, VideoAttachmentList } from "./VideoAttachment"
+import {
+  createVideoWorkflow,
+  saveVideoWorkflow,
+  videoWorkflowEnabled,
+  type WorkflowVideo,
+} from "./videoWorkflow"
 import { WorkspaceHome } from "./WorkspaceHome"
 import "./workspace.css"
 
@@ -222,6 +229,9 @@ export function AgentWorkspace({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState("")
   const [artifact, setArtifact] = useState<Artifact | null>(null)
+  const [videos, setVideos] = useState<WorkflowVideo[]>([])
+  const [attachmentOpen, setAttachmentOpen] = useState(false)
+  const canAttach = videoWorkflowEnabled && !taskId
   const input = useRef<HTMLTextAreaElement>(null)
   const task = useQuery({
     queryKey: taskKey(taskId),
@@ -254,13 +264,15 @@ export function AgentWorkspace({
     setDraft(taskId || projectId ? "" : pendingBriefPrompt())
     setError("")
     setArtifact(null)
+    setVideos([])
+    setAttachmentOpen(false)
   }, [taskId, projectId])
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: tasksKey })
     void queryClient.invalidateQueries({ queryKey: taskKey(taskId) })
   }
   const send = async () => {
-    if (!draft.trim() || pending) return
+    if ((!draft.trim() && !videos.length) || pending) return
     if (!taskId && projectId && !project) {
       setError("项目不可用，请返回项目页重试。你的问题已保留。")
       return
@@ -269,7 +281,16 @@ export function AgentWorkspace({
     setPending(true)
     setError("")
     try {
-      if (taskId)
+      if (videos.length && canAttach) {
+        const flow = createVideoWorkflow(videos, text, projectId)
+        saveVideoWorkflow(flow)
+        await navigate({
+          to: "/tasks/$taskId",
+          params: { taskId: flow.id },
+          search: { project: projectId },
+        })
+        setVideos([])
+      } else if (taskId)
         await agentJson(agentRoutes.tasksByTaskIdMessages(taskId), { text })
       else {
         const created = await agentJson<{ task: Task; run?: Run }>(
@@ -365,6 +386,14 @@ export function AgentWorkspace({
             </span>
           )}
         </div>
+        {videos.length > 0 && (
+          <VideoAttachmentList
+            videos={videos}
+            onRemove={(id) =>
+              setVideos(videos.filter((video) => video.id !== id))
+            }
+          />
+        )}
         <textarea
           ref={input}
           value={draft}
@@ -376,9 +405,11 @@ export function AgentWorkspace({
               ? "请先回答上方科研口径问题后继续"
               : taskId
                 ? "继续追问，或补充分析要求…"
-                : projectId
-                  ? "在此项目开始新对话…"
-                  : "输入研究问题，可附上视频 ID 或实验范围…"
+                : canAttach
+                  ? "上传视频，或描述你的研究问题…"
+                  : projectId
+                    ? "在此项目开始新对话…"
+                    : "输入研究问题，可附上视频 ID 或实验范围…"
           }
           disabled={pending || blocked}
           onKeyDown={(e) => {
@@ -393,7 +424,15 @@ export function AgentWorkspace({
           }}
         />
         <div className="agent-composer-toolbar">
-          {!isProjectHome && !returnProjectId && (
+          {canAttach && (
+            <VideoAttachment
+              open={attachmentOpen}
+              onOpenChange={setAttachmentOpen}
+              videos={videos}
+              onChange={setVideos}
+            />
+          )}
+          {!canAttach && !isProjectHome && !returnProjectId && (
             <Link to="/annotations" title="浏览实验与视频">
               <Video size={17} />
               <span>浏览视频</span>
@@ -420,10 +459,10 @@ export function AgentWorkspace({
               className="agent-send"
               aria-label="发送研究问题"
               disabled={
-                !draft.trim() ||
+                (!draft.trim() && !videos.length) ||
                 pending ||
                 blocked ||
-                !!tasks.error ||
+                (!videos.length && !!tasks.error) ||
                 !!task.error
               }
             >
