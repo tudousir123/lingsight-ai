@@ -1,0 +1,507 @@
+{
+  "timestamp": "2026-11-12T03:11:28.984435+00:00",
+  "target": "http://127.0.0.1:8000",
+  "suite": "independent deployed-service acceptance",
+  "counts": {
+    "PASS": 50,
+    "FAIL": 0
+  },
+  "criteria": [
+    {
+      "criterion": "#45 AC1 migration and replaced-container health",
+      "result": "PASS",
+      "evidence": "Alembic b7d8e9f0a1c2; backend healthy; image+OCI revision c11077fcf9a925e20b2b3a0debfea863b5b7d3af; retained 2 users; persistent MySQL volume"
+    },
+    {
+      "criterion": "#45 AC2 retired5174/formalentry",
+      "result": "PASS",
+      "evidence": "No listener5174; actual8000 form login,inference+candidate,project page reload,authenticated upstream APIs"
+    },
+    {
+      "criterion": "#45 AC3 current platform-L3 path",
+      "result": "PASS",
+      "evidence": "Enabled+active durable user SSH tunnel127.0.0.1:19200; upstream health200; platform tasks/videos200; candidate2560x1440 loaded"
+    },
+    {
+      "criterion": "#45 AC3 browser-visible normalized outage in disposable exact-production image",
+      "result": "PASS",
+      "evidence": "Owned backend18000 uses exactproductionimageID+OCIrevision; onlyinferenceupstreamoverridden torefused18001; actualAPI503normalized andrealUIvisiblealert; ownedcontainer+0600configcleaned; productionhealth200 unchanged"
+    },
+    {
+      "criterion": "#45 AC4 user real-video full-loop and human scientific conclusion",
+      "result": "NOT RUN",
+      "evidence": "Task f303297d-1547-401e-9ba5-f3a751776258: waiting_for_review/preannotation at acceptance; no human confirmation, GPU tracking, published result, or real project Agent report"
+    }
+  ],
+  "additional_not_run": [
+    "This independent probe did not interrupt the actual production tunnel; parent separately owns live-stop/recovery evidence",
+    "Cross-user authentication/ownership using another existing account; no second account credentials used",
+    "Real publication frame readback/idempotent replay with genuine reviewed inference artifacts",
+    "New real Agent run on empty project, intentionally not submitted",
+    "Remote inference21-test result: parent reports finalstdout/exitunavailable; no PASS inferred"
+  ],
+  "state_snapshot_note": "State below was observed during initialQA before subsequent human actions; do not assert it remains unchanged after legitimate researcher activity",
+  "state_preserved": {
+    "users": 2,
+    "projects_before": 0,
+    "projects_after": 0,
+    "published_results": 0,
+    "published_frames": 0,
+    "temporary_projects_deleted": true,
+    "inference_task_confirmed": false,
+    "inference_task_review": null,
+    "new_agent_tasks_started": 0
+  },
+  "new_dbhub_exposure": "NewDockerpublish127.0.0.1:19081 only; preexistingPID4894 socat172.17.0.1:19081 →127.0.0.1:19084 separate legacybridge observed unchanged",
+  "checks": [
+    {
+      "name": "unauthenticated /api/v1/projects/",
+      "status": 401,
+      "result": "PASS",
+      "response": {
+        "detail": "Not authenticated"
+      }
+    },
+    {
+      "name": "authenticated /api/v1/projects/",
+      "status": 200,
+      "result": "PASS",
+      "detail": {
+        "shape": [
+          "data",
+          "count"
+        ],
+        "count": 0
+      }
+    },
+    {
+      "name": "unauthenticated /api/v1/agent/tasks",
+      "status": 401,
+      "result": "PASS",
+      "response": {
+        "detail": "Not authenticated"
+      }
+    },
+    {
+      "name": "authenticated /api/v1/agent/tasks",
+      "status": 200,
+      "result": "PASS",
+      "detail": {
+        "shape": "array",
+        "count": 4
+      }
+    },
+    {
+      "name": "unauthenticated /api/v1/inference/tasks",
+      "status": 401,
+      "result": "PASS",
+      "response": {
+        "detail": "Not authenticated"
+      }
+    },
+    {
+      "name": "authenticated /api/v1/inference/tasks",
+      "status": 200,
+      "result": "PASS",
+      "detail": {
+        "shape": [
+          "items"
+        ]
+      }
+    },
+    {
+      "name": "unauthenticated /api/v1/inference/videos",
+      "status": 401,
+      "result": "PASS",
+      "response": {
+        "detail": "Not authenticated"
+      }
+    },
+    {
+      "name": "authenticated /api/v1/inference/videos",
+      "status": 200,
+      "result": "PASS",
+      "detail": {
+        "shape": [
+          "items"
+        ]
+      }
+    },
+    {
+      "name": "pending inference task",
+      "status": 200,
+      "result": "PASS",
+      "detail": {
+        "status": "waiting_for_review",
+        "stage": "preannotation",
+        "confirmed": false,
+        "review": null
+      }
+    },
+    {
+      "name": "candidate unauthenticated denied",
+      "status": 403,
+      "result": "PASS",
+      "response": {
+        "detail": "Not authenticated"
+      },
+      "detail": {
+        "expected": 403,
+        "contract": "get_media_user explicitly returns403 when neither header nor query token exists"
+      }
+    },
+    {
+      "name": "pending tracking artifact unavailable",
+      "status": 404,
+      "result": "PASS",
+      "response": {
+        "detail": "产物不存在"
+      }
+    },
+    {
+      "name": "unknown inference operation denied",
+      "status": 404,
+      "result": "PASS",
+      "response": {
+        "detail": "Unknown inference operation"
+      }
+    },
+    {
+      "name": "explicit null project rejected",
+      "status": 400,
+      "result": "PASS",
+      "response": {
+        "error": "project_id must be a UUID"
+      }
+    },
+    {
+      "name": "nonexistent project rejected",
+      "status": 404,
+      "result": "PASS",
+      "response": {
+        "detail": "项目不存在"
+      }
+    },
+    {
+      "name": "malformed project rejected",
+      "status": 422,
+      "result": "PASS",
+      "response": {
+        "detail": "Invalid project_id"
+      }
+    },
+    {
+      "name": "temporary project create",
+      "status": 200,
+      "result": "PASS"
+    },
+    {
+      "name": "temporary project duplicate name blocked",
+      "status": 409,
+      "result": "PASS",
+      "response": {
+        "detail": "同名项目已存在"
+      }
+    },
+    {
+      "name": "temporary project rename",
+      "status": 200,
+      "result": "PASS"
+    },
+    {
+      "name": "temporary project persisted on reread",
+      "status": 200,
+      "result": "PASS",
+      "detail": {
+        "persisted": true
+      }
+    },
+    {
+      "name": "temporary project browser page survives reload",
+      "result": "PASS",
+      "detail": {
+        "projectId": "2678ce3d-679b-4027-9697-b2d06f58a00b"
+      }
+    },
+    {
+      "name": "temporary project results empty",
+      "status": 200,
+      "result": "PASS",
+      "detail": {
+        "count": 0
+      }
+    },
+    {
+      "name": "unreviewed inference publish blocked",
+      "status": 409,
+      "result": "PASS",
+      "response": {
+        "detail": "只有通过人工复核（tracking_ok）的推理任务才能发布"
+      }
+    },
+    {
+      "name": "blocked publish wrote no result",
+      "status": 200,
+      "result": "PASS",
+      "detail": {
+        "count": 0
+      }
+    },
+    {
+      "name": "temporary project cleanup",
+      "status": 200,
+      "result": "PASS"
+    },
+    {
+      "name": "deployed migration and retained state",
+      "result": "PASS",
+      "detail": {
+        "migration": "b7d8e9f0a1c2",
+        "users": "2",
+        "projects": "0",
+        "published_results": "0",
+        "published_frames": "0"
+      }
+    },
+    {
+      "name": "dedicated reader column SELECT only",
+      "result": "PASS",
+      "detail": [
+        "GRANT USAGE ON *.*",
+        "GRANT SELECT (`centroid_x`, `centroid_y`, `contour_area`, `frame_idx`, `head_x`, `head_y`, `heading_angle_deg`, `is_proposal`, `keypoint_correction`, `mask_height`, `mask_rle_counts`, `mask_valid`, `mask_width`, `rle_format`, `tail_x`, `tail_y`, `task_id`) ON `app`.`published_frame`",
+        "GRANT SELECT (`content_fingerprint`, `first_frame_model_sha256`, `fps`, `frames_with_heading`, `heading_algorithm`, `keypoint_protocol`, `keypoints_json_sha256`, `mark_model_sha256`, `overlay_sha256`, `project_id`, `proposal_frames`, `provenance_json_sha256`, `published_at`, `review_tracking_ok`, `task_id`, `total_frames`, `tracking_json_sha256`, `tracking_model_sha256`, `v9_model_sha256`, `valid_frames`, `video_id`, `video_sha256`) ON `app`.`published_result`"
+      ]
+    },
+    {
+      "name": "reader rejects SELECT id FROM user LIMIT 1",
+      "result": "PASS",
+      "detail": {
+        "mysql_error": 1142
+      }
+    },
+    {
+      "name": "reader rejects SELECT user_id FROM published_result LIMIT 1",
+      "result": "PASS",
+      "detail": {
+        "mysql_error": 1143
+      }
+    },
+    {
+      "name": "reader rejects SELECT review_note FROM published_result LIMIT 1",
+      "result": "PASS",
+      "detail": {
+        "mysql_error": 1143
+      }
+    },
+    {
+      "name": "reader rejects SELECT id FROM project LIMIT 1",
+      "result": "PASS",
+      "detail": {
+        "mysql_error": 1142
+      }
+    },
+    {
+      "name": "reader allowed publication columns",
+      "result": "PASS",
+      "detail": {
+        "rows": 0
+      }
+    },
+    {
+      "name": "platform health",
+      "result": "PASS",
+      "detail": true
+    },
+    {
+      "name": "agent health",
+      "result": "PASS",
+      "detail": {
+        "status": "ok",
+        "service": "lingsight-agent",
+        "version": "0.1.0",
+        "engine": "pi-sdk",
+        "capabilities": {
+          "project_scope": "immutable-v1",
+          "project_data_configured": true
+        },
+        "active_run": null
+      }
+    },
+    {
+      "name": "inference health",
+      "result": "PASS",
+      "detail": {
+        "status": "ok"
+      }
+    },
+    {
+      "name": "live project capability",
+      "result": "PASS",
+      "detail": {
+        "project_scope": "immutable-v1",
+        "project_data_configured": true
+      }
+    },
+    {
+      "name": "agent direct unauth denied",
+      "result": "PASS",
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "name": "inference direct unauth denied",
+      "result": "PASS",
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "name": "persistent provider consent",
+      "result": "PASS",
+      "detail": {
+        "PI_PROVIDER": "deepseek",
+        "PI_MODEL": "deepseek-flash",
+        "MODEL_DATA_TRANSFER_CONSENT": "true"
+      }
+    },
+    {
+      "name": "runtime tokens align",
+      "result": "PASS",
+      "detail": {
+        "match": true
+      }
+    },
+    {
+      "name": "actual MCP scoped results",
+      "result": "PASS",
+      "detail": {
+        "source": "lingsight_results",
+        "rows": 0,
+        "tables": [
+          "published_result"
+        ],
+        "selection": "latest_per_video"
+      }
+    },
+    {
+      "name": "actual MCP scoped frames",
+      "result": "PASS",
+      "detail": {
+        "source": "lingsight_results",
+        "rows": 0,
+        "tables": [
+          "published_result",
+          "published_frame"
+        ],
+        "selection": "latest_per_video"
+      }
+    },
+    {
+      "name": "wrong source rejected without fallback",
+      "result": "PASS",
+      "detail": "Unexpected DBHub source"
+    },
+    {
+      "name": "SQL override forbidden",
+      "result": "PASS",
+      "detail": "Project queries use the task's immutable project_id; SQL and scope overrides are forbidden"
+    },
+    {
+      "name": "scope override forbidden",
+      "result": "PASS",
+      "detail": "Project queries use the task's immutable project_id; SQL and scope overrides are forbidden"
+    },
+    {
+      "name": "retired preview5174 has no listener and refuses connection",
+      "result": "PASS",
+      "detail": {
+        "ss_listeners": 0,
+        "tcp127.0.0.1_5174_refused": true
+      }
+    },
+    {
+      "name": "disposable config matches production and excludes MySQL root secret",
+      "result": "PASS",
+      "detail": {
+        "mode": "0o600",
+        "keys": [
+          "AGENT_API_TOKEN",
+          "AGENT_BASE_URL",
+          "AGENT_WORKSPACE_EMAIL",
+          "DATABASE_URL",
+          "FIRST_SUPERUSER",
+          "FIRST_SUPERUSER_PASSWORD",
+          "FRONTEND_HOST",
+          "INFERENCE_API_TOKEN",
+          "INFERENCE_BASE_URL",
+          "PROJECT_NAME",
+          "SECRET_KEY"
+        ],
+        "all_other_runtime_keys_equal_production": true,
+        "only_runtime_override": "INFERENCE_BASE_URL=http://127.0.0.1:18001"
+      }
+    },
+    {
+      "name": "outage sidecar uses exact production image identity",
+      "result": "PASS",
+      "detail": {
+        "production_image_id": "sha256:2f93e3f696669dd70630c25d63e2d2c1e71b56ca5e711f780c8178da84096cd2",
+        "disposable_image_id": "sha256:2f93e3f696669dd70630c25d63e2d2c1e71b56ca5e711f780c8178da84096cd2",
+        "image": "lingsight-platform:c11077fcf9a925e20b2b3a0debfea863b5b7d3af",
+        "production_oci_revision": "c11077fcf9a925e20b2b3a0debfea863b5b7d3af",
+        "disposable_oci_revision": "c11077fcf9a925e20b2b3a0debfea863b5b7d3af",
+        "command": [
+          "run",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "18000",
+          "--workers",
+          "1"
+        ],
+        "no_migrations_or_initial_data": true
+      }
+    },
+    {
+      "name": "disposable production-image UI visibly reports inference outage",
+      "result": "PASS",
+      "detail": {
+        "route": "http://127.0.0.1:18000/inference",
+        "visible": true,
+        "alert": "暂时无法连接视频推理服务",
+        "pageErrors": [],
+        "network": [
+          {
+            "path": "/api/v1/inference/videos",
+            "status": 503
+          },
+          {
+            "path": "/api/v1/inference/tasks",
+            "status": 503
+          }
+        ]
+      }
+    },
+    {
+      "name": "disposable production-image gateway normalizes unreachable upstream",
+      "result": "PASS",
+      "detail": {
+        "status": 503,
+        "body": {
+          "detail": "暂时无法连接视频推理服务"
+        }
+      }
+    },
+    {
+      "name": "owned disposable container and secret config cleaned; production healthy",
+      "result": "PASS",
+      "detail": {
+        "disposable_container_removed": true,
+        "temporary_env_removed": true,
+        "production_health": 200,
+        "production_image_unchanged": true
+      }
+    }
+  ]
+}

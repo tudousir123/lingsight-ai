@@ -1,5 +1,7 @@
 # LingSight AI 进度（事实优先）
 
+**2026-11-12 正式部署与工程验收**：主站 `http://localhost:8000` 使用独立 `lingsight-formal` Compose，运行生产构建 c11077f、无 Vite/watch；从迁移备份仅恢复 app 库，原 2 账号全字段指纹和 JWT 密钥保持，先做私有快照再迁移至 b7d8e9f0a1c2。Agent 用户服务与生产锁定依赖镜像启用，27/27 Docker 测试通过；用户明确授权当前 DeepSeek/deepseek-flash 后，真实 Pi SDK 在隔离合成 MCP 完成 18 份产物验证。新 DBHub 单源、列级只读账户已接入应用库，既有 v3 零变更。L3 上线 6635283 的冻结 7px 实现，模型与冻结文件哈希核对，用户服务 linger 与持久 SSH 隧道启用；鉴权、服务重启与隧道断线恢复通过。独立 QA 对真实主站/API/数据库/只读 MCP 执行 **50 项 PASS、0 项 FAIL** 工程核验（[脱敏汇总](evidence/deploy-20261112/independent-summary.json)），未代替研究者确认、复核或造发布数据。验收快照中的唯一真实视频任务等待预标注确认，后续研究者操作以新记录为准，**#45 保持打开，完整真实推理→发布→项目分析→结论人工验收尚未完成**。部署事实与回滚见 [平台运行记录](evidence/deploy-20261112/platform-runbook.md)。
+
 **2026-11-11 远端 CI 竞态收口**：PR #49 首轮只有浏览器 shard 2 因旧项目导入用例 flaky 失败，未绕过门禁。trace 证实初始空列表 GET 与导入 POST 重叠，单纯 invalidateQueries 复用了旧请求；修为先取消导入账号的精确列表查询，再刷新。受控回归在修前稳定失败，修后零重试 **10/10**，工作区/项目分析 **20/20**；Biome、TypeScript 与独立复审通过。证据见 [项目导入 CI 竞态](evidence/ci-project-import-20261111/README.md)。
 
 **2026-11-11 提交前独立复审**：Standards/Spec 两轴 subagent 复审均 0 遗留问题。发布质心改为原样保留 v9 mask 像素质心，非法值拒绝（修前新增用例 5 失败、修后全量 **241 passed / 6 research-live skipped，coverage 91%**）。首页补中英文合成演示标注、准确碰台口径及浏览器存储受限回退，最后首页/引导 **20 passed**；旧 E2E 配置向导安全退役。Agent PR #2 的固定生产依赖镜像与 Docker 测试已在 GitHub CI 通过并合并，推理文档 PR #2 已通过 CI 并合并；平台汇总与远端 CI 的实时状态见 [PR #49](https://github.com/tudousir123/lingsight-ai/pull/49)。新证据见 [独立复审](evidence/review-20261111/README.md)。正式配置、部署和真实视频人工验收仍在 #45，未改动现役服务。

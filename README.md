@@ -4,7 +4,9 @@
 
 > **Animal Behavior Intelligence Platform** — 面向动物行为科研的视频智能分析与科研 Agent 平台。
 
-**当前状态（2026-11-11）：科研工作区、项目实体、推理结果发布与项目范围 Agent 分析已实现并进入本地整合验收；正式部署与真实视频人工验收仍待完成。** 本仓库是 React 工作台与 FastAPI 认证网关，任务执行和视觉推理分别由独立的 `lingsight-agent`、`lingsight-inference` 拥有。最新事实与剩余项见 [进度](docs/progress.md)，项目范围和旧服务门禁见 [ADR-0018](docs/adr/0018-project-task-scope.md)。
+**当前状态（2026-11-12）：本机正式主站已部署至 http://localhost:8000，旧应用库和账号已恢复并迁移，Agent 专用只读源及 L3 推理通路已启用；真实视频的人工标注确认、结果复核和结论验收仍待完成（#45）。** 本仓库是 React 工作台与 FastAPI 认证网关，任务执行和视觉推理分别由独立的 `lingsight-agent`、`lingsight-inference` 拥有。最新事实与剩余项见 [进度](docs/progress.md)，项目范围和旧服务门禁见 [ADR-0018](docs/adr/0018-project-task-scope.md)。
+
+正式运行与回滚见 [部署记录](docs/evidence/deploy-20261112/platform-runbook.md)；运行配置位于仓库外的私有目录，勿使用开发 Compose override 替代正式栈。
 
 ## 为什么做
 

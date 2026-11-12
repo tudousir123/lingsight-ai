@@ -1,0 +1,22 @@
+{
+  "login_page_http_status": 200,
+  "original_admin_login_destination": "/",
+  "routes": [
+    {
+      "path": "/",
+      "http_status": 200,
+      "browser_path": "/",
+      "body_rendered": true,
+      "reload_status": 200
+    },
+    {
+      "path": "/inference",
+      "http_status": 200,
+      "browser_path": "/inference",
+      "body_rendered": true,
+      "reload_status": 200
+    }
+  ],
+  "javascript_errors": [],
+  "notes": "Original restored admin used. No account, project, video, publication or task was created. Browser state ephemeral; no screenshot containing personal data saved. Project detail requires a real project; /projects is not an index route."
+}
