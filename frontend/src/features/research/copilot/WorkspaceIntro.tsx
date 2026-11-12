@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { ArrowUpRight, ChartNoAxesCombined, Play } from "lucide-react"
 import { ResearchIllustration } from "../ResearchIllustration"
+import "./workspace-intro.css"
 
 const cloudPrompt =
   "创建「水迷宫训练日对比」项目，从网盘选择视频，推理后比较第 1 天和第 5 天的逃逸潜伏期及路径长度。"
@@ -9,9 +10,34 @@ const localPrompt =
 
 export function WorkspaceIntro({
   onUsePrompt,
+  onChooseVideo,
+  onAnalyzeData,
 }: {
   onUsePrompt: (prompt: string) => void
+  onChooseVideo?: (source: "drive" | "local") => void
+  onAnalyzeData?: () => void
 }) {
+  const analysisTile = (
+    <>
+      <span className="copilot-launch-copy">
+        <strong>{onAnalyzeData ? "分析已有数据" : "研究成果"}</strong>
+        <span>
+          {onAnalyzeData ? "在对话里查询和比较实验指标" : "查看图表与报告"}
+        </span>
+      </span>
+      <ArrowUpRight size={16} aria-hidden="true" />
+      <span
+        className="copilot-launch-art copilot-launch-report"
+        aria-hidden="true"
+      >
+        <span className="copilot-report-sheet" />
+        <span className="copilot-report-figure">
+          <ChartNoAxesCombined size={33} />
+        </span>
+      </span>
+    </>
+  )
+
   return (
     <div className="copilot-intro">
       <h1>动物行为研究</h1>
@@ -20,7 +46,9 @@ export function WorkspaceIntro({
           <button
             className="copilot-launch-tile"
             type="button"
-            onClick={() => onUsePrompt(cloudPrompt)}
+            onClick={() =>
+              onChooseVideo ? onChooseVideo("drive") : onUsePrompt(cloudPrompt)
+            }
           >
             <span className="copilot-launch-copy">
               <strong>水迷宫分析</strong>
@@ -35,7 +63,9 @@ export function WorkspaceIntro({
         <button
           className="copilot-launch-tile"
           type="button"
-          onClick={() => onUsePrompt(localPrompt)}
+          onClick={() =>
+            onChooseVideo ? onChooseVideo("local") : onUsePrompt(localPrompt)
+          }
         >
           <span className="copilot-launch-copy">
             <strong>本地视频</strong>
@@ -52,22 +82,19 @@ export function WorkspaceIntro({
             </span>
           </span>
         </button>
-        <Link className="copilot-launch-tile" to="/analysis">
-          <span className="copilot-launch-copy">
-            <strong>研究成果</strong>
-            <span>查看图表与报告</span>
-          </span>
-          <ArrowUpRight size={16} aria-hidden="true" />
-          <span
-            className="copilot-launch-art copilot-launch-report"
-            aria-hidden="true"
+        {onAnalyzeData ? (
+          <button
+            className="copilot-launch-tile"
+            type="button"
+            onClick={onAnalyzeData}
           >
-            <span className="copilot-report-sheet" />
-            <span className="copilot-report-figure">
-              <ChartNoAxesCombined size={33} />
-            </span>
-          </span>
-        </Link>
+            {analysisTile}
+          </button>
+        ) : (
+          <Link className="copilot-launch-tile" to="/analysis">
+            {analysisTile}
+          </Link>
+        )}
       </div>
     </div>
   )

@@ -87,7 +87,15 @@ test("网盘视频在项目对话内逐步核对、导入和分析", async ({ pa
 
 test("本地视频可单独发送，并可在发送前移除", async ({ page }) => {
   await page.goto("/")
-  await page.getByRole("button", { name: "上传视频", exact: true }).click()
+  await page.getByRole("button", { name: /水迷宫分析/ }).click()
+  await expect(
+    page.getByRole("button", { name: "网盘", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true")
+  await page.getByRole("button", { name: "Close", exact: true }).click()
+  await page.getByRole("button", { name: /本地视频.*选择本次实验录像/ }).click()
+  await expect(
+    page.getByRole("button", { name: "本地文件", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true")
   await page.locator('input[type="file"]').setInputFiles([
     {
       name: "trial-a.mp4",
@@ -100,6 +108,7 @@ test("本地视频可单独发送，并可在发送前移除", async ({ page }) 
       buffer: Buffer.from("fixture"),
     },
   ])
+  await page.getByRole("textbox", { name: "研究问题" }).clear()
   const selected = page.getByRole("list", { name: "已选视频" })
   await expect(selected.getByRole("listitem")).toHaveCount(2)
   await page.getByRole("button", { name: "移除 trial-b.mov" }).click()

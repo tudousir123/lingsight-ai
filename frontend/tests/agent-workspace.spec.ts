@@ -83,21 +83,31 @@ async function mock(page: Page) {
 }
 test.beforeEach(async ({ page }) => mock(page))
 
-test("工作台可发起研究，并提供视频推理、标注和成果入口", async ({ page }) => {
+test("首页在中央展示研究入口，输入框固定在底部", async ({ page }) => {
   await page.goto("/")
-  await expect(page.getByRole("heading", { name: "科研工作台" })).toBeVisible()
+  const main = page.getByRole("main")
+  const intro = main.locator(".copilot-intro")
   await expect(
-    page.getByRole("textbox", { name: "研究问题", exact: true }),
+    intro.getByRole("heading", { name: "动物行为研究" }),
   ).toBeVisible()
-  await expect(
-    page.getByRole("link", { name: /开始视频推理/ }),
-  ).toHaveAttribute("href", "/inference")
-  await expect(
-    page.getByRole("link", { name: /浏览视频与标注/ }),
-  ).toHaveAttribute("href", "/annotations")
-  await expect(
-    page.getByRole("link", { name: /查看图表与报告/ }),
-  ).toHaveAttribute("href", "/analysis")
+  await expect(intro.getByRole("button")).toHaveCount(3)
+  await expect(main.getByRole("textbox", { name: "研究问题" })).toBeVisible()
+  await expect(main.getByText("最近任务", { exact: true })).toHaveCount(0)
+  await expect(main.getByText("项目", { exact: true })).toHaveCount(0)
+  await expect(main.getByText("视频与成果", { exact: true })).toHaveCount(0)
+  await expect(main.locator(".agent-composer-wrap")).toBeVisible()
+  expect(
+    await main.evaluate((element) => {
+      const composer = element.querySelector(".agent-composer-wrap")
+      const thread = element.querySelector(".agent-scroll-area")
+      if (!composer || !thread) return false
+      const bottom = composer.getBoundingClientRect().bottom
+      return (
+        !thread.contains(composer) &&
+        Math.abs(element.getBoundingClientRect().bottom - bottom) < 3
+      )
+    }),
+  ).toBe(true)
   const navigation = page.getByRole("navigation", {
     name: "科研工作区导航",
   })
@@ -112,7 +122,7 @@ test("工作台可发起研究，并提供视频推理、标注和成果入口",
     page.getByRole("heading", { name: "分析与报告", exact: true }),
   ).toBeVisible()
 })
-test("待确认的研究任务在首屏优先显示", async ({ page }) => {
+test("待确认的研究任务在左侧栏显示", async ({ page }) => {
   const waiting = {
     ...task,
     id: "waiting-task",
@@ -123,12 +133,14 @@ test("待确认的研究任务在首屏优先显示", async ({ page }) => {
     route.fulfill({ json: [task, waiting] }),
   )
   await page.goto("/")
-  const recent = page.getByRole("region", { name: "最近任务" })
-  await expect(recent.getByText("1 项待确认")).toBeVisible()
-  await expect(recent.getByRole("link").first()).toHaveAttribute(
-    "href",
-    "/tasks/waiting-task",
-  )
+  await expect(
+    page
+      .locator(".research-sidebar-history")
+      .getByRole("link", { name: /等待确认视频范围.*等待确认/ }),
+  ).toHaveAttribute("href", "/tasks/waiting-task")
+  await expect(
+    page.getByRole("main").getByText("等待确认视频范围"),
+  ).toHaveCount(0)
 })
 
 test("引导完成携带问题和范围但不自动提交", async ({ page }) => {
@@ -387,7 +399,9 @@ test("侧栏与首页使用中文，示例问题只填入草稿", async ({ page 
       writes++
   })
   await page.goto("/")
-  await expect(page.getByRole("heading", { name: "科研工作台" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "动物行为研究" }),
+  ).toBeVisible()
   await expect(
     page.getByRole("navigation", { name: "科研工作区导航" }).getByRole("link"),
   ).toHaveText(["新建科研任务", "实验与数据", "视频与标注", "分析与报告"])
@@ -400,10 +414,10 @@ test("侧栏与首页使用中文，示例问题只填入草稿", async ({ page 
   expect(await page.locator("body").innerText()).not.toMatch(
     /Start with experimental data|New research task|Your research companion/,
   )
-  await page.getByRole("button", { name: /核对动物身份/ }).click()
+  await page.getByRole("button", { name: /分析已有数据/ }).click()
   await expect(
     page.getByRole("textbox", { name: "研究问题", exact: true }),
-  ).toHaveValue(/核对动物身份/)
+  ).toHaveValue(/比较不同训练日的逃逸潜伏期/)
   expect(writes).toBe(0)
 })
 

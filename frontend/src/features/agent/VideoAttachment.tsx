@@ -13,16 +13,19 @@ import "./video-workflow.css"
 export function VideoAttachment({
   open,
   onOpenChange,
+  source,
+  onSourceChange,
   videos,
   onChange,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  source: WorkflowVideo["source"]
+  onSourceChange: (source: WorkflowVideo["source"]) => void
   videos: WorkflowVideo[]
   onChange: (videos: WorkflowVideo[]) => void
 }) {
   const localInput = useRef<HTMLInputElement>(null)
-  const [source, setSource] = useState<"local" | "drive">("local")
   const [checked, setChecked] = useState<string[]>([])
   const [error, setError] = useState("")
   const close = (next: boolean) => {
@@ -61,14 +64,14 @@ export function VideoAttachment({
             <button
               type="button"
               aria-pressed={source === "local"}
-              onClick={() => setSource("local")}
+              onClick={() => onSourceChange("local")}
             >
               <Upload size={16} /> 本地文件
             </button>
             <button
               type="button"
               aria-pressed={source === "drive"}
-              onClick={() => setSource("drive")}
+              onClick={() => onSourceChange("drive")}
             >
               <Cloud size={17} /> 网盘
             </button>

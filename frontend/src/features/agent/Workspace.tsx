@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
+import { WorkspaceIntro } from "@/features/research/copilot/WorkspaceIntro"
 import { consumeBrief, pendingBriefPrompt } from "@/features/research/entry"
 import { flagshipVisionModel } from "@/features/research/vision-model"
 import { agentRoutes } from "@/lib/upstreamRoutes.gen"
@@ -51,8 +52,8 @@ import {
   videoWorkflowEnabled,
   type WorkflowVideo,
 } from "./videoWorkflow"
-import { WorkspaceHome } from "./WorkspaceHome"
 import "./workspace.css"
+import "./workspace-home.css"
 
 function eventText(event: TaskEvent, field: string) {
   const value = event.data[field]
@@ -231,6 +232,8 @@ export function AgentWorkspace({
   const [artifact, setArtifact] = useState<Artifact | null>(null)
   const [videos, setVideos] = useState<WorkflowVideo[]>([])
   const [attachmentOpen, setAttachmentOpen] = useState(false)
+  const [attachmentSource, setAttachmentSource] =
+    useState<WorkflowVideo["source"]>("local")
   const canAttach = videoWorkflowEnabled && !taskId
   const input = useRef<HTMLTextAreaElement>(null)
   const task = useQuery({
@@ -266,6 +269,7 @@ export function AgentWorkspace({
     setArtifact(null)
     setVideos([])
     setAttachmentOpen(false)
+    setAttachmentSource("local")
   }, [taskId, projectId])
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: tasksKey })
@@ -366,6 +370,17 @@ export function AgentWorkspace({
     setDraft(text)
     input.current?.focus({ preventScroll: true })
   }
+  const startVideoAnalysis = (source: WorkflowVideo["source"]) => {
+    start(
+      source === "drive"
+        ? "比较水迷宫不同训练日的逃逸潜伏期和轨迹。"
+        : "汇总本次水迷宫视频的逃逸潜伏期和轨迹。",
+    )
+    if (canAttach) {
+      setAttachmentSource(source)
+      setAttachmentOpen(true)
+    }
+  }
   const blocked = run?.status === "waiting_for_input"
   const serviceError = tasks.error?.message
   const composer = (
@@ -428,11 +443,13 @@ export function AgentWorkspace({
             <VideoAttachment
               open={attachmentOpen}
               onOpenChange={setAttachmentOpen}
+              source={attachmentSource}
+              onSourceChange={setAttachmentSource}
               videos={videos}
               onChange={setVideos}
             />
           )}
-          {!canAttach && !isProjectHome && !returnProjectId && (
+          {!!taskId && !returnProjectId && (
             <Link to="/annotations" title="浏览实验与视频">
               <Video size={17} />
               <span>浏览视频</span>
@@ -521,17 +538,15 @@ export function AgentWorkspace({
                 </h1>
               )
             ) : !taskId ? (
-              <WorkspaceHome
-                tasks={tasks.data ?? []}
-                tasksLoading={tasks.isPending}
-                tasksUnavailable={!!tasks.error}
-                projects={projects.data ?? []}
-                projectsLoading={projects.isPending}
-                projectsUnavailable={!!projects.error}
-                onStart={start}
-              >
-                {composer}
-              </WorkspaceHome>
+              <WorkspaceIntro
+                onUsePrompt={start}
+                onChooseVideo={startVideoAnalysis}
+                onAnalyzeData={() =>
+                  start(
+                    "用已有水迷宫数据比较不同训练日的逃逸潜伏期，请先确认实验范围。",
+                  )
+                }
+              />
             ) : task.isPending ? (
               <div className="agent-empty">
                 <LoaderCircle className="animate-spin" />
@@ -614,7 +629,7 @@ export function AgentWorkspace({
             )}
           </div>
         </div>
-        {(taskId || isProjectHome) && composer}
+        {composer}
         {artifact && (
           <ArtifactViewer
             key={artifact.id}
