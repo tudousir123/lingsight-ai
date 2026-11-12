@@ -38,12 +38,29 @@ async function send(page: Page, message?: string) {
 test("从同一对话建项目、选网盘视频、确认推理并导出训练日对比", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const input = page.getByRole("textbox", { name: "研究目标" })
+  const progress = page.getByRole("list", { name: "研究进度" })
+  await expect(progress).toBeHidden()
+  await expect(
+    page.getByRole("complementary", { name: "项目进度" }),
+  ).toHaveCount(0)
+  const initialBottom = await page
+    .getByRole("button", { name: "发送研究目标" })
+    .evaluate((node) => node.getBoundingClientRect().bottom)
+  expect(900 - initialBottom).toBeLessThan(35)
   await page.getByRole("button", { name: "从网盘比较训练日" }).click()
   await expect(page.getByText(/已创建项目/)).toHaveCount(0)
   await send(page)
   await expect(
     page.getByRole("heading", { name: "水迷宫训练日对比" }),
   ).toBeVisible()
+  await expect(progress.locator('[aria-current="step"]')).toHaveText("视频")
+  const progressBox = await progress.boundingBox()
+  const inputBox = await input.boundingBox()
+  expect(
+    progressBox && inputBox && progressBox.y + progressBox.height < inputBox.y,
+  ).toBe(true)
   await expect(page.getByRole("button", { name: "加入项目" })).toBeDisabled()
   await page.getByRole("checkbox", { name: /Day 1 · Trial 01/ }).check()
   await page.getByRole("checkbox", { name: /Day 5 · Trial 01/ }).check()
@@ -59,6 +76,8 @@ test("从同一对话建项目、选网盘视频、确认推理并导出训练�
   await expect(table.getByRole("rowheader", { name: "第 1 天" })).toBeVisible()
   await expect(table.getByRole("rowheader", { name: "第 5 天" })).toBeVisible()
   await expect(page.getByText("模拟结果")).toBeVisible()
+  await expect(progress.locator("[data-complete]")).toHaveCount(4)
+  await expect(progress.locator('[aria-current="step"]')).toHaveCount(0)
   const download = page.waitForEvent("download")
   await page.getByRole("button", { name: "导出 CSV" }).click()
   expect((await download).suggestedFilename()).toBe(
@@ -89,4 +108,5 @@ test("手机可选本地文件，缺训练日时仅按视频汇总", async ({ pa
     390,
   )
   await expect(page.getByRole("textbox", { name: "研究目标" })).toBeInViewport()
+  await expect(page.getByRole("list", { name: "研究进度" })).toBeInViewport()
 })

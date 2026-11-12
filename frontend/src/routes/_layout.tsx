@@ -47,7 +47,7 @@ function Layout() {
   return (
     <SidebarProvider
       className="lingsight-app agent-shell dark"
-      style={{ "--sidebar-width": "274px" } as CSSProperties}
+      style={{ "--sidebar-width": "236px" } as CSSProperties}
     >
       <AppSidebar />
       <SidebarInset className="h-full min-h-0 min-w-0 overflow-hidden">

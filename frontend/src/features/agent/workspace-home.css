@@ -1,6 +1,6 @@
 .workspace-start {
   --start-border: #353535;
-  --start-surface: #000;
+  --start-surface: #202020;
   --start-secondary: #b6b6b6;
   --start-accent: #eeeeee;
 }
@@ -47,7 +47,7 @@
 .workspace-start .agent-composer {
   border-color: #484848;
   border-radius: 14px;
-  background: #000;
+  background: #262626;
 }
 
 .workspace-start .agent-composer:focus-within {
@@ -126,7 +126,7 @@
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  background: #000;
+  background: #262626;
   color: var(--start-accent);
 }
 

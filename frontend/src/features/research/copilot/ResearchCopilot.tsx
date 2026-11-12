@@ -2,13 +2,10 @@ import {
   ArrowUp,
   ChartNoAxesCombined,
   Check,
-  Circle,
   Clapperboard,
   Download,
-  FolderOpen,
   LoaderCircle,
   Plus,
-  Sparkles,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { consumeBrief, pendingBriefPrompt } from "../entry"
@@ -33,6 +30,8 @@ type Message = {
   role: "user" | "agent" | "tool"
   text: string
 }
+
+const workflowSteps = ["项目", "视频", "推理", "统计"]
 
 const samplePrompts = [
   {
@@ -346,18 +345,7 @@ export function ResearchCopilot({
 
   const comparable = hasComparableDays(videos)
   const progress = [!!project, !!videos.length, !!inference, !!report]
-  const steps = [
-    { title: "研究项目", detail: project?.name ?? "待创建" },
-    {
-      title: "视频范围",
-      detail: videos.length ? `${videos.length} 个视频` : "待选择",
-    },
-    {
-      title: "视频推理",
-      detail: inference ? `${inference.videoCount} 个视频已处理` : "待执行",
-    },
-    { title: "统计分析", detail: report ? "报告已生成" : "待确认口径" },
-  ]
+  const currentStep = progress.indexOf(false)
 
   const composer = (
     <form
@@ -373,11 +361,7 @@ export function ResearchCopilot({
         onChange={(event) => setDraft(event.target.value)}
         aria-label="研究目标"
         maxLength={3000}
-        placeholder={
-          phase === "start"
-            ? "例如：分析水迷宫训练视频，比较第 1 天和第 5 天的逃逸潜伏期"
-            : "补充要求，或告诉我下一步怎么做…"
-        }
+        placeholder={phase === "start" ? "描述你的研究任务…" : "补充要求…"}
         onKeyDown={(event) => {
           if (
             event.key === "Enter" &&
@@ -390,9 +374,7 @@ export function ResearchCopilot({
         }}
       />
       <div>
-        <span>
-          <Sparkles size={15} /> 灵视科研助手 · 模拟工具
-        </span>
+        <span>模拟工具</span>
         <button
           type="submit"
           aria-label="发送研究目标"
@@ -406,176 +388,166 @@ export function ResearchCopilot({
 
   return (
     <div className="copilot" lang="zh-CN">
-      <div className="copilot-chat">
-        <div className="copilot-thread" ref={scroll}>
-          <div className="copilot-inner">
-            {messages.length === 0 ? (
-              <div className="copilot-intro">
-                <div className="copilot-emblem">
-                  <Sparkles size={25} strokeWidth={1.6} />
-                </div>
-                <h1>这次想分析什么？</h1>
-                <p>说出你的研究目标。项目、视频和结果都在这场对话里。</p>
-                {composer}
-                <div className="copilot-controls">
-                  {samplePrompts.map(({ label, prompt }) => (
-                    <button
-                      key={label}
-                      className="copilot-button"
-                      type="button"
-                      onClick={() => {
-                        setDraft(prompt)
-                        input.current?.focus()
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="copilot-thread-header">
-                  <h1 className="copilot-thread-title">
-                    {project?.name ?? "新的研究对话"}
-                  </h1>
+      <div className="copilot-thread" ref={scroll}>
+        <div className="copilot-inner">
+          {messages.length === 0 ? (
+            <div className="copilot-intro">
+              <h1>这次想分析什么？</h1>
+              <div className="copilot-shortcuts">
+                {samplePrompts.map(({ label, prompt }) => (
                   <button
-                    type="button"
+                    key={label}
                     className="copilot-button"
-                    onClick={reset}
-                    disabled={!!activeTool}
+                    type="button"
+                    onClick={() => {
+                      setDraft(prompt)
+                      input.current?.focus()
+                    }}
                   >
-                    <Plus size={16} /> 新对话
+                    {label}
                   </button>
-                </div>
-                {messages.map((message) => (
-                  <p
-                    key={message.id}
-                    className={`copilot-message copilot-${message.role}`}
-                  >
-                    {message.role === "tool" && <Check size={15} />}
-                    <span>{message.text}</span>
-                  </p>
                 ))}
-                {phase === "videos" && (
-                  <VideoPicker
-                    source={source}
-                    onSourceChange={setSource}
-                    onConfirm={confirmVideos}
-                    tools={tools}
-                    busy={!!activeTool}
-                  />
-                )}
-                {!activeTool && phase === "ready" && (
-                  <section
-                    className="copilot-card"
-                    aria-labelledby="copilot-infer-heading"
-                  >
-                    <div className="copilot-card-title">
-                      <Clapperboard size={19} />
-                      <h2 id="copilot-infer-heading">推理范围</h2>
-                    </div>
-                    <ul className="copilot-scope-list">
-                      {videos.map((video) => (
-                        <li key={video.id}>{video.name}</li>
-                      ))}
-                    </ul>
-                    <div className="copilot-card-footer">
-                      <span>{videos.length} 个视频 · 模拟执行</span>
-                      <button
-                        type="button"
-                        className="copilot-button copilot-primary"
-                        onClick={infer}
-                      >
-                        开始推理
-                      </button>
-                    </div>
-                  </section>
-                )}
-                {activeTool && (
-                  <div className="copilot-card copilot-running" role="status">
-                    <span>
-                      <LoaderCircle size={17} className="animate-spin" /> 正在
-                      {activeTool}…
-                    </span>
-                    {activeTool === "视频推理" && (
-                      <>
-                        <progress
-                          aria-label="视频推理进度"
-                          max={videos.length}
-                          value={processed}
-                        />
-                        <small>
-                          已处理 {processed} / {videos.length} 个视频
-                        </small>
-                      </>
-                    )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="copilot-thread-header">
+                <h1 className="copilot-thread-title">
+                  {project?.name ?? "新的研究对话"}
+                </h1>
+                <button
+                  type="button"
+                  className="copilot-button"
+                  onClick={reset}
+                  disabled={!!activeTool}
+                >
+                  <Plus size={16} /> 新对话
+                </button>
+              </div>
+              {messages.map((message) => (
+                <p
+                  key={message.id}
+                  className={`copilot-message copilot-${message.role}`}
+                >
+                  {message.role === "tool" && <Check size={15} />}
+                  <span>{message.text}</span>
+                </p>
+              ))}
+              {phase === "videos" && (
+                <VideoPicker
+                  source={source}
+                  onSourceChange={setSource}
+                  onConfirm={confirmVideos}
+                  tools={tools}
+                  busy={!!activeTool}
+                />
+              )}
+              {!activeTool && phase === "ready" && (
+                <section
+                  className="copilot-card"
+                  aria-labelledby="copilot-infer-heading"
+                >
+                  <div className="copilot-card-title">
+                    <Clapperboard size={19} />
+                    <h2 id="copilot-infer-heading">推理范围</h2>
                   </div>
-                )}
-                {!activeTool && phase === "analysis" && (
-                  <section
-                    className="copilot-card"
-                    aria-labelledby="copilot-analysis-heading"
-                  >
-                    <div className="copilot-card-title">
-                      <ChartNoAxesCombined size={19} />
-                      <h2 id="copilot-analysis-heading">确认统计口径</h2>
-                    </div>
-                    {!comparable && (
-                      <p>
-                        按训练日对比需要为全部视频标记训练日，且至少有两个训练日。
-                      </p>
-                    )}
-                    <div className="copilot-controls">
-                      <button
-                        type="button"
-                        className={`copilot-button ${preferredAnalysis === "video" || !comparable ? "copilot-primary" : ""}`}
-                        onClick={() => analyze("video")}
-                      >
-                        按视频汇总
-                      </button>
-                      <button
-                        type="button"
-                        className={`copilot-button ${preferredAnalysis === "day" && comparable ? "copilot-primary" : ""}`}
-                        disabled={!comparable}
-                        onClick={() => analyze("day")}
-                      >
-                        按训练日对比
-                      </button>
-                    </div>
-                  </section>
-                )}
-                {report && <ReportCard report={report} />}
-                {error && (
-                  <p className="copilot-error" role="alert">
-                    {error}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
+                  <ul className="copilot-scope-list">
+                    {videos.map((video) => (
+                      <li key={video.id}>{video.name}</li>
+                    ))}
+                  </ul>
+                  <div className="copilot-card-footer">
+                    <span>{videos.length} 个视频 · 模拟执行</span>
+                    <button
+                      type="button"
+                      className="copilot-button copilot-primary"
+                      onClick={infer}
+                    >
+                      开始推理
+                    </button>
+                  </div>
+                </section>
+              )}
+              {activeTool && (
+                <div className="copilot-card copilot-running" role="status">
+                  <span>
+                    <LoaderCircle size={17} className="animate-spin" /> 正在
+                    {activeTool}…
+                  </span>
+                  {activeTool === "视频推理" && (
+                    <>
+                      <progress
+                        aria-label="视频推理进度"
+                        max={videos.length}
+                        value={processed}
+                      />
+                      <small>
+                        已处理 {processed} / {videos.length} 个视频
+                      </small>
+                    </>
+                  )}
+                </div>
+              )}
+              {!activeTool && phase === "analysis" && (
+                <section
+                  className="copilot-card"
+                  aria-labelledby="copilot-analysis-heading"
+                >
+                  <div className="copilot-card-title">
+                    <ChartNoAxesCombined size={19} />
+                    <h2 id="copilot-analysis-heading">确认统计口径</h2>
+                  </div>
+                  {!comparable && (
+                    <p>
+                      按训练日对比需要为全部视频标记训练日，且至少有两个训练日。
+                    </p>
+                  )}
+                  <div className="copilot-controls">
+                    <button
+                      type="button"
+                      className={`copilot-button ${preferredAnalysis === "video" || !comparable ? "copilot-primary" : ""}`}
+                      onClick={() => analyze("video")}
+                    >
+                      按视频汇总
+                    </button>
+                    <button
+                      type="button"
+                      className={`copilot-button ${preferredAnalysis === "day" && comparable ? "copilot-primary" : ""}`}
+                      disabled={!comparable}
+                      onClick={() => analyze("day")}
+                    >
+                      按训练日对比
+                    </button>
+                  </div>
+                </section>
+              )}
+              {report && <ReportCard report={report} />}
+              {error && (
+                <p className="copilot-error" role="alert">
+                  {error}
+                </p>
+              )}
+            </>
+          )}
         </div>
-        {messages.length > 0 && (
-          <div className="copilot-bottom">{composer}</div>
-        )}
       </div>
-      <aside className="copilot-context" aria-label="项目进度">
-        <div className="copilot-context-title">
-          <FolderOpen size={17} />
-          <h2>本次研究</h2>
-        </div>
-        <ol>
-          {steps.map(({ title, detail }, index) => (
-            <li key={title}>
-              {progress[index] ? <Check size={16} /> : <Circle size={13} />}
-              <span>
-                <strong>{title}</strong>
-                <small>{detail}</small>
-              </span>
-            </li>
-          ))}
-        </ol>
-      </aside>
+      <div className="copilot-bottom">
+        {(project || activeTool) && (
+          <ol className="copilot-progress" aria-label="研究进度">
+            {workflowSteps.map((step, index) => (
+              <li
+                key={step}
+                data-complete={progress[index] || undefined}
+                aria-current={index === currentStep ? "step" : undefined}
+              >
+                {progress[index] && <Check size={12} aria-label="已完成" />}
+                {step}
+              </li>
+            ))}
+          </ol>
+        )}
+        {composer}
+      </div>
     </div>
   )
 }
