@@ -21,6 +21,7 @@ import {
   type VideoSource,
 } from "./tools"
 import { VideoPicker } from "./VideoPicker"
+import { WorkspaceIntro } from "./WorkspaceIntro"
 import "./copilot.css"
 
 type Phase = "start" | "videos" | "ready" | "analysis" | "done"
@@ -32,19 +33,6 @@ type Message = {
 }
 
 const workflowSteps = ["项目", "视频", "推理", "统计"]
-
-const samplePrompts = [
-  {
-    label: "从网盘比较训练日",
-    prompt:
-      "创建「水迷宫训练日对比」项目，从网盘选择视频，推理后比较第 1 天和第 5 天的逃逸潜伏期及路径长度。",
-  },
-  {
-    label: "从本地分析视频",
-    prompt:
-      "创建「水迷宫视频分析」项目，选择本地视频，推理后逐视频汇总逃逸潜伏期和路径长度。",
-  },
-]
 
 function projectName(text: string) {
   const named = text.match(/(?:「([^」]+)」|“([^”]+)”|"([^"]+)")\s*(?:的)?项目/)
@@ -391,24 +379,12 @@ export function ResearchCopilot({
       <div className="copilot-thread" ref={scroll}>
         <div className="copilot-inner">
           {messages.length === 0 ? (
-            <div className="copilot-intro">
-              <h1>这次想分析什么？</h1>
-              <div className="copilot-shortcuts">
-                {samplePrompts.map(({ label, prompt }) => (
-                  <button
-                    key={label}
-                    className="copilot-button"
-                    type="button"
-                    onClick={() => {
-                      setDraft(prompt)
-                      input.current?.focus()
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <WorkspaceIntro
+              onUsePrompt={(prompt) => {
+                setDraft(prompt)
+                input.current?.focus()
+              }}
+            />
           ) : (
             <>
               <div className="copilot-thread-header">

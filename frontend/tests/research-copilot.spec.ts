@@ -42,6 +42,10 @@ test("从同一对话建项目、选网盘视频、确认推理并导出训练�
   const input = page.getByRole("textbox", { name: "研究目标" })
   const progress = page.getByRole("list", { name: "研究进度" })
   await expect(progress).toBeHidden()
+  await expect(page.getByRole("link", { name: /研究成果/ })).toHaveAttribute(
+    "href",
+    "/analysis",
+  )
   await expect(
     page.getByRole("complementary", { name: "项目进度" }),
   ).toHaveCount(0)
@@ -49,7 +53,7 @@ test("从同一对话建项目、选网盘视频、确认推理并导出训练�
     .getByRole("button", { name: "发送研究目标" })
     .evaluate((node) => node.getBoundingClientRect().bottom)
   expect(900 - initialBottom).toBeLessThan(35)
-  await page.getByRole("button", { name: "从网盘比较训练日" }).click()
+  await page.getByRole("button", { name: /水迷宫分析/ }).click()
   await expect(page.getByText(/已创建项目/)).toHaveCount(0)
   await send(page)
   await expect(
@@ -88,7 +92,7 @@ test("从同一对话建项目、选网盘视频、确认推理并导出训练�
 
 test("手机可选本地文件，缺训练日时仅按视频汇总", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.getByRole("button", { name: "从本地分析视频" }).click()
+  await page.getByRole("button", { name: /本地视频/ }).click()
   await send(page)
   await page.getByLabel("选择本地视频").setInputFiles({
     name: "local-trial.mp4",
