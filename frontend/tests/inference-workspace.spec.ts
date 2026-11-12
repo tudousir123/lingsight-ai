@@ -108,7 +108,7 @@ test("视频目录浏览可归入项目并从项目页移出", async ({ page }) 
   await expect(
     dialog.getByText("已将“Day5-Trial3.mp4”归入“学习与记忆”。"),
   ).toBeVisible()
-  await page.goto("/projects/learning-memory")
+  await page.goto("/projects/learning-memory?view=details")
   await expect(
     page.getByRole("heading", { name: "归入项目的视频" }),
   ).toBeVisible()

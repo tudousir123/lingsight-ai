@@ -1,0 +1,141 @@
+.project-conversations {
+  padding-top: clamp(16px, 5dvh, 52px);
+}
+
+.project-conversations-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.project-conversations-heading h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f4f4f4;
+  font-size: clamp(22px, 2.6vw, 30px);
+  font-weight: 500;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.project-conversations-heading :where(h1) svg {
+  flex-shrink: 0;
+  color: #b6b6b6;
+}
+
+.project-materials-link {
+  padding: 6px 10px;
+  border: 1px solid #383838;
+  border-radius: 8px;
+  color: #c6c6c6;
+  font-size: 13px;
+}
+
+.project-materials-link:hover,
+.project-materials-link:focus-visible {
+  background: #242424;
+  color: #f4f4f4;
+}
+
+.project-conversations h2 {
+  padding: 0 2px 8px;
+  border-bottom: 1px solid #313131;
+  color: #b6b6b6;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.project-conversation-list li + li {
+  border-top: 1px solid #2d2d2d;
+}
+
+.project-conversation-list a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 11px;
+  min-height: 52px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  color: #e6e6e6;
+  font-size: 14px;
+}
+
+.project-conversation-list a:hover,
+.project-conversation-list a:focus-visible {
+  background: #242424;
+}
+
+.project-conversation-list a:focus-visible {
+  outline: 2px solid #b6b6b6;
+  outline-offset: 1px;
+}
+
+.project-conversation-list svg {
+  color: #a2a2a2;
+}
+
+.project-conversation-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-conversation-status {
+  color: #b6b6b6;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.project-conversation-status.status-waiting_for_input {
+  color: #e2bd81;
+}
+
+.project-conversations-empty {
+  padding: 16px 2px;
+  color: #aaa;
+  font-size: 14px;
+}
+
+.agent-project-chat .agent-content,
+.agent-project-chat .agent-composer-wrap {
+  width: min(660px, calc(100% - 56px));
+}
+
+.agent-project-chat .agent-composer textarea {
+  min-height: 58px;
+}
+
+.project-details-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 24px 32px;
+}
+
+.project-details-header {
+  margin-bottom: 20px;
+}
+
+.project-details-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+@media (max-width: 600px) {
+  .agent-project-chat .agent-content,
+  .agent-project-chat .agent-composer-wrap {
+    width: calc(100% - 28px);
+  }
+
+  .project-details-scroll {
+    padding-inline: 14px;
+  }
+}

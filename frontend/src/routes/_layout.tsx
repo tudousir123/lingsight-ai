@@ -42,7 +42,10 @@ function Layout() {
   const section = pathname.split("/")[1]
   const title = sectionTitles[section]
   const isAgentWorkspace =
-    !section || section === "tasks" || section === "project-research"
+    !section ||
+    section === "tasks" ||
+    section === "projects" ||
+    section === "project-research"
 
   return (
     <SidebarProvider

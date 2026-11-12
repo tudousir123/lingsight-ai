@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link, useNavigate } from "@tanstack/react-router"
 import {
+  ArrowLeft,
   ArrowUp,
   ArrowUpRight,
   Check,
@@ -36,7 +37,12 @@ import {
   tasksKey,
 } from "./api"
 import { useTaskEvents } from "./events"
-import { useAddProjectMember, useWorkspaceProjects } from "./projects"
+import { ProjectConversationHome } from "./ProjectConversationHome"
+import {
+  membersOfKind,
+  useAddProjectMember,
+  useWorkspaceProjects,
+} from "./projects"
 import { useTasks } from "./queries"
 import { WorkspaceHome } from "./WorkspaceHome"
 import "./workspace.css"
@@ -200,9 +206,11 @@ function Clarification({
 export function AgentWorkspace({
   taskId = "",
   projectId,
+  projectContextId,
 }: {
   taskId?: string
   projectId?: string
+  projectContextId?: string
 }) {
   const tasks = useTasks()
   const projects = useWorkspaceProjects()
@@ -231,6 +239,17 @@ export function AgentWorkspace({
   const stream = useTaskEvents(taskId)
   const run = task.data?.runs[task.data.runs.length - 1]
   const scopeId = projectId ?? task.data?.project_id
+  const isProjectHome = !!projectId && !taskId
+  const containingProject = projects.data?.find(
+    (item) =>
+      item.id === projectContextId &&
+      membersOfKind(item, "agent_task").some((member) => member.id === taskId),
+  )
+  const returnProjectId = containingProject?.id ?? task.data?.project_id
+  const returnProject =
+    containingProject ??
+    projects.data?.find((item) => item.id === returnProjectId)
+  const scopeProject = projects.data?.find((item) => item.id === scopeId)
   useEffect(() => {
     setDraft(taskId || projectId ? "" : pendingBriefPrompt())
     setError("")
@@ -357,7 +376,9 @@ export function AgentWorkspace({
               ? "请先回答上方科研口径问题后继续"
               : taskId
                 ? "继续追问，或补充分析要求…"
-                : "输入研究问题，可附上视频 ID 或实验范围…"
+                : projectId
+                  ? "在此项目开始新对话…"
+                  : "输入研究问题，可附上视频 ID 或实验范围…"
           }
           disabled={pending || blocked}
           onKeyDown={(e) => {
@@ -372,10 +393,12 @@ export function AgentWorkspace({
           }}
         />
         <div className="agent-composer-toolbar">
-          <Link to="/annotations" title="浏览实验与视频">
-            <Video size={17} />
-            <span>浏览视频</span>
-          </Link>
+          {!isProjectHome && !returnProjectId && (
+            <Link to="/annotations" title="浏览实验与视频">
+              <Video size={17} />
+              <span>浏览视频</span>
+            </Link>
+          )}
           <span className="agent-model-label">
             <Sparkles size={14} />
             灵视科研助手
@@ -422,21 +445,43 @@ export function AgentWorkspace({
   )
   return (
     <div
-      className={`agent-workbench ${taskId ? "" : "agent-home"}`}
+      className={`agent-workbench ${!taskId && !isProjectHome ? "agent-home" : ""} ${isProjectHome || returnProjectId ? "agent-project-chat" : ""}`}
       lang="zh-CN"
     >
       <div className="agent-workspace">
         <div className="agent-scroll-area">
           <div className="agent-content">
-            {scopeId && (
-              <p className="workspace-scope" role="status">
-                分析范围为当前项目的已发布推理数据
-                <Link to="/projects/$projectId" params={{ projectId: scopeId }}>
-                  {project?.name ?? "查看项目"}
+            {taskId && returnProjectId && (
+              <div className="workspace-scope">
+                <Link
+                  to="/projects/$projectId"
+                  params={{ projectId: returnProjectId }}
+                >
+                  <ArrowLeft size={14} /> {returnProject?.name ?? "返回项目"}
                 </Link>
-              </p>
+                {scopeId && (
+                  <span role="status">
+                    {scopeId === returnProjectId
+                      ? "分析范围为当前项目的已发布推理数据"
+                      : `分析范围为${scopeProject?.name ?? "任务所属项目"}的已发布推理数据`}
+                  </span>
+                )}
+              </div>
             )}
-            {!taskId ? (
+            {isProjectHome ? (
+              project ? (
+                <ProjectConversationHome
+                  project={project}
+                  tasks={tasks.data ?? []}
+                  tasksLoading={tasks.isPending}
+                  tasksUnavailable={!!tasks.error}
+                />
+              ) : (
+                <h1 className="agent-task-heading">
+                  {projects.isPending ? "正在加载项目…" : "项目不可用"}
+                </h1>
+              )
+            ) : !taskId ? (
               <WorkspaceHome
                 tasks={tasks.data ?? []}
                 tasksLoading={tasks.isPending}
@@ -444,7 +489,6 @@ export function AgentWorkspace({
                 projects={projects.data ?? []}
                 projectsLoading={projects.isPending}
                 projectsUnavailable={!!projects.error}
-                projectId={projectId}
                 onStart={start}
               >
                 {composer}
@@ -531,7 +575,7 @@ export function AgentWorkspace({
             )}
           </div>
         </div>
-        {taskId && composer}
+        {(taskId || isProjectHome) && composer}
         {artifact && (
           <ArtifactViewer
             key={artifact.id}
@@ -541,7 +585,7 @@ export function AgentWorkspace({
           />
         )}
       </div>
-      {task.data && (
+      {task.data && !returnProjectId && (
         <aside className="agent-overview" aria-label="任务概览">
           <h2>
             <PanelRight size={16} strokeWidth={1.5} />

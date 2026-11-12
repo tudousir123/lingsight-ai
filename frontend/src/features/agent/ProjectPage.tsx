@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router"
-import { FolderOpen, Pencil, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, FolderOpen, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {
   Dialog,
@@ -7,7 +7,6 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { statusLabels } from "./api"
 import { ProjectVideoFolder } from "./ProjectVideoFolder"
 import {
   membersOfKind,
@@ -175,38 +174,6 @@ function ProjectResults({ projectId }: { projectId: string }) {
   )
 }
 
-function ProjectTasks({
-  project,
-  tasksReady,
-}: {
-  project: WorkspaceProject
-  tasksReady: Map<string, { title: string; status: string | undefined }>
-}) {
-  const members = membersOfKind(project, "agent_task")
-  if (!members.length) return null
-  return (
-    <div className="agent-task-list">
-      {members.map((member) => {
-        const task = tasksReady.get(member.id)
-        return (
-          <Link
-            to="/tasks/$taskId"
-            params={{ taskId: member.id }}
-            key={member.id}
-          >
-            <FolderOpen size={18} />
-            <span>
-              <strong>{task?.title ?? member.id}</strong>
-              <small>科研任务</small>
-            </span>
-            <small>{task ? (task.status ?? "新任务") : "任务不可用"}</small>
-          </Link>
-        )
-      })}
-    </div>
-  )
-}
-
 function ProjectVideos({ project }: { project: WorkspaceProject }) {
   const removeMember = useRemoveProjectMember()
   const members = membersOfKind(project, "video")
@@ -280,21 +247,9 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         <Link to="/">新建科研任务</Link>
       </div>
     )
-  const tasksReady = new Map(
-    (tasks.data ?? []).map((task) => [
-      task.id,
-      {
-        title: task.title,
-        status: task.runs.length
-          ? statusLabels[task.runs[task.runs.length - 1].status]
-          : undefined,
-      },
-    ]),
-  )
   const taskMemberIds = membersOfKind(project, "agent_task").map(
     (member) => member.id,
   )
-  const videoMembers = membersOfKind(project, "video")
   const closeEdit = () => {
     setEditing(false)
     setError("")
@@ -305,82 +260,64 @@ export function ProjectPage({ projectId }: { projectId: string }) {
   }
   return (
     <div className="agent-results-page" lang="zh-CN">
-      <span className="agent-eyebrow">科研项目</span>
-      <h1 className="project-title">
-        <FolderOpen size={24} />
-        {project.name}
-        <button
-          type="button"
-          aria-label="重命名项目"
+      <header className="project-details-header">
+        <Link
+          to="/projects/$projectId"
+          params={{ projectId }}
           className="project-action"
-          onClick={() => {
-            setNameDraft(project.name)
-            setNameError("")
-            setEditingName(true)
-          }}
         >
-          <Pencil size={15} />
-          重命名
-        </button>
-        <button
-          type="button"
-          aria-label="删除项目"
-          className="project-action"
-          onClick={() => {
-            setDeleteError("")
-            setConfirmingDelete(true)
-          }}
-        >
-          <Trash2 size={15} />
-          删除项目
-        </button>
-      </h1>
-      <p>
-        项目归集科研任务与视频引用，保存在你的平台账号中；移出项目不会删除任务或视频本体。
-      </p>
+          <ArrowLeft size={15} /> 返回项目对话
+        </Link>
+        <h1 className="project-title">{project.name}</h1>
+        <div className="project-details-actions">
+          <button
+            type="button"
+            aria-label="重命名项目"
+            className="project-action"
+            onClick={() => {
+              setNameDraft(project.name)
+              setNameError("")
+              setEditingName(true)
+            }}
+          >
+            <Pencil size={15} /> 重命名
+          </button>
+          <button
+            type="button"
+            className="project-action"
+            disabled={!tasks.data || !!tasks.error}
+            onClick={() => {
+              setSelected(taskMemberIds)
+              setError("")
+              setEditing(true)
+            }}
+          >
+            <Plus size={15} /> 整理对话
+          </button>
+          <button
+            type="button"
+            className="project-action"
+            onClick={() => {
+              setDeleteError("")
+              setConfirmingDelete(true)
+            }}
+          >
+            <Trash2 size={15} /> 删除项目
+          </button>
+        </div>
+        {tasks.error && <p role="alert">无法加载对话：{tasks.error.message}</p>}
+      </header>
       <ProjectVideoFolder project={project} />
-      <Link
-        className="project-action"
-        to="/project-research/$projectId"
-        params={{ projectId }}
-      >
-        分析本项目数据
-      </Link>
-      <button
-        type="button"
-        className="project-action"
-        disabled={!tasks.data || !!tasks.error}
-        onClick={() => {
-          setSelected(taskMemberIds)
-          setError("")
-          setEditing(true)
-        }}
-      >
-        <Plus size={15} />
-        整理任务
-      </button>
-      {tasks.error ? (
-        <p role="alert">无法加载科研任务：{tasks.error.message}</p>
-      ) : tasks.isPending ? (
-        <p>正在加载科研任务…</p>
-      ) : (
-        <ProjectTasks project={project} tasksReady={tasksReady} />
-      )}
       <ProjectVideos project={project} />
-      {videoMembers.length === 0 && taskMemberIds.length > 0 && (
-        <p className="research-history-note">
-          还没有归入视频。到“视频推理”页浏览目录时可将视频加入项目。
-        </p>
-      )}
       <ProjectResults projectId={project.id} />
       <Dialog
         open={editing}
         onOpenChange={(open) => (open ? null : closeEdit())}
       >
         <DialogContent className="project-dialog">
-          <DialogTitle>整理任务</DialogTitle>
+          <DialogTitle>整理对话</DialogTitle>
           <DialogDescription>
-            选择要归入“{project.name}”的任务。移出项目时，原始任务仍会保留。
+            选择要归入“{project.name}”的对话。
           </DialogDescription>
           <div className="project-task-options">
             {tasks.data?.map((task) => (
@@ -400,9 +337,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
               </label>
             ))}
           </div>
-          {!tasks.data?.length && (
-            <p>暂无科研任务。新建任务后即可在这里整理。</p>
-          )}
+          {!tasks.data?.length && <p>暂无对话。</p>}
           {error && (
             <p role="alert" className="agent-error">
               {error}

@@ -81,7 +81,7 @@ async function workspace(
 
 test("项目先选择来源和视频文件夹，刷新后保留", async ({ page }) => {
   await workspace(page)
-  await page.goto("/projects/folder-project")
+  await page.goto("/projects/folder-project?view=details")
   await expect(
     page.getByRole("heading", { name: "选择视频文件夹" }),
   ).toBeVisible()
@@ -126,7 +126,7 @@ test("批量归入所选视频，部分失败后保留失败项供重试，长�
     }
     return route.fallback()
   })
-  await page.goto("/projects/folder-project")
+  await page.goto("/projects/folder-project?view=details")
   await page.getByRole("checkbox", { name: "选择视频 鼠1.mp4" }).check()
   await page.getByRole("checkbox", { name: "选择视频 鼠2.mp4" }).check()
   await page.getByRole("button", { name: "将所选视频归入项目" }).click()
@@ -175,7 +175,7 @@ test("来源离线和保存失败给出错误，取消更换保留原文件夹",
   await page.route("**/api/v1/projects/folder-project/video-folder", (route) =>
     route.fulfill({ status: 503, json: { detail: "无法保存视频文件夹" } }),
   )
-  await page.goto("/projects/folder-project")
+  await page.goto("/projects/folder-project?view=details")
   await page.getByRole("button", { name: "更换文件夹" }).click()
   await page.getByLabel("视频来源", { exact: true }).selectOption("offline")
   await expect(page.getByRole("alert")).toContainText("NAS 暂时离线")
@@ -244,7 +244,7 @@ test("切换来源后慢响应不会覆盖新目录", async ({ page }) => {
   const slow = page.waitForRequest((request) =>
     request.url().includes("/inference/videos?source_id=slow"),
   )
-  await page.goto("/projects/folder-project")
+  await page.goto("/projects/folder-project?view=details")
   await slow
   await page.getByLabel("视频来源", { exact: true }).selectOption("fast")
   await expect(
@@ -273,7 +273,7 @@ test("读取目录失败不冒充空目录，重试恢复", async ({ page }) => 
         })
       : route.fulfill({ json: { items: [] } }),
   )
-  await page.goto("/projects/folder-project")
+  await page.goto("/projects/folder-project?view=details")
   await expect(page.getByRole("alert")).toContainText("NAS 连接已中断")
   await expect(page.getByText("此文件夹为空。", { exact: true })).toHaveCount(0)
   await expect(
@@ -342,7 +342,7 @@ test("退出并切换账号后不显示上个账号的文件夹或来源缓存",
         })
       : route.fallback(),
   )
-  await page.goto("/projects/folder-project")
+  await page.goto("/projects/folder-project?view=details")
   await page.getByRole("checkbox", { name: "选择视频 鼠1.mp4" }).check()
   await page.getByTestId("user-menu").click()
   await page.getByRole("menuitem", { name: "退出登录" }).click()
@@ -350,6 +350,7 @@ test("退出并切换账号后不显示上个账号的文件夹或来源缓存",
   await page.getByLabel("Password", { exact: true }).fill("test-password")
   await page.getByRole("button", { name: "Log In" }).click()
   await page.getByRole("link", { name: "另一个项目", exact: true }).click()
+  await page.getByRole("link", { name: "项目资料" }).click()
   await expect(page.getByLabel("视频来源", { exact: true })).toHaveValue(
     "another-nas",
   )
@@ -398,7 +399,7 @@ test("项目文件夹带到推理页，同源目录的视频仅在点击开始�
       },
     })
   })
-  await page.goto("/projects/folder-project")
+  await page.goto("/projects/folder-project?view=details")
   await page.getByRole("button", { name: "打开文件夹 十月" }).click()
   await page.getByRole("button", { name: "使用此文件夹" }).click()
   await page.getByRole("link", { name: "前往视频推理" }).click()
@@ -459,7 +460,7 @@ test("后台刷新项目文件夹后，视频列表跟随已保存的新目录",
       },
     }),
   )
-  await page.goto("/projects/folder-project")
+  await page.goto("/projects/folder-project?view=details")
   await expect(
     page.getByRole("checkbox", { name: "选择视频 旧视频.mp4" }),
   ).toBeVisible()

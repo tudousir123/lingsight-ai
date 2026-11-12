@@ -38,7 +38,6 @@ type WorkspaceHomeProps = {
   projects: WorkspaceProject[]
   projectsLoading: boolean
   projectsUnavailable: boolean
-  projectId?: string
   onStart: (prompt: string) => void
 }
 
@@ -50,25 +49,21 @@ export function WorkspaceHome({
   projects,
   projectsLoading,
   projectsUnavailable,
-  projectId,
   onStart,
 }: WorkspaceHomeProps) {
-  const visibleTasks = projectId
-    ? tasks.filter((task) => task.project_id === projectId)
-    : tasks
-  const waiting = visibleTasks.filter(
+  const waiting = tasks.filter(
     (task) => task.runs[task.runs.length - 1]?.status === "waiting_for_input",
   )
   const recentTasks = [
     ...waiting,
-    ...visibleTasks.filter(
+    ...tasks.filter(
       (task) => task.runs[task.runs.length - 1]?.status !== "waiting_for_input",
     ),
   ].slice(0, 4)
 
   return (
     <div className="workspace-start">
-      <h1>{projectId ? "项目研究" : "科研工作台"}</h1>
+      <h1>科研工作台</h1>
       <div className="workspace-start-grid">
         <div className="workspace-start-main">
           <section aria-labelledby="workspace-question">
@@ -86,44 +81,42 @@ export function WorkspaceHome({
               ))}
             </fieldset>
           </section>
-          {!projectId && (
-            <section
-              className="workspace-tools"
-              aria-labelledby="workspace-tools"
-            >
-              <h2 id="workspace-tools">视频与成果</h2>
-              <Link to="/inference" className="workspace-tool">
-                <span className="workspace-tool-icon">
-                  <Clapperboard size={18} />
-                </span>
-                <span>
-                  <strong>开始视频推理</strong>
-                  <small>选择实验视频，跟进逐帧识别进度</small>
-                </span>
-                <ArrowRight size={16} />
-              </Link>
-              <Link to="/annotations" className="workspace-tool">
-                <span className="workspace-tool-icon">
-                  <ScanLine size={18} />
-                </span>
-                <span>
-                  <strong>浏览视频与标注</strong>
-                  <small>核查实验视频和标注</small>
-                </span>
-                <ArrowRight size={16} />
-              </Link>
-              <Link to="/analysis" className="workspace-tool">
-                <span className="workspace-tool-icon">
-                  <ChartNoAxesCombined size={18} />
-                </span>
-                <span>
-                  <strong>查看图表与报告</strong>
-                  <small>回到科研任务，查看生成的成果</small>
-                </span>
-                <ArrowRight size={16} />
-              </Link>
-            </section>
-          )}
+          <section
+            className="workspace-tools"
+            aria-labelledby="workspace-tools"
+          >
+            <h2 id="workspace-tools">视频与成果</h2>
+            <Link to="/inference" className="workspace-tool">
+              <span className="workspace-tool-icon">
+                <Clapperboard size={18} />
+              </span>
+              <span>
+                <strong>开始视频推理</strong>
+                <small>选择实验视频，跟进逐帧识别进度</small>
+              </span>
+              <ArrowRight size={16} />
+            </Link>
+            <Link to="/annotations" className="workspace-tool">
+              <span className="workspace-tool-icon">
+                <ScanLine size={18} />
+              </span>
+              <span>
+                <strong>浏览视频与标注</strong>
+                <small>核查实验视频和标注</small>
+              </span>
+              <ArrowRight size={16} />
+            </Link>
+            <Link to="/analysis" className="workspace-tool">
+              <span className="workspace-tool-icon">
+                <ChartNoAxesCombined size={18} />
+              </span>
+              <span>
+                <strong>查看图表与报告</strong>
+                <small>回到科研任务，查看生成的成果</small>
+              </span>
+              <ArrowRight size={16} />
+            </Link>
+          </section>
         </div>
         <div className="workspace-start-side">
           <section
@@ -166,43 +159,41 @@ export function WorkspaceHome({
               </p>
             )}
           </section>
-          {!projectId && (
-            <section
-              className="workspace-panel"
-              aria-labelledby="workspace-projects"
-            >
-              <div className="workspace-panel-heading">
-                <h2 id="workspace-projects">项目</h2>
-              </div>
-              {projects.length ? (
-                <ul className="workspace-panel-list">
-                  {projects.slice(0, 3).map((project) => (
-                    <li key={project.id}>
-                      <Link
-                        to="/projects/$projectId"
-                        params={{ projectId: project.id }}
-                        aria-label={`打开项目：${project.name}`}
-                      >
-                        <FolderOpen size={16} />
-                        <span>
-                          <strong>{project.name}</strong>
-                        </span>
-                        <ChevronRight size={15} />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="workspace-panel-note">
-                  {projectsLoading
-                    ? "正在加载项目…"
-                    : projectsUnavailable
-                      ? "暂时无法查看项目。"
-                      : "可从侧栏新建项目，归集视频和科研任务。"}
-                </p>
-              )}
-            </section>
-          )}
+          <section
+            className="workspace-panel"
+            aria-labelledby="workspace-projects"
+          >
+            <div className="workspace-panel-heading">
+              <h2 id="workspace-projects">项目</h2>
+            </div>
+            {projects.length ? (
+              <ul className="workspace-panel-list">
+                {projects.slice(0, 3).map((project) => (
+                  <li key={project.id}>
+                    <Link
+                      to="/projects/$projectId"
+                      params={{ projectId: project.id }}
+                      aria-label={`打开项目：${project.name}`}
+                    >
+                      <FolderOpen size={16} />
+                      <span>
+                        <strong>{project.name}</strong>
+                      </span>
+                      <ChevronRight size={15} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="workspace-panel-note">
+                {projectsLoading
+                  ? "正在加载项目…"
+                  : projectsUnavailable
+                    ? "暂时无法查看项目。"
+                    : "可从侧栏新建项目，归集视频和科研任务。"}
+              </p>
+            )}
+          </section>
         </div>
       </div>
     </div>

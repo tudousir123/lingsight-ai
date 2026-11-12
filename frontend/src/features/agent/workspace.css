@@ -76,6 +76,9 @@
   font-size: 13px;
 }
 .workspace-scope a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: #dedede;
   text-decoration: underline;
   text-underline-offset: 3px;

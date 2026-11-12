@@ -427,26 +427,28 @@ test("项目可新建、归组任务、刷新保留并清空，不写 Agent 服�
   await expect(
     page.getByRole("heading", { name: "Spatial learning pilot" }),
   ).toBeVisible()
-  await page.getByRole("button", { name: "整理任务" }).click()
+  await page.getByRole("link", { name: "项目资料" }).click()
+  await page.getByRole("button", { name: "整理对话" }).click()
   await page.getByRole("checkbox", { name: task.title }).check()
   await page.getByRole("button", { name: "保存项目" }).click()
+  await page.getByRole("link", { name: "返回项目对话" }).click()
   await expect(
     page
-      .locator(".agent-task-list")
+      .getByRole("region", { name: "项目对话" })
       .getByRole("link", { name: new RegExp(task.title) }),
   ).toBeVisible()
   await page.reload()
   await expect(
     page
-      .locator(".agent-task-list")
+      .getByRole("region", { name: "项目对话" })
       .getByRole("link", { name: new RegExp(task.title) }),
   ).toBeVisible()
-  await page.getByRole("button", { name: "整理任务" }).click()
+  await page.getByRole("link", { name: "项目资料" }).click()
+  await page.getByRole("button", { name: "整理对话" }).click()
   await page.getByRole("checkbox", { name: task.title }).uncheck()
   await page.getByRole("button", { name: "保存项目" }).click()
-  await expect(
-    page.getByRole("heading", { name: "选择视频文件夹" }),
-  ).toBeVisible()
+  await page.getByRole("link", { name: "返回项目对话" }).click()
+  await expect(page.getByText("暂无对话，从下方输入框开始。")).toBeVisible()
   await expect(
     page
       .locator(".research-history-list")
@@ -459,6 +461,7 @@ test("项目可改名与删除，删除后任务保留", async ({ page }) => {
   await page.goto("/")
   await page.getByRole("link", { name: "学习与记忆", exact: true }).click()
   await expect(page).toHaveURL(/\/projects\/learning-memory/)
+  await page.getByRole("link", { name: "项目资料" }).click()
   await page.getByRole("button", { name: "重命名项目" }).click()
   const dialog = page.getByRole("dialog")
   await dialog.getByLabel("项目名称").fill("空间学习试点")
@@ -603,7 +606,7 @@ test("localStorage 旧项目一次性迁移导入且重放幂等", async ({ page
   await page.getByRole("link", { name: "学习与记忆", exact: true }).click()
   await expect(
     page
-      .locator(".agent-task-list")
+      .getByRole("region", { name: "项目对话" })
       .getByRole("link", { name: new RegExp(task.title) }),
   ).toBeVisible()
   await page.reload()
@@ -669,7 +672,7 @@ test("项目页查看已发布推理结果的逐帧行摘要", async ({ page }) 
       return route.fulfill({ json: frames(offset, 3, 53) })
     },
   )
-  await page.goto("/projects/learning-memory")
+  await page.goto("/projects/learning-memory?view=details")
   await expect(
     page.getByRole("heading", { name: "已发布推理结果" }),
   ).toBeVisible()
