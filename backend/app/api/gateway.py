@@ -118,6 +118,9 @@ class GatewayPolicy:
     range_streaming: bool = False
     forward_client_accept: bool = False
     forward_path_query_routes: frozenset[str] = frozenset()
+    forward_query_parameters: Mapping[str, tuple[str, ...]] = field(
+        default_factory=dict
+    )
 
 
 async def read_payload(request: Request, policy: GatewayPolicy) -> bytes:
@@ -166,6 +169,10 @@ async def forward(
         headers["Range"] = value
     if path in policy.forward_path_query_routes:
         params["path"] = request.query_params.get("path", "")
+
+    for name in policy.forward_query_parameters.get(path, ()):
+        if name in request.query_params:
+            params[name] = request.query_params[name]
 
     client = httpx.AsyncClient(
         timeout=httpx.Timeout(CONNECT_TIMEOUT_S, read=policy.read_timeout_s),

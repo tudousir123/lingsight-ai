@@ -59,8 +59,14 @@ function artifact(id: string, name: InferenceArtifactName): string {
   return withTokenQuery(`${inferenceGatewayBase}/${path}`)
 }
 
-export function InferencePage() {
-  const [directory, setDirectory] = useState("")
+export function InferencePage({
+  sourceId,
+  initialDirectory = "",
+}: {
+  sourceId?: string
+  initialDirectory?: string
+}) {
+  const [directory, setDirectory] = useState(initialDirectory)
   const [entries, setEntries] = useState<Entry[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [current, setCurrent] = useState<Task | null>(null)
@@ -90,11 +96,11 @@ export function InferencePage() {
   }, [])
   useEffect(() => {
     request<{ items: Entry[] }>(
-      `${inferenceRoutes.videos()}?path=${encodeURIComponent(directory)}`,
+      `${inferenceRoutes.videos()}?${new URLSearchParams({ path: directory, ...(sourceId ? { source_id: sourceId } : {}) })}`,
     )
       .then((v) => setEntries(v.items))
       .catch((e: Error) => setError(e.message))
-  }, [directory])
+  }, [directory, sourceId])
   useEffect(() => {
     const refresh = () => {
       void loadTasks().catch((e: Error) => setError(e.message))

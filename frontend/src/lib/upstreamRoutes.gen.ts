@@ -22,6 +22,7 @@ export const agentRoutes = {
 export type InferenceArtifactName = "candidate.jpg" | "overlay.mp4" | "tracking.json" | "keypoints.json" | "provenance.json"
 
 export const inferenceRoutes = {
+  sources: () => `sources`,
   tasks: () => `tasks`,
   tasksByTaskId: (taskId: string) => `tasks/${taskId}`,
   tasksByTaskIdArtifactsByArtifactName: (taskId: string, artifactName: InferenceArtifactName) => `tasks/${taskId}/artifacts/${artifactName}`,

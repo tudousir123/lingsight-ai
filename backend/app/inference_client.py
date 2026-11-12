@@ -19,6 +19,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, TypeVar
+from urllib.parse import urlencode
 
 import httpx
 
@@ -116,25 +117,39 @@ class InferenceClient:
         except httpx.HTTPError as exc:
             raise InferenceUnreachable(str(exc)) from exc
 
-    def fetch_task(self, task_id: str) -> dict[str, Any]:
-        """One task record (status, candidate, review) as the service shapes it."""
-
+    def _fetch_json(self, path: str, resource: str) -> dict[str, Any]:
         def handle(client: httpx.Client) -> dict[str, Any]:
-            with self._get(client, f"tasks/{task_id}") as response:
+            with self._get(client, path) as response:
                 payload = bytearray()
                 for chunk in response.iter_bytes(STREAM_CHUNK_BYTES):
                     payload.extend(chunk)
                     if len(payload) > JSON_ARTIFACT_CAP_BYTES:
-                        raise InferenceArtifactTooLarge("task")
+                        raise InferenceArtifactTooLarge(resource)
             try:
-                task = json.loads(payload)
+                value = json.loads(payload)
             except ValueError, UnicodeError:
                 raise InferenceUpstreamError(502) from None
-            if not isinstance(task, dict):
+            if not isinstance(value, dict):
                 raise InferenceUpstreamError(502)
-            return task
+            return value
 
         return self._send(handle)
+
+    def fetch_task(self, task_id: str) -> dict[str, Any]:
+        """One task record (status, candidate, review) as the service shapes it."""
+        return self._fetch_json(f"tasks/{task_id}", "task")
+
+    def fetch_directory(self, source_id: str, path: str) -> dict[str, Any]:
+        """Verify a source-relative directory using the same private transport."""
+        query = urlencode({"source_id": source_id, "path": path})
+        listing = self._fetch_json(f"videos?{query}", "directory")
+        if (
+            not isinstance(listing.get("items"), list)
+            or listing.get("source_id") != source_id
+            or listing.get("path") != path
+        ):
+            raise InferenceUpstreamError(502)
+        return listing
 
     def fetch_artifact(self, task_id: str, name: str) -> bytes:
         """Download one JSON artifact in full (with an explicit size ceiling)."""

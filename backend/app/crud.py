@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 from typing import Any
 
@@ -128,6 +129,11 @@ def list_project_members(
     return grouped
 
 
+def project_member_key(member_id: str) -> str:
+    """Fixed-size index key; the full opaque upstream reference is preserved."""
+    return hashlib.sha256(member_id.encode("utf-8")).hexdigest()
+
+
 def add_project_member(
     *,
     session: Session,
@@ -137,11 +143,16 @@ def add_project_member(
     label: str | None,
 ) -> tuple[ProjectMember, bool]:
     """Add or update one member reference; returns (member, created)."""
-    member = session.get(ProjectMember, (project.id, member_kind, member_id))
+    member = session.get(
+        ProjectMember, (project.id, member_kind, project_member_key(member_id))
+    )
     created = member is None
     if member is None:
         member = ProjectMember(
-            project_id=project.id, member_kind=member_kind, member_id=member_id
+            project_id=project.id,
+            member_kind=member_kind,
+            member_id=member_id,
+            member_key=project_member_key(member_id),
         )
         session.add(member)
     if label is not None:
@@ -155,7 +166,9 @@ def add_project_member(
 def remove_project_member(
     *, session: Session, project: Project, member_kind: str, member_id: str
 ) -> bool:
-    member = session.get(ProjectMember, (project.id, member_kind, member_id))
+    member = session.get(
+        ProjectMember, (project.id, member_kind, project_member_key(member_id))
+    )
     if member is None:
         return False
     session.delete(member)
@@ -197,6 +210,7 @@ def import_local_projects(
                     project_id=project.id,
                     member_kind="agent_task",
                     member_id=task_id,
+                    member_key=project_member_key(task_id),
                 )
             )
         session.commit()

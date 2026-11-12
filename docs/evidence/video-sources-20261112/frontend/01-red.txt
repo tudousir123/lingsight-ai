@@ -1,0 +1,36 @@
+
+Running 1 test using 1 worker
+
+(node:1173989) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] [chromium] › tests/project-video-folder.spec.ts:41:1 › 项目先选择来源和视频文件夹，刷新后保留
+  1) [chromium] › tests/project-video-folder.spec.ts:41:1 › 项目先选择来源和视频文件夹，刷新后保留 ────────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: '选择视频文件夹' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: '选择视频文件夹' }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: '选择视频文件夹' })
+
+
+      42 |   await workspace(page)
+      43 |   await page.goto("/projects/folder-project")
+    > 44 |   await expect(page.getByRole("heading", { name: "选择视频文件夹" })).toBeVisible()
+         |                                                                ^
+      45 |   await page.getByLabel("视频来源", { exact: true }).selectOption("nas")
+      46 |   await page.getByRole("button", { name: "打开文件夹 十月" }).click()
+      47 |   await page.getByRole("button", { name: "使用此文件夹" }).click()
+        at /home/x/Documents/Codex/2026-11-11/wo-de/work/video-sources-platform/frontend/tests/project-video-folder.spec.ts:44:64
+
+    Error Context: test-results/project-video-folder-项目先选择来源和视频文件夹，刷新后保留-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › tests/project-video-folder.spec.ts:41:1 › 项目先选择来源和视频文件夹，刷新后保留 ─────────────────────

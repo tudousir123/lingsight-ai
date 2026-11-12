@@ -1,0 +1,19 @@
+
+Running 3 tests using 3 workers
+
+(node:1184567) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:1184574) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:1184568) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/3] [chromium] › tests/project-video-folder.spec.ts:41:1 › 项目先选择来源和视频文件夹，刷新后保留
+[2/3] [chromium] › tests/project-video-folder.spec.ts:85:1 › 来源离线和保存失败给出错误，取消更换保留原文件夹
+[3/3] [chromium] › tests/project-video-folder.spec.ts:54:1 › 批量归入所选视频，部分失败后保留失败项供重试，长视频标识完整保存
+  3 passed (5.1s)

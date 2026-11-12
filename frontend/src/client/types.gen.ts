@@ -458,6 +458,7 @@ export type ProjectPublic = {
      * Members
      */
     members?: Array<ProjectMemberPublic>;
+    video_folder?: ProjectVideoFolderPublic | null;
 };
 
 /**
@@ -468,6 +469,38 @@ export type ProjectRename = {
      * Name
      */
     name: string;
+};
+
+/**
+ * ProjectVideoFolderInput
+ */
+export type ProjectVideoFolderInput = {
+    /**
+     * Source Id
+     */
+    source_id: string;
+    /**
+     * Path
+     */
+    path?: string;
+};
+
+/**
+ * ProjectVideoFolderPublic
+ */
+export type ProjectVideoFolderPublic = {
+    /**
+     * Source Id
+     */
+    source_id: string;
+    /**
+     * Path
+     */
+    path?: string;
+    /**
+     * Label
+     */
+    label: string;
 };
 
 /**
@@ -1913,6 +1946,36 @@ export type projectsRenameProjectResponses = {
 };
 
 export type projectsRenameProjectResponse = projectsRenameProjectResponses[keyof projectsRenameProjectResponses];
+
+export type projectsSelectProjectVideoFolderData = {
+    body: ProjectVideoFolderInput;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/video-folder';
+};
+
+export type projectsSelectProjectVideoFolderErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type projectsSelectProjectVideoFolderError = projectsSelectProjectVideoFolderErrors[keyof projectsSelectProjectVideoFolderErrors];
+
+export type projectsSelectProjectVideoFolderResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectPublic;
+};
+
+export type projectsSelectProjectVideoFolderResponse = projectsSelectProjectVideoFolderResponses[keyof projectsSelectProjectVideoFolderResponses];
 
 export type projectsAddProjectMemberData = {
     body: ProjectMemberAdd;

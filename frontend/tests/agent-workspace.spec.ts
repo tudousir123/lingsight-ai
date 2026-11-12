@@ -421,7 +421,7 @@ test("项目可新建、归组任务、刷新保留并清空，不写 Agent 服�
   await page.getByRole("checkbox", { name: task.title }).uncheck()
   await page.getByRole("button", { name: "保存项目" }).click()
   await expect(
-    page.getByRole("heading", { name: "为下一次发现留一个位置。" }),
+    page.getByRole("heading", { name: "选择视频文件夹" }),
   ).toBeVisible()
   await expect(
     page

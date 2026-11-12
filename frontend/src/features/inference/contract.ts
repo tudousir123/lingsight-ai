@@ -12,6 +12,13 @@ export type Entry = {
   path?: string
   id?: string
 }
+export type VideoSource = {
+  id: string
+  label: string
+  kind: string
+  available: boolean
+  error?: { code: string; message: string }
+}
 export type Point = [number, number]
 export type Mark = {
   label: string

@@ -1,0 +1,46 @@
+
+Running 30 tests using 3 workers
+
+(node:1216240) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:1216241) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:1216239) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/30] [chromium] › tests/agent-workspace.spec.ts:108:1 › 引导完成携带问题和范围但不自动提交
+[2/30] [chromium] › tests/agent-workspace.spec.ts:146:1 › 创建任务和刷新重放，交付物安全预览
+[3/30] [chromium] › tests/agent-workspace.spec.ts:86:1 › 默认进入对话，侧栏三个工具入口
+[4/30] [chromium] › tests/agent-workspace.spec.ts:173:1 › 提交失败保留输入
+[5/30] [chromium] › tests/agent-workspace.spec.ts:189:1 › 待确认口径通过答复入口提交
+[6/30] [chromium] › tests/agent-workspace.spec.ts:219:1 › 窄屏输入框可见，侧栏可展开
+[7/30] [chromium] › tests/agent-workspace.spec.ts:232:1 › 报告编辑失败保留修改，重试另存新版本
+[8/30] [chromium] › tests/agent-workspace.spec.ts:268:1 › 侧栏品牌菜单、真实任务状态与选中状态
+[9/30] [chromium] › tests/agent-workspace.spec.ts:286:1 › 搜索研究筛选完整任务列表，关闭后恢复最近任务
+[10/30] [chromium] › tests/agent-workspace.spec.ts:317:1 › 折叠侧栏仍可展开搜索，手机选择任务后关闭抽屉
+[11/30] [chromium] › tests/agent-workspace.spec.ts:343:1 › 侧栏与首页使用中文，示例问题只填入草稿
+[12/30] [chromium] › tests/agent-workspace.spec.ts:386:1 › 项目可新建、归组任务、刷新保留并清空，不写 Agent 服务
+[13/30] [chromium] › tests/agent-workspace.spec.ts:434:1 › 项目可改名与删除，删除后任务保留
+[14/30] [chromium] › tests/agent-workspace.spec.ts:465:1 › 新建项目失败保留名称并允许重试
+[15/30] [chromium] › tests/agent-workspace.spec.ts:495:1 › 项目接口失败不阻塞科研任务
+[16/30] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+[17/30] [chromium] › tests/agent-workspace.spec.ts:592:1 › 项目页查看已发布推理结果的逐帧行摘要
+[18/30] [chromium] › tests/inference-workspace.spec.ts:25:1 › 预标注编辑在轮询后保留，并作为独立确认提交
+[19/30] [chromium] › tests/inference-workspace.spec.ts:88:1 › 视频目录浏览可归入项目并从项目页移出
+[20/30] [chromium] › tests/inference-workspace.spec.ts:139:1 › 复核通过后出现发布动作，发布结果进项目且重放幂等
+[21/30] [chromium] › tests/inference-workspace.spec.ts:182:1 › 未通过复核的结果不出现发布动作
+[22/30] [chromium] › tests/inference-workspace.spec.ts:206:1 › 发布失败呈现服务端拒绝原因
+[23/30] [chromium] › tests/project-video-folder.spec.ts:82:1 › 项目先选择来源和视频文件夹，刷新后保留
+[24/30] [chromium] › tests/project-video-folder.spec.ts:99:1 › 批量归入所选视频，部分失败后保留失败项供重试，长视频标识完整保存
+[25/30] [chromium] › tests/project-video-folder.spec.ts:153:1 › 来源离线和保存失败给出错误，取消更换保留原文件夹
+[26/30] [chromium] › tests/project-video-folder.spec.ts:196:1 › 切换来源后慢响应不会覆盖新目录
+[27/30] [chromium] › tests/project-video-folder.spec.ts:263:1 › 读取目录失败不冒充空目录，重试恢复
+[28/30] [chromium] › tests/project-video-folder.spec.ts:288:1 › 退出并切换账号后不显示上个账号的文件夹或来源缓存
+[29/30] [chromium] › tests/project-video-folder.spec.ts:367:1 › 项目文件夹带到推理页，同源目录的视频仅在点击开始后提交
+[30/30] [chromium] › tests/project-video-folder.spec.ts:414:1 › 后台刷新项目文件夹后，视频列表跟随已保存的新目录
+  30 passed (29.9s)
