@@ -99,3 +99,5 @@ Text-to-SQL 最小闭环已端到端跑通并留档（除人机协作的事件�
 ## License
 
 应用代码基于 [FastAPI 官方 full-stack-fastapi-template](https://github.com/fastapi/full-stack-fastapi-template)（MIT）；其余引用的开源项目按各自许可证使用。仓库内禁止上传无再分发授权的第三方代码、私人科研数据与密钥。
+
+项目视频来源与文件夹的 NAS 首期契约见 [视频来源规格](docs/features/video-sources.md)；运行与回归证据见 [目录验收](docs/evidence/video-sources-20261112/README.md)。阿里云盘、百度网盘授权与下载尚未实现。

@@ -12,7 +12,15 @@ from fastapi import APIRouter, HTTPException, Path, Response, status
 from sqlalchemy.exc import IntegrityError
 
 from app import crud
-from app.api.deps import CurrentUser, SessionDep, owned_project
+from app.api.deps import CurrentUser, SessionDep, ensure_workspace_user, owned_project
+from app.inference_client import (
+    InferenceArtifactTooLarge,
+    InferenceClient,
+    InferenceNotFound,
+    InferenceUnconfigured,
+    InferenceUnreachable,
+    InferenceUpstreamError,
+)
 from app.models import (
     Message,
     Project,
@@ -26,6 +34,9 @@ from app.models import (
     ProjectPublic,
     ProjectRename,
     ProjectsPublic,
+    ProjectVideoFolderInput,
+    ProjectVideoFolderPublic,
+    get_datetime_utc,
 )
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -49,6 +60,16 @@ def _public(project: Project, members: list[ProjectMember]) -> ProjectPublic:
         created_at=project.created_at,
         updated_at=project.updated_at,
         members=[_member_public(member) for member in members],
+        video_folder=(
+            ProjectVideoFolderPublic(
+                source_id=project.video_source_id,
+                path=project.video_directory,
+                label=project.video_directory_label or "根目录",
+            )
+            if project.video_source_id is not None
+            and project.video_directory is not None
+            else None
+        ),
     )
 
 
@@ -96,6 +117,42 @@ def rename_project(
     return _public(project, members.get(project.id, []))
 
 
+@router.put("/{project_id}/video-folder", response_model=ProjectPublic)
+def select_project_video_folder(
+    session: SessionDep,
+    current_user: CurrentUser,
+    project_id: uuid.UUID,
+    folder: ProjectVideoFolderInput,
+) -> Any:
+    """Persist one readable source-relative directory, without starting inference."""
+    project = owned_project(session, current_user, project_id)
+    ensure_workspace_user(current_user)
+    try:
+        InferenceClient().fetch_directory(folder.source_id, folder.path)
+    except InferenceUnconfigured:
+        raise HTTPException(503, "视频推理服务尚未配置") from None
+    except InferenceUnreachable:
+        raise HTTPException(503, "暂时无法连接视频推理服务") from None
+    except InferenceNotFound:
+        raise HTTPException(404, "目录不存在或不在允许的来源内") from None
+    except InferenceUpstreamError as exc:
+        raise HTTPException(
+            503 if exc.status_code == 503 else 502,
+            "视频来源暂时不可用，请检查连接后重试",
+        ) from None
+    except InferenceArtifactTooLarge:
+        raise HTTPException(502, "视频目录过大，请选择更小的目录") from None
+    project.video_source_id = folder.source_id
+    project.video_directory = folder.path
+    project.video_directory_label = folder.path.rsplit("/", 1)[-1][:255] or "根目录"
+    project.updated_at = get_datetime_utc()
+    session.add(project)
+    session.commit()
+    session.refresh(project)
+    members = crud.list_project_members(session=session, project_ids=[project.id])
+    return _public(project, members.get(project.id, []))
+
+
 @router.delete("/{project_id}", response_model=Message)
 def delete_project(
     session: SessionDep, current_user: CurrentUser, project_id: uuid.UUID
@@ -137,7 +194,7 @@ def remove_project_member(
     current_user: CurrentUser,
     project_id: uuid.UUID,
     member_kind: ProjectMemberKind,
-    member_id: Annotated[str, Path(min_length=1, max_length=128)],
+    member_id: Annotated[str, Path(min_length=1, max_length=4096)],
 ) -> None:
     """Remove one member reference; the referenced item itself is untouched."""
     project = owned_project(session, current_user, project_id)

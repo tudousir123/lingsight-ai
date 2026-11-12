@@ -3,11 +3,13 @@ from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from pydantic import EmailStr, field_validator
+from pydantic import Field as PydanticField
 from sqlalchemy import (
     CHAR,
     BigInteger,
     Column,
     Dialect,
+    Text,
     TypeDecorator,
     UniqueConstraint,
 )
@@ -169,6 +171,11 @@ class Project(SQLModel, table=True):
         sa_type=Char36UUID,
     )
     name: str = Field(nullable=False, max_length=80)
+    video_source_id: str | None = Field(default=None, max_length=64)
+    video_directory: str | None = Field(
+        default=None, sa_column=Column(Text, nullable=True)
+    )
+    video_directory_label: str | None = Field(default=None, max_length=255)
     created_at: datetime | None = Field(default_factory=get_datetime_utc)
     updated_at: datetime | None = Field(default_factory=get_datetime_utc)
 
@@ -189,7 +196,8 @@ class ProjectMember(SQLModel, table=True):
         sa_type=Char36UUID,
     )
     member_kind: str = Field(primary_key=True, max_length=16)
-    member_id: str = Field(primary_key=True, max_length=128)
+    member_key: str = Field(primary_key=True, max_length=64)
+    member_id: str = Field(sa_column=Column(Text, nullable=False))
     label: str | None = Field(default=None, max_length=255)
     added_at: datetime | None = Field(default_factory=get_datetime_utc)
 
@@ -344,7 +352,7 @@ class ProjectRename(ProjectNameBase):
 
 class ProjectMemberAdd(SQLModel):
     kind: ProjectMemberKind
-    id: str = Field(min_length=1, max_length=128)
+    id: str = Field(min_length=1, max_length=4096)
     label: str | None = Field(default=None, max_length=255)
 
 
@@ -355,12 +363,36 @@ class ProjectMemberPublic(SQLModel):
     added_at: datetime | None = None
 
 
+class ProjectVideoFolderInput(SQLModel):
+    source_id: str = PydanticField(
+        min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]*$"
+    )
+    path: str = Field(default="", max_length=4096)
+
+    @field_validator("path")
+    @classmethod
+    def relative_directory(cls, value: str) -> str:
+        if (
+            value.startswith("/")
+            or "\\" in value
+            or any(ord(c) < 32 for c in value)
+            or ".." in value.split("/")
+        ):
+            raise ValueError("请选择来源内的相对目录")
+        return "/".join(p for p in value.split("/") if p and p != ".")
+
+
+class ProjectVideoFolderPublic(ProjectVideoFolderInput):
+    label: str
+
+
 class ProjectPublic(SQLModel):
     id: uuid.UUID
     name: str
     created_at: datetime | None = None
     updated_at: datetime | None = None
     members: list[ProjectMemberPublic] = []
+    video_folder: ProjectVideoFolderPublic | None = None
 
 
 class ProjectsPublic(SQLModel):

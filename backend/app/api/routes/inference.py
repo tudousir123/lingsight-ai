@@ -21,6 +21,7 @@ router = APIRouter(prefix="/inference", tags=["inference"])
 OPERATIONS = OperationTable(
     operations={
         "GET": (
+            "sources",
             "videos",
             "tasks",
             "tasks/{task_id}",
@@ -57,6 +58,7 @@ POLICY = GatewayPolicy(
     range_streaming=True,
     forward_client_accept=True,
     forward_path_query_routes=frozenset({"videos"}),
+    forward_query_parameters={"videos": ("source_id",)},
 )
 
 UNKNOWN_OPERATION = "Unknown inference operation"

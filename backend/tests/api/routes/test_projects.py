@@ -1,7 +1,10 @@
 """Project entity API: user-owned grouping of agent tasks and videos (#42)."""
 
 import uuid
+from unittest.mock import patch
 
+import httpx
+import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -293,3 +296,185 @@ def test_random_new_user_gets_an_empty_project_list(
     headers = authentication_token_from_email(client=client, email=user.email, db=db)
     listing = _list_projects(client, headers)
     assert listing == []
+
+
+def test_long_video_reference_round_trip(
+    client: TestClient, db: Session, normal_user_token_headers: dict[str, str]
+) -> None:
+    project = _create_project(client, normal_user_token_headers, _unique_name("长视频"))
+    project_id = str(project["id"])
+    video_id = "v1." + "a" * 4093
+    url = f"{settings.API_V1_STR}/projects/{project_id}/members"
+    try:
+        first = client.post(
+            url,
+            json={"kind": "video", "id": video_id},
+            headers=normal_user_token_headers,
+        )
+        assert first.status_code == 201, first.text
+        replay = client.post(
+            url,
+            json={"kind": "video", "id": video_id},
+            headers=normal_user_token_headers,
+        )
+        assert replay.status_code == 200, replay.text
+        saved = next(
+            p
+            for p in _list_projects(client, normal_user_token_headers)
+            if p["id"] == project_id
+        )
+        assert [m["id"] for m in saved["members"]] == [video_id]
+        removed = client.delete(
+            f"{url}/video/{video_id}", headers=normal_user_token_headers
+        )
+        assert removed.status_code == 204, removed.text
+    finally:
+        _cleanup(db, project_id)
+
+
+def test_selected_video_folder_survives_project_reload(
+    client: TestClient, db: Session, normal_user_token_headers: dict[str, str]
+) -> None:
+    project = _create_project(client, normal_user_token_headers, _unique_name("目录"))
+    project_id = str(project["id"])
+    observed = []
+    original = httpx.Client
+
+    def upstream(request: httpx.Request) -> httpx.Response:
+        observed.append(request)
+        return httpx.Response(
+            200, json={"source_id": "lab-nas", "path": "Day1/Batch2", "items": []}
+        )
+
+    try:
+        with (
+            patch.object(settings, "AGENT_WORKSPACE_EMAIL", settings.EMAIL_TEST_USER),
+            patch.object(settings, "INFERENCE_API_TOKEN", "isolated-token"),
+            patch.object(settings, "INFERENCE_BASE_URL", "http://inference.test"),
+            patch(
+                "app.inference_client.httpx.Client",
+                side_effect=lambda **kw: original(
+                    transport=httpx.MockTransport(upstream), **kw
+                ),
+            ),
+        ):
+            response = client.put(
+                f"{settings.API_V1_STR}/projects/{project_id}/video-folder",
+                json={"source_id": "lab-nas", "path": "Day1/Batch2"},
+                headers=normal_user_token_headers,
+            )
+        assert response.status_code == 200, response.text
+        expected = {"source_id": "lab-nas", "path": "Day1/Batch2", "label": "Batch2"}
+        assert response.json()["video_folder"] == expected
+        stored = next(
+            p
+            for p in _list_projects(client, normal_user_token_headers)
+            if p["id"] == project_id
+        )
+        assert stored["video_folder"] == expected
+        assert len(observed) == 1
+        assert observed[0].url.path == "/v1/videos"
+        assert dict(observed[0].url.params) == {
+            "source_id": "lab-nas",
+            "path": "Day1/Batch2",
+        }
+        assert observed[0].headers["authorization"] == "Bearer isolated-token"
+    finally:
+        _cleanup(db, project_id)
+
+
+@pytest.mark.parametrize("status", [404, 503, 500])
+def test_unreadable_folder_does_not_replace_saved_reference(
+    client: TestClient,
+    db: Session,
+    normal_user_token_headers: dict[str, str],
+    status: int,
+) -> None:
+    project = _create_project(
+        client, normal_user_token_headers, _unique_name("失败保留")
+    )
+    project_id = str(project["id"])
+    original = httpx.Client
+    ready = {"source_id": "legacy", "path": "ok", "items": []}
+    state = {"status": 200}
+
+    def upstream(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            state["status"],
+            json=ready
+            if state["status"] == 200
+            else {"detail": "private path must not escape"},
+        )
+
+    try:
+        with (
+            patch.object(settings, "AGENT_WORKSPACE_EMAIL", settings.EMAIL_TEST_USER),
+            patch.object(settings, "INFERENCE_API_TOKEN", "isolated-token"),
+            patch.object(settings, "INFERENCE_BASE_URL", "http://inference.test"),
+            patch(
+                "app.inference_client.httpx.Client",
+                side_effect=lambda **kw: original(
+                    transport=httpx.MockTransport(upstream), **kw
+                ),
+            ),
+        ):
+            url = f"{settings.API_V1_STR}/projects/{project_id}/video-folder"
+            saved = client.put(
+                url,
+                json={"source_id": "legacy", "path": "ok"},
+                headers=normal_user_token_headers,
+            )
+            assert saved.status_code == 200, saved.text
+            state["status"] = status
+            failed = client.put(
+                url,
+                json={"source_id": "legacy", "path": "missing"},
+                headers=normal_user_token_headers,
+            )
+            assert failed.status_code == (status if status in (404, 503) else 502), (
+                failed.text
+            )
+            assert "private path" not in failed.text
+        stored = next(
+            p
+            for p in _list_projects(client, normal_user_token_headers)
+            if p["id"] == project_id
+        )
+        assert stored["video_folder"]["path"] == "ok"
+    finally:
+        _cleanup(db, project_id)
+
+
+def test_folder_selection_rejects_other_owner_and_path_traversal(
+    client: TestClient,
+    db: Session,
+    normal_user_token_headers: dict[str, str],
+    superuser_token_headers: dict[str, str],
+) -> None:
+    project = _create_project(
+        client, normal_user_token_headers, _unique_name("目录隔离")
+    )
+    project_id = str(project["id"])
+    try:
+        url = f"{settings.API_V1_STR}/projects/{project_id}/video-folder"
+        forbidden = client.put(
+            url,
+            json={"source_id": "legacy", "path": ""},
+            headers=superuser_token_headers,
+        )
+        assert forbidden.status_code == 404
+        for path in [
+            "/etc",
+            "../secret",
+            "day/../../secret",
+            "C:\\secret",
+            "bad\x00path",
+        ]:
+            response = client.put(
+                url,
+                json={"source_id": "legacy", "path": path},
+                headers=normal_user_token_headers,
+            )
+            assert response.status_code == 422, response.text
+    finally:
+        _cleanup(db, project_id)

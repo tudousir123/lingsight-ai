@@ -168,3 +168,31 @@ def test_videos_query_path_forwarded(gateway: Harness) -> None:
 def test_client_accept_forwarded_verbatim(gateway: Harness) -> None:
     gateway.client.get("/inference/tasks", headers={"Accept": "text/csv"})
     assert gateway.requests[-1].headers["accept"] == "text/csv"
+
+
+def test_video_sources_and_source_query_are_forwarded(gateway: Harness) -> None:
+    gateway.state.response = httpx.Response(
+        200,
+        json={
+            "items": [
+                {
+                    "id": "legacy",
+                    "label": "现有推理视频目录",
+                    "kind": "filesystem",
+                    "available": True,
+                }
+            ]
+        },
+    )
+    sources = gateway.client.get("/inference/sources")
+    assert sources.status_code == 200
+    assert gateway.requests[-1].url.path == "/v1/sources"
+    gateway.client.get(
+        "/inference/videos?source_id=lab-nas&path=Day1&url=http://evil.test&token=leak"
+    )
+    assert dict(gateway.requests[-1].url.params) == {
+        "path": "Day1",
+        "source_id": "lab-nas",
+    }
+    gateway.client.get("/inference/tasks?source_id=lab-nas")
+    assert "source_id" not in gateway.requests[-1].url.params

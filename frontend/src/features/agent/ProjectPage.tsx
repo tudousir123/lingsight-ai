@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { statusLabels } from "./api"
+import { ProjectVideoFolder } from "./ProjectVideoFolder"
 import {
   membersOfKind,
   projectErrorText,
@@ -337,6 +338,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       <p>
         项目归集科研任务与视频引用，保存在你的平台账号中；移出项目不会删除任务或视频本体。
       </p>
+      <ProjectVideoFolder project={project} />
       <Link
         className="project-action"
         to="/project-research/$projectId"
@@ -362,21 +364,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       ) : tasks.isPending ? (
         <p>正在加载科研任务…</p>
       ) : (
-        <>
-          <ProjectTasks project={project} tasksReady={tasksReady} />
-          {!taskMemberIds.length && (
-            <div className="agent-empty">
-              <FolderOpen size={32} />
-              <h2>为下一次发现留一个位置。</h2>
-              <p>
-                点击“整理任务”添加已有任务，或在“视频推理”页把视频归入项目。
-              </p>
-              <Link to="/project-research/$projectId" params={{ projectId }}>
-                新建项目科研任务
-              </Link>
-            </div>
-          )}
-        </>
+        <ProjectTasks project={project} tasksReady={tasksReady} />
       )}
       <ProjectVideos project={project} />
       {videoMembers.length === 0 && taskMemberIds.length > 0 && (
