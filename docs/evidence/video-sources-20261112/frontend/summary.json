@@ -1,0 +1,42 @@
+{
+  "status": "pass",
+  "scope": "project video-source / folder UI and context into inference",
+  "tdd_red_green_pairs": [
+    [
+      "01-red.txt",
+      "01-green.txt"
+    ],
+    [
+      "02-red.txt",
+      "02-green.txt"
+    ],
+    [
+      "03-red.txt",
+      "03-green.txt"
+    ],
+    [
+      "06-red.txt",
+      "06-green.txt"
+    ],
+    [
+      "08-red.txt",
+      "08-green.txt"
+    ]
+  ],
+  "tests": {
+    "command": "PLAYWRIGHT_BASE_URL=http://127.0.0.1:5198 node ../node_modules/@playwright/test/cli.js test tests/project-video-folder.spec.ts tests/agent-workspace.spec.ts tests/inference-workspace.spec.ts --project=chromium --no-deps --workers=3 --reporter=line",
+    "result": "30 passed (29.9s)",
+    "output": "09-final-regression.txt"
+  },
+  "typecheck": {
+    "command": "node ../node_modules/typescript/bin/tsc -p tsconfig.build.json --noEmit",
+    "exit_code": 0
+  },
+  "biome": {
+    "result": "Checked 6 files. No fixes applied.",
+    "exit_code": 0
+  },
+  "production_modified": false,
+  "real_nas_acceptance": false,
+  "automatic_gpu_starts": false
+}
