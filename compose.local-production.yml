@@ -1,0 +1,65 @@
+# Explicit standalone file: never loads compose.override.yml or its dev/watch server.
+# Private configuration lives outside this checkout (mode 0600).
+name: lingsight-formal
+services:
+  db:
+    image: mysql@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set private MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set private MYSQL_ROOT_PASSWORD}
+    ports:
+      - "127.0.0.1:13308:3306"
+    volumes:
+      - app-db-data:/var/lib/mysql
+    networks:
+      default:
+        aliases:
+          - lingsight-formal-db
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -uapp app -e 'SELECT 1' >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  backend:
+    image: ${PLATFORM_IMAGE:?Set immutable source image tag}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        VITE_API_URL: ""
+    restart: unless-stopped
+    # Agent and the persistent inference tunnel are host-loopback services.
+    network_mode: host
+    environment:
+      PROJECT_NAME: ${PROJECT_NAME:?Set private PROJECT_NAME}
+      SECRET_KEY: ${SECRET_KEY:?Set private SECRET_KEY}
+      FIRST_SUPERUSER: ${FIRST_SUPERUSER:?Set private FIRST_SUPERUSER}
+      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:?Set private FIRST_SUPERUSER_PASSWORD}
+      DATABASE_URL: ${DATABASE_URL:?Set private DATABASE_URL}
+      FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost:8000}
+      AGENT_BASE_URL: ${AGENT_BASE_URL:-http://127.0.0.1:19100}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:?Set private AGENT_API_TOKEN}
+      AGENT_WORKSPACE_EMAIL: ${AGENT_WORKSPACE_EMAIL:-}
+      INFERENCE_BASE_URL: ${INFERENCE_BASE_URL:-http://127.0.0.1:19200}
+      INFERENCE_API_TOKEN: ${INFERENCE_API_TOKEN:?Set private INFERENCE_API_TOKEN}
+    command: ["fastapi", "run", "--host", "127.0.0.1", "--port", "8000", "--workers", "4"]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8000/api/v1/utils/health-check/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  app-db-data:
+networks:
+  default:
+    name: lingsight-formal

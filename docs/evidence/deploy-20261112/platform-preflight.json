@@ -1,0 +1,12 @@
+{
+  "source_sha": "c11077fcf9a925e20b2b3a0debfea863b5b7d3af",
+  "restoration_source": "migration backup lingsight-ai-db-1.sql.gz; app schema only; mysql system schema and test schema excluded",
+  "source_sha256": "a305f09f72ed98f00baffb91d76ffc3c9266f0034e837dad19888e3b04fb4eb1",
+  "old_revision": "d4e5f6a7b8c9",
+  "old_user_count": 2,
+  "db_container": "lingsight-formal-db-1",
+  "volume": "lingsight-formal_app-db-data",
+  "entrypoint": "http://localhost:8000",
+  "private_config": "~/.config/lingsight/platform.env (0600)",
+  "original_backups_retained": true
+}

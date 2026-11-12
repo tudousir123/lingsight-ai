@@ -1,0 +1,97 @@
+{
+  "timestamp": "2026-11-12T03:10:51.919029+00:00",
+  "mode": "Owned disposable exact-production-image backend; production services remain running",
+  "checks": [
+    {
+      "name": "retired preview5174 has no listener and refuses connection",
+      "result": "PASS",
+      "detail": {
+        "ss_listeners": 0,
+        "tcp127.0.0.1_5174_refused": true
+      }
+    },
+    {
+      "name": "disposable config matches production and excludes MySQL root secret",
+      "result": "PASS",
+      "detail": {
+        "mode": "0o600",
+        "keys": [
+          "AGENT_API_TOKEN",
+          "AGENT_BASE_URL",
+          "AGENT_WORKSPACE_EMAIL",
+          "DATABASE_URL",
+          "FIRST_SUPERUSER",
+          "FIRST_SUPERUSER_PASSWORD",
+          "FRONTEND_HOST",
+          "INFERENCE_API_TOKEN",
+          "INFERENCE_BASE_URL",
+          "PROJECT_NAME",
+          "SECRET_KEY"
+        ],
+        "all_other_runtime_keys_equal_production": true,
+        "only_runtime_override": "INFERENCE_BASE_URL=http://127.0.0.1:18001"
+      }
+    },
+    {
+      "name": "outage sidecar uses exact production image identity",
+      "result": "PASS",
+      "detail": {
+        "production_image_id": "sha256:2f93e3f696669dd70630c25d63e2d2c1e71b56ca5e711f780c8178da84096cd2",
+        "disposable_image_id": "sha256:2f93e3f696669dd70630c25d63e2d2c1e71b56ca5e711f780c8178da84096cd2",
+        "image": "lingsight-platform:c11077fcf9a925e20b2b3a0debfea863b5b7d3af",
+        "production_oci_revision": "c11077fcf9a925e20b2b3a0debfea863b5b7d3af",
+        "disposable_oci_revision": "c11077fcf9a925e20b2b3a0debfea863b5b7d3af",
+        "command": [
+          "run",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "18000",
+          "--workers",
+          "1"
+        ],
+        "no_migrations_or_initial_data": true
+      }
+    },
+    {
+      "name": "disposable production-image UI visibly reports inference outage",
+      "result": "PASS",
+      "detail": {
+        "route": "http://127.0.0.1:18000/inference",
+        "visible": true,
+        "alert": "暂时无法连接视频推理服务",
+        "pageErrors": [],
+        "network": [
+          {
+            "path": "/api/v1/inference/videos",
+            "status": 503
+          },
+          {
+            "path": "/api/v1/inference/tasks",
+            "status": 503
+          }
+        ]
+      }
+    },
+    {
+      "name": "disposable production-image gateway normalizes unreachable upstream",
+      "result": "PASS",
+      "detail": {
+        "status": 503,
+        "body": {
+          "detail": "暂时无法连接视频推理服务"
+        }
+      }
+    },
+    {
+      "name": "owned disposable container and secret config cleaned; production healthy",
+      "result": "PASS",
+      "detail": {
+        "disposable_container_removed": true,
+        "temporary_env_removed": true,
+        "production_health": 200,
+        "production_image_unchanged": true
+      }
+    }
+  ]
+}
