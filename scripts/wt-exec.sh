@@ -32,10 +32,16 @@ if [[ "$top" != "$physical_path" ]]; then
   echo 'wt-exec: target must be the repository top-level, not a subdirectory' >&2
   exit 2
 fi
-branch=$(git symbolic-ref --quiet --short HEAD) || {
+branch_ref=$(git symbolic-ref --quiet HEAD) || {
   echo 'wt-exec: detached HEAD or invalid repository' >&2
   exit 2
 }
+if [[ "$branch_ref" != refs/heads/* ]]; then
+  echo 'wt-exec: HEAD must reference a local branch' >&2
+  exit 2
+fi
+# --short can return heads/main when a tag also names main; strip only this prefix.
+branch=${branch_ref#refs/heads/}
 if [[ "$branch" != "$expected_branch" ]]; then
   echo "wt-exec: branch '$branch' does not match expected '$expected_branch'" >&2
   exit 2

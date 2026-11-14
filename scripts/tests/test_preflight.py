@@ -163,6 +163,24 @@ class PreflightTests(unittest.TestCase):
         self.assertIn(self.head, result.stdout)
         self.assertEqual(self.git("status", "--porcelain").stdout, "")
 
+    def test_protected_branch_with_same_named_tag_is_rejected(self):
+        for branch in ("main", "master"):
+            with self.subTest(branch=branch):
+                self.git("switch", "-C", branch)
+                self.git("tag", branch)
+                self.log.unlink(missing_ok=True)
+                self.assert_rejected_before_hooks(self.base)
+
+    def test_hooks_creating_a_tag_do_not_look_like_a_branch_switch(self):
+        self.configure_uv(
+            "import subprocess; subprocess.run(['git', '-C', os.getcwd(), 'tag', 'topic'], check=True)"
+        )
+        result = self.run_preflight(self.base)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(
+            self.git("symbolic-ref", "HEAD").stdout.strip(), "refs/heads/topic"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

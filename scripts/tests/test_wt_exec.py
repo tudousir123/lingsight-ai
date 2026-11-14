@@ -150,6 +150,19 @@ class WorktreeExecutionTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("usage:", result.stderr)
 
+    def test_tag_name_ambiguity_cannot_change_branch_identity(self):
+        self.git("tag", "main")
+        marker = self.base / "denied-ambiguous-main"
+        denied = self.run_guard(
+            ["touch", str(marker)], target=self.main, branch="heads/main"
+        )
+        self.assertEqual(denied.returncode, 2, denied.stderr)
+        self.assertFalse(marker.exists())
+        self.git("tag", "task/safe")
+        allowed = self.run_guard(["printf", "%s", "fixture"])
+        self.assertEqual(allowed.returncode, 0, allowed.stderr)
+        self.assertEqual(allowed.stdout, "fixture")
+
 
 if __name__ == "__main__":
     unittest.main()
