@@ -1,11 +1,4 @@
-import {
-  Circle,
-  Eye,
-  EyeOff,
-  MousePointer2,
-  Pentagon,
-  Trash2,
-} from "lucide-react"
+import { Eye, EyeOff, Trash2 } from "lucide-react"
 import { type PointerEvent, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 
@@ -29,6 +22,18 @@ export type SceneShape = {
   timeMs: number
 }
 
+export const pointLabels = { head: "头点", tail: "尾点", center: "质心" }
+export type Landmark = keyof typeof pointLabels
+export type CanvasAnnotation =
+  | SceneShape
+  | {
+      kind: "point"
+      label: Landmark
+      shape_type: "point"
+      points: Point[]
+      timeMs: number
+    }
+
 export const shapeLabels = {
   mark: "Mark",
   platform: "平台",
@@ -42,8 +47,14 @@ export const markLabels = {
 } as const
 export type MarkLabel = keyof typeof markLabels
 
-export function shapeKey(shape: Pick<SceneShape, "kind" | "label">) {
-  return `${shape.kind}:${shape.label}`
+export function pointKey(label: Landmark, timeMs: number) {
+  return `point:${label}:${timeMs}`
+}
+
+export function shapeKey(shape: CanvasAnnotation) {
+  return shape.kind === "point"
+    ? pointKey(shape.label, shape.timeMs)
+    : `${shape.kind}:${shape.label}`
 }
 
 export type ShapeTool = {
@@ -58,13 +69,18 @@ export const defaultShapeTool: ShapeTool = {
   type: "polygon",
 }
 
-export function shapeName(shape: SceneShape) {
+function annotationName(shape: CanvasAnnotation) {
+  if (shape.kind === "point") return pointLabels[shape.label]
   return shape.kind === "mark"
     ? `Mark · ${markLabels[shape.label as MarkLabel] ?? shape.label}`
     : shapeLabels[shape.kind]
 }
 
-export function validOutline(points: Point[], type: ShapeType) {
+export function validOutline(
+  points: Point[],
+  type: CanvasAnnotation["shape_type"],
+) {
+  if (type === "point") return points.length === 1
   if (type === "circle") {
     return (
       points.length === 2 &&
@@ -100,7 +116,7 @@ function outline(points: Point[], type: ShapeType, closed: boolean) {
   )
 }
 
-export function SceneOverlay({
+export function AnnotationOverlay({
   width,
   height,
   scale,
@@ -118,7 +134,7 @@ export function SceneOverlay({
   width: number
   height: number
   scale: number
-  shapes: SceneShape[]
+  shapes: CanvasAnnotation[]
   selected: string | null
   editable: boolean
   canEdit: boolean
@@ -127,16 +143,16 @@ export function SceneOverlay({
   snap: boolean
   tool: ShapeTool
   onSelect: (id: string) => void
-  onEdit: (shape: SceneShape) => void
+  onEdit: (shape: CanvasAnnotation) => void
 }) {
   const svg = useRef<SVGSVGElement>(null)
   const moving = useRef<{
-    shape: SceneShape
+    shape: CanvasAnnotation
     index: number | null
     start: Point
     points: Point[]
   } | null>(null)
-  const [transient, setTransient] = useState<SceneShape | null>(null)
+  const [transient, setTransient] = useState<CanvasAnnotation | null>(null)
   const interactive = editable && canEdit
   const handleRadius = (Math.max(width, height) * 0.007) / scale
   const drawPoints = cursor ? [...preview, cursor] : preview
@@ -154,7 +170,7 @@ export function SceneOverlay({
 
   function begin(
     event: PointerEvent<SVGElement>,
-    shape: SceneShape,
+    shape: CanvasAnnotation,
     index: number | null,
   ) {
     if (event.button !== 0) return
@@ -211,10 +227,23 @@ export function SceneOverlay({
         const isSelected = selected === id
         const shape =
           transient && shapeKey(transient) === id ? transient : saved
+        const geometry =
+          shape.kind === "point" ? (
+            <circle
+              className="annotation-point"
+              cx={shape.points[0].x}
+              cy={shape.points[0].y}
+              r={handleRadius * 0.75}
+              vectorEffect="non-scaling-stroke"
+            />
+          ) : (
+            outline(shape.points, shape.shape_type, true)
+          )
         return (
           <g
             key={id}
             data-kind={shape.kind}
+            data-label={shape.label}
             data-selected={isSelected || undefined}
           >
             {interactive ? (
@@ -226,13 +255,14 @@ export function SceneOverlay({
                 onPointerUp={() => end(true)}
                 onPointerCancel={() => end(false)}
               >
-                {outline(shape.points, shape.shape_type, true)}
+                {geometry}
               </g>
             ) : (
-              outline(shape.points, shape.shape_type, true)
+              geometry
             )}
             {interactive &&
               isSelected &&
+              shape.kind !== "point" &&
               shape.points.map((point, index) => (
                 <circle
                   key={index}
@@ -272,220 +302,136 @@ export function SceneOverlay({
   )
 }
 
-export function SceneToolbar({
+export function ShapeOptions({
   tool,
-  editing,
+  canEdit,
+  pending,
   onTool,
-  onEditMode,
+  onFinish,
+  onCancel,
 }: {
   tool: ShapeTool
-  editing: boolean
+  canEdit: boolean
+  pending: number
   onTool: (tool: ShapeTool) => void
-  onEditMode: () => void
+  onFinish: () => void
+  onCancel: () => void
 }) {
   return (
-    <fieldset className="scene-tools" aria-label="绘图工具">
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        aria-pressed={editing}
-        onClick={onEditMode}
-      >
-        <MousePointer2 /> 编辑轮廓
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        aria-pressed={!editing && tool.type === "polygon"}
-        onClick={() => onTool({ ...tool, type: "polygon" })}
-      >
-        <Pentagon /> 多边形
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        aria-pressed={!editing && tool.type === "circle"}
-        onClick={() => onTool({ ...tool, type: "circle" })}
-      >
-        <Circle /> 圆形
-      </Button>
-    </fieldset>
+    <div className="scene-options">
+      {tool.type === "circle" && (
+        <label>
+          定圆方式
+          <select
+            value={tool.circleMode ?? "center"}
+            onChange={(event) =>
+              onTool({
+                ...tool,
+                circleMode: event.target.value === "rim" ? "rim" : "center",
+              })
+            }
+          >
+            <option value="center">圆心 + 边缘</option>
+            <option value="rim">三点定圆</option>
+          </select>
+        </label>
+      )}
+      <p>
+        {tool.type === "polygon"
+          ? "沿轮廓落点，回到起点或按 Enter 闭合。"
+          : tool.circleMode === "rim"
+            ? "沿边缘点三个分散的位置。"
+            : "依次点击圆心和边缘。"}
+      </p>
+      {!!pending && (
+        <div className="annotation-actions">
+          {tool.type === "polygon" && (
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending < 3 || !canEdit}
+              onClick={onFinish}
+            >
+              闭合轮廓
+            </Button>
+          )}
+          <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+            取消绘制
+          </Button>
+        </div>
+      )}
+    </div>
   )
 }
 
-export function SceneControls({
-  tool,
-  editing,
-  canEdit,
-  pending,
+export function AnnotationList({
   shapes,
   selected,
   hidden,
-  onTool,
+  canEdit,
   onSelect,
-  onFinish,
-  onCancel,
   onDelete,
   onToggle,
 }: {
-  tool: ShapeTool
-  editing: boolean
-  canEdit: boolean
-  pending: number
-  shapes: SceneShape[]
+  shapes: CanvasAnnotation[]
   selected: string | null
   hidden: string[]
-  onTool: (tool: ShapeTool) => void
+  canEdit: boolean
   onSelect: (id: string) => void
-  onFinish: () => void
-  onCancel: () => void
   onDelete: () => void
   onToggle: (id: string) => void
 }) {
   return (
-    <div className="scene-controls">
-      <fieldset className="scene-tools" aria-label="场景标注对象">
-        {(Object.keys(shapeLabels) as ShapeKind[]).map((kind) => (
-          <Button
-            key={kind}
-            type="button"
-            size="sm"
-            variant="outline"
-            aria-pressed={tool.kind === kind}
-            onClick={() =>
-              onTool({
-                ...tool,
-                kind,
-                type: kind === "mark" ? "polygon" : "circle",
-                circleMode: kind === "pool" ? "rim" : "center",
-              })
-            }
-          >
-            {shapeLabels[kind]}
-          </Button>
-        ))}
-      </fieldset>
-      {!editing && (
-        <div className="scene-options">
-          {tool.kind === "mark" && (
-            <label>
-              Mark 类型
-              <select
-                value={tool.mark}
-                onChange={(event) =>
-                  onTool({ ...tool, mark: event.target.value as MarkLabel })
-                }
-              >
-                {Object.entries(markLabels).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          {tool.type === "circle" && (
-            <label>
-              定圆方式
-              <select
-                value={tool.circleMode ?? "center"}
-                onChange={(event) =>
-                  onTool({
-                    ...tool,
-                    circleMode: event.target.value === "rim" ? "rim" : "center",
-                  })
-                }
-              >
-                <option value="center">圆心 + 边缘</option>
-                <option value="rim">三点定圆</option>
-              </select>
-            </label>
-          )}
-          <p>
-            {tool.type === "polygon"
-              ? "沿轮廓落点，回到起点或按 Enter 闭合。"
-              : tool.circleMode === "rim"
-                ? "沿边缘点三个分散的位置。"
-                : "依次点击圆心和边缘。"}
-          </p>
-          {!!pending && (
-            <div className="annotation-actions">
-              {tool.type === "polygon" && (
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={pending < 3 || !canEdit}
-                  onClick={onFinish}
-                >
-                  闭合轮廓
-                </Button>
-              )}
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={onCancel}
-              >
-                取消绘制
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-      <div className="annotation-frames scene-list">
-        <div className="annotation-section-title">
-          <h3>场景轮廓</h3>
-          <span>{shapes.length} 个</span>
-        </div>
-        <ul>
-          {shapes.map((shape) => {
-            const id = shapeKey(shape)
-            const name = shapeName(shape)
-            const invisible = hidden.includes(id)
-            return (
-              <li key={id}>
-                <button
-                  className="scene-row-select"
-                  type="button"
-                  data-kind={shape.kind}
-                  aria-current={selected === id ? "true" : undefined}
-                  onClick={() => onSelect(id)}
-                >
-                  <i className="scene-swatch" aria-hidden="true" />
-                  <span>{name}</span>
-                </button>
-                <Button
-                  variant="ghost"
-                  type="button"
-                  size="icon-sm"
-                  aria-label={`${invisible ? "显示" : "隐藏"}${name}`}
-                  onClick={() => onToggle(id)}
-                >
-                  {invisible ? <EyeOff /> : <Eye />}
-                </Button>
-              </li>
-            )
-          })}
-        </ul>
-        {editing && selected && (
-          <>
-            <p>拖动形状移动，拖动控制点调整边界。</p>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              disabled={!canEdit}
-              onClick={onDelete}
-            >
-              <Trash2 /> 删除轮廓
-            </Button>
-          </>
-        )}
+    <div className="annotation-frames scene-list">
+      <div className="annotation-section-title">
+        <h3>标注列表</h3>
+        <span>{shapes.length} 个</span>
       </div>
-      <p>场景轮廓在当前视频各帧共用。</p>
+      <ul aria-label="标注列表">
+        {shapes.map((shape) => {
+          const id = shapeKey(shape)
+          const name = annotationName(shape)
+          const invisible = hidden.includes(id)
+          return (
+            <li key={id}>
+              <button
+                className="scene-row-select"
+                type="button"
+                data-kind={shape.kind}
+                data-label={shape.label}
+                aria-label={name}
+                aria-current={selected === id ? "true" : undefined}
+                onClick={() => onSelect(id)}
+              >
+                <i className="scene-swatch" aria-hidden="true" />
+                <span>{name}</span>
+                <span>{shape.kind === "point" ? "本帧" : "整段"}</span>
+              </button>
+              <Button
+                variant="ghost"
+                type="button"
+                size="icon-sm"
+                aria-label={`${invisible ? "显示" : "隐藏"}${name}`}
+                onClick={() => onToggle(id)}
+              >
+                {invisible ? <EyeOff /> : <Eye />}
+              </Button>
+            </li>
+          )
+        })}
+      </ul>
+      {!shapes.length && <p>暂无标注</p>}
+      {selected && (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={!canEdit}
+          onClick={onDelete}
+        >
+          <Trash2 /> 删除标注
+        </Button>
+      )}
     </div>
   )
 }

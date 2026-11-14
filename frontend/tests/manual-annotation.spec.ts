@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test"
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
-test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) => {
+test("同一工作台能绘制、编辑、恢复和导出本帧与整段标注", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("access_token", "annotation-test")
   })
@@ -84,13 +84,15 @@ test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) 
   const fps = page.getByRole("spinbutton", { name: "帧率（FPS）" })
   await fps.fill("10")
   await fps.press("Enter")
+  const target = page.getByLabel("标注对象")
+  const list = page.getByRole("list", { name: "标注列表" })
   const head = page.getByRole("button", { name: "画面标注：头点" })
   await expect(head).toBeEnabled()
   await head.click({ position: { x: 140, y: 110 } })
   await expect(
     page.getByRole("button", { name: "第 1 帧 1 个点" }),
   ).toBeVisible()
-  await page.getByRole("button", { name: /^尾点/ }).click()
+  await target.selectOption("tail")
   await page.getByRole("button", { name: "画面标注：尾点" }).press("Enter")
   await expect(
     page.getByRole("button", { name: "第 1 帧 2 个点" }),
@@ -101,13 +103,13 @@ test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) 
   ).toBeVisible()
   await page.getByRole("button", { name: "下一帧" }).click()
   await expect(page.locator(".annotation-time")).toContainText("第 2 帧")
-  await page.getByRole("button", { name: /^质心/ }).click()
+  await target.selectOption("center")
   await page.getByRole("button", { name: "画面标注：质心" }).press("Enter")
   await expect(
     page.getByRole("button", { name: "第 2 帧 1 个点" }),
   ).toBeVisible()
 
-  await page.getByRole("button", { name: "场景标注", exact: true }).click()
+  await target.selectOption("pentacle")
   const drawMark = page.getByRole("button", { name: "绘制Mark", exact: true })
   await drawMark.click({ position: { x: 42, y: 40 } })
   await drawMark.click({ position: { x: 95, y: 40 } })
@@ -166,15 +168,15 @@ test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) 
   expect(await frame.getAttribute("style")).not.toBe(oldView)
   await page.getByRole("button", { name: "适应画面" }).click()
   await expect(page.getByLabel("画布缩放")).toHaveText("100%")
-  await page.getByRole("button", { name: "平台", exact: true }).click()
+  await target.selectOption("platform")
   const drawPlatform = page.getByRole("button", {
     name: "绘制平台",
     exact: true,
   })
   await drawPlatform.click({ position: { x: 179, y: 127 } })
   await drawPlatform.click({ position: { x: 199, y: 127 } })
-  await expect(page.getByRole("button", { name: "删除轮廓" })).toBeEnabled()
-  await page.getByRole("button", { name: "删除轮廓" }).click()
+  await expect(page.getByRole("button", { name: "删除标注" })).toBeEnabled()
+  await page.getByRole("button", { name: "删除标注" }).click()
   await expect(page.locator(".scene-overlay [data-kind=platform]")).toHaveCount(
     0,
   )
@@ -182,7 +184,7 @@ test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) 
   await expect(page.locator(".scene-overlay [data-kind=platform]")).toHaveCount(
     1,
   )
-  await page.getByRole("button", { name: "水池边缘", exact: true }).click()
+  await target.selectOption("pool")
   const drawPool = page.getByRole("button", {
     name: "绘制水池边缘",
     exact: true,
@@ -199,11 +201,47 @@ test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) 
     page.locator(".scene-preview circle:not(.scene-vertex)"),
   ).toBeVisible()
   await drawPool.click({ position: { x: 300, y: 249 } })
-  await expect(page.locator(".scene-list li")).toHaveCount(3)
+  await expect(list.getByRole("listitem")).toHaveCount(4)
+  const centerItem = list.getByRole("button", { name: "质心", exact: true })
+  await expect(centerItem).toContainText("本帧")
+  await expect(
+    list.getByRole("button", { name: "水池边缘", exact: true }),
+  ).toContainText("整段")
+  const centerPoint = page.locator(
+    ".scene-overlay [data-label=center] .annotation-point",
+  )
+  await expect(centerPoint).toBeVisible()
+  await centerItem.click()
+  await expect(
+    page.getByRole("button", { name: "选择", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true")
+  const pointBox = await centerPoint.boundingBox()
+  if (!pointBox) throw new Error("Missing point on canvas")
+  const oldX = await centerPoint.getAttribute("cx")
+  await page.mouse.move(
+    pointBox.x + pointBox.width / 2,
+    pointBox.y + pointBox.height / 2,
+  )
+  await page.mouse.down()
+  await page.mouse.move(
+    pointBox.x + pointBox.width / 2 + 28,
+    pointBox.y + pointBox.height / 2 + 6,
+  )
+  await page.mouse.up()
+  expect(await centerPoint.getAttribute("cx")).not.toBe(oldX)
+  await page.getByRole("button", { name: "撤销" }).click()
+  await expect(centerPoint).toHaveAttribute("cx", oldX!)
+  await page.getByRole("button", { name: "删除标注" }).click()
+  await expect(centerItem).toHaveCount(0)
+  await page.getByRole("button", { name: "撤销" }).click()
+  await expect(centerItem).toBeVisible()
   await page.getByRole("button", { name: "上一帧" }).click()
   await expect(page.locator(".annotation-time")).toContainText("第 1 帧")
-  await expect(page.locator(".scene-list li")).toHaveCount(3)
-  await page.getByRole("button", { name: "关键点", exact: true }).click()
+  await expect(centerItem).toHaveCount(0)
+  await expect(
+    list.getByRole("button", { name: "头点", exact: true }),
+  ).toBeVisible()
+  await expect(list.getByRole("listitem")).toHaveCount(4)
 
   await page.getByRole("tab", { name: "试次目录" }).click()
   await expect(
@@ -234,22 +272,27 @@ test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) 
     { frameIndex: 1, timeMs: 100, points: { center: { x: 40, y: 24 } } },
   ])
   expect(exported.frames[0].points.tail).toBeUndefined()
-  const [center, edge] = exported.sceneShapes.find(
-    (shape: { kind: string }) => shape.kind === "pool",
-  ).points
+  const sceneShapes: Array<{
+    kind: string
+    label: string
+    shape_type: string
+    frameIndex: number | null
+    points: number[][]
+  }> = exported.sceneShapes
+  const [center, edge] = sceneShapes.find(
+    (shape) => shape.kind === "pool",
+  )!.points
   expect(center[0]).toBeGreaterThan(10)
   expect(center[0]).toBeLessThan(50)
   expect(edge[1]).toBeGreaterThan(center[1])
   expect(
-    exported.sceneShapes.map(
-      ({ kind, label, shape_type, frameIndex, points }) => [
-        kind,
-        label,
-        shape_type,
-        frameIndex,
-        points.length,
-      ],
-    ),
+    sceneShapes.map(({ kind, label, shape_type, frameIndex, points }) => [
+      kind,
+      label,
+      shape_type,
+      frameIndex,
+      points.length,
+    ]),
   ).toEqual([
     ["mark", "pentacle", "polygon", 1, 3],
     ["platform", "platform", "circle", 1, 2],

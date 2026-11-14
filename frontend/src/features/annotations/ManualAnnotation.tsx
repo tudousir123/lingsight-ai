@@ -1,9 +1,13 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Circle,
+  Dot,
   Download,
   FolderOpen,
+  MousePointer2,
   Pause,
+  Pentagon,
   Play,
   RotateCcw,
 } from "lucide-react"
@@ -12,12 +16,18 @@ import { Button } from "@/components/ui/button"
 import useAuth from "@/hooks/useAuth"
 import { AnnotationViewport } from "./AnnotationViewport"
 import {
+  AnnotationList,
+  AnnotationOverlay,
+  type CanvasAnnotation,
   defaultShapeTool,
+  type Landmark,
+  type MarkLabel,
+  markLabels,
   type Point,
-  SceneControls,
-  SceneOverlay,
+  pointKey,
+  pointLabels,
   type SceneShape,
-  SceneToolbar,
+  ShapeOptions,
   type ShapeTool,
   shapeKey,
   shapeLabels,
@@ -26,8 +36,6 @@ import {
 import { circleFromRim, imagePoint } from "./shapeGeometry"
 import "./manual-annotation.css"
 
-const labels = { head: "头点", tail: "尾点", center: "质心" }
-type Landmark = keyof typeof labels
 type Frame = {
   timeMs: number
   frameIndex: number | null
@@ -48,7 +56,7 @@ type Source = {
   kind: "local" | "example"
   fps?: number
 }
-const landmarks = Object.keys(labels) as Landmark[]
+const landmarks = Object.keys(pointLabels) as Landmark[]
 const exampleUrl = import.meta.env.VITE_MOCK_ANNOTATION_VIDEO_URL
 const example: Source | null = exampleUrl
   ? {
@@ -237,9 +245,30 @@ function AnnotationEditor({
   const current = draft.frames[timeMs]
   const frames = Object.values(draft.frames).sort((a, b) => a.timeMs - b.timeMs)
   const canMark = !!meta && ready && paused && !seeking && !error
-  const selectedShape = draft.shapes.find(
+  const framePoints: CanvasAnnotation[] = []
+  for (const label of landmarks) {
+    const point = current?.points[label]
+    if (point) {
+      framePoints.push({
+        kind: "point",
+        label,
+        shape_type: "point",
+        points: [point],
+        timeMs,
+      })
+    }
+  }
+  const annotations = [...draft.shapes, ...framePoints]
+  const selectedAnnotation = annotations.find(
     (shape) => shapeKey(shape) === selected,
   )
+  const target =
+    mode === "points" ||
+    (mode === "edit" && selectedAnnotation?.kind === "point")
+      ? landmark
+      : tool.kind === "mark"
+        ? tool.mark
+        : tool.kind
   const drawLabel = shapeLabels[tool.kind]
 
   function persist(next: Draft) {
@@ -260,22 +289,22 @@ function AnnotationEditor({
     persist({ ...draft, frames: next })
   }
 
-  function setPoint(point: Point) {
+  function setPoint(point: Point, label = landmark) {
     if (!canMark || !meta || media.current?.seeking) return
     const next = {
       x: clamp(Math.round(point.x), meta.width - 1),
       y: clamp(Math.round(point.y), meta.height - 1),
     }
     if (
-      current?.points[landmark]?.x === next.x &&
-      current.points[landmark]?.y === next.y
+      current?.points[label]?.x === next.x &&
+      current.points[label]?.y === next.y
     )
       return
     setUndo([...undo, { kind: "frame", key: timeMs, frame: current }])
     updateFrame(timeMs, {
       timeMs,
       frameIndex,
-      points: { ...current?.points, [landmark]: next },
+      points: { ...current?.points, [label]: next },
     })
   }
 
@@ -286,17 +315,69 @@ function AnnotationEditor({
     setShapeError("")
   }
 
-  function changeTool(next: ShapeTool) {
+  function changeTool(next: ShapeTool, focusCanvas = true) {
     cancelOutline()
     setTool(next)
     setMode("draw")
-    canvas.current?.focus({ preventScroll: true })
+    setSelected(null)
+    if (focusCanvas) canvas.current?.focus({ preventScroll: true })
   }
 
-  function selectShape(key: string) {
+  function pointMode(label = landmark, focusCanvas = true) {
+    cancelOutline()
+    setLandmark(label)
+    setMode("points")
+    setSelected(null)
+    setHiddenShapes((hidden) =>
+      hidden.filter((id) => id !== pointKey(label, timeMs)),
+    )
+    if (focusCanvas) canvas.current?.focus({ preventScroll: true })
+  }
+
+  function chooseTarget(value: string) {
+    if (value === "head" || value === "tail" || value === "center") {
+      pointMode(value, false)
+    } else if (value === "platform" || value === "pool") {
+      changeTool(
+        {
+          ...tool,
+          kind: value,
+          type: "circle",
+          circleMode: value === "pool" ? "rim" : "center",
+        },
+        false,
+      )
+    } else {
+      changeTool(
+        {
+          ...tool,
+          kind: "mark",
+          mark: value as MarkLabel,
+          type: "polygon",
+        },
+        false,
+      )
+    }
+  }
+
+  function selectShape(
+    key: string,
+    shape = annotations.find((annotation) => shapeKey(annotation) === key),
+  ) {
     cancelOutline()
     setMode("edit")
     setSelected(key)
+    if (shape?.kind === "point") {
+      setLandmark(shape.label)
+    } else if (shape) {
+      setTool({
+        ...tool,
+        kind: shape.kind,
+        type: shape.shape_type,
+        mark: shape.kind === "mark" ? (shape.label as MarkLabel) : tool.mark,
+        circleMode: shape.kind === "pool" ? "rim" : "center",
+      })
+    }
     setHiddenShapes((hidden) => hidden.filter((id) => id !== key))
     canvas.current?.focus({ preventScroll: true })
   }
@@ -306,7 +387,12 @@ function AnnotationEditor({
     persist({ ...draft, shapes })
   }
 
-  function updateShape(shape: SceneShape) {
+  function updateShape(shape: CanvasAnnotation) {
+    if (!canMark || media.current?.seeking) return
+    if (shape.kind === "point") {
+      if (shape.timeMs === timeMs) setPoint(shape.points[0], shape.label)
+      return
+    }
     const id = shapeKey(shape)
     const exists = draft.shapes.some((item) => shapeKey(item) === id)
     saveShapes(
@@ -340,7 +426,7 @@ function AnnotationEditor({
       frameIndex,
     }
     updateShape(shape)
-    selectShape(shapeKey(shape))
+    selectShape(shapeKey(shape), shape)
   }
 
   function editMode() {
@@ -360,8 +446,18 @@ function AnnotationEditor({
   }
 
   function deleteShape() {
-    if (!canMark || !selectedShape) return
-    saveShapes(draft.shapes.filter((shape) => shapeKey(shape) !== selected))
+    if (!canMark || media.current?.seeking || !selectedAnnotation) return
+    if (selectedAnnotation.kind === "point" && current) {
+      const points = { ...current.points }
+      delete points[selectedAnnotation.label]
+      setUndo([...undo, { kind: "frame", key: timeMs, frame: current }])
+      updateFrame(
+        timeMs,
+        Object.keys(points).length ? { ...current, points } : undefined,
+      )
+    } else {
+      saveShapes(draft.shapes.filter((shape) => shapeKey(shape) !== selected))
+    }
     setSelected(null)
   }
 
@@ -372,7 +468,10 @@ function AnnotationEditor({
     cancelOutline()
     if (last.kind === "scene") {
       persist({ ...draft, shapes: last.shapes })
-      if (!last.shapes.some((shape) => shapeKey(shape) === selected))
+      if (
+        selectedAnnotation?.kind !== "point" &&
+        !last.shapes.some((shape) => shapeKey(shape) === selected)
+      )
         setSelected(null)
     } else {
       updateFrame(last.key, last.frame)
@@ -384,6 +483,7 @@ function AnnotationEditor({
   function seek(seconds: number) {
     if (!media.current || !meta || !Number.isFinite(seconds)) return
     cancelOutline()
+    if (selectedAnnotation?.kind === "point") setSelected(null)
     media.current.pause()
     media.current.currentTime = clamp(
       seconds,
@@ -433,40 +533,44 @@ function AnnotationEditor({
     <div className="annotation-grid">
       <div className="annotation-player">
         <div className="annotation-drawing-bar">
-          <fieldset
-            className="scene-tools annotation-mode"
-            aria-label="标注范围"
-          >
+          <fieldset className="scene-tools" aria-label="标注工具">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              aria-pressed={mode === "edit"}
+              onClick={editMode}
+            >
+              <MousePointer2 /> 选择
+            </Button>
             <Button
               type="button"
               size="sm"
               variant="ghost"
               aria-pressed={mode === "points"}
-              onClick={() => {
-                cancelOutline()
-                setMode("points")
-              }}
+              onClick={() => pointMode()}
             >
-              关键点
+              <Dot /> 点
             </Button>
             <Button
               type="button"
               size="sm"
               variant="ghost"
-              aria-pressed={mode !== "points"}
-              onClick={() => changeTool(tool)}
+              aria-pressed={mode === "draw" && tool.type === "circle"}
+              onClick={() => changeTool({ ...tool, type: "circle" })}
             >
-              场景标注
+              <Circle /> 圆形
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              aria-pressed={mode === "draw" && tool.type === "polygon"}
+              onClick={() => changeTool({ ...tool, type: "polygon" })}
+            >
+              <Pentagon /> 多边形
             </Button>
           </fieldset>
-          {mode !== "points" && (
-            <SceneToolbar
-              tool={tool}
-              editing={mode === "edit"}
-              onTool={changeTool}
-              onEditMode={editMode}
-            />
-          )}
         </div>
         <AnnotationViewport width={meta?.width} height={meta?.height}>
           {(panning, scale) => (
@@ -499,6 +603,7 @@ function AnnotationEditor({
                 onLoadedData={() => setReady(true)}
                 onPlay={() => {
                   cancelOutline()
+                  if (selectedAnnotation?.kind === "point") setSelected(null)
                   setPaused(false)
                 }}
                 onPause={() => setPaused(true)}
@@ -522,10 +627,10 @@ function AnnotationEditor({
                   data-mode={mode}
                   aria-label={
                     mode === "points"
-                      ? `画面标注：${labels[landmark]}`
+                      ? `画面标注：${pointLabels[landmark]}`
                       : mode === "draw"
                         ? `绘制${drawLabel}`
-                        : "轮廓编辑画布"
+                        : "标注编辑画布"
                   }
                   disabled={!canMark}
                   onPointerMove={(event) => {
@@ -656,36 +761,17 @@ function AnnotationEditor({
                       y: point.y + delta[1] * stride,
                     })
                   }}
-                >
-                  {paused &&
-                    !seeking &&
-                    landmarks.map((key) => {
-                      const point = current?.points[key]
-                      if (!point) return null
-                      return (
-                        <span
-                          className="annotation-marker"
-                          data-landmark={key}
-                          key={key}
-                          aria-hidden="true"
-                          style={{
-                            left: `${(100 * point.x) / Math.max(1, meta.width - 1)}%`,
-                            top: `${(100 * point.y) / Math.max(1, meta.height - 1)}%`,
-                          }}
-                        >
-                          <i /> <b>{labels[key]}</b>
-                        </span>
-                      )
-                    })}
-                </button>
+                />
               )}
               {meta && (
-                <SceneOverlay
+                <AnnotationOverlay
                   width={meta.width}
                   height={meta.height}
                   scale={scale}
-                  shapes={draft.shapes.filter(
-                    (shape) => !hiddenShapes.includes(shapeKey(shape)),
+                  shapes={annotations.filter(
+                    (shape) =>
+                      !hiddenShapes.includes(shapeKey(shape)) &&
+                      (shape.kind !== "point" || (paused && !seeking)),
                   )}
                   selected={mode === "edit" ? selected : null}
                   editable={mode === "edit"}
@@ -766,60 +852,59 @@ function AnnotationEditor({
         </div>
       </div>
       <aside className="annotation-inspector" aria-label="标注面板">
-        {mode === "points" ? (
-          <>
-            <div className="annotation-inspector-header">
-              <h3>关键点标注</h3>
-              <p>
-                {paused
-                  ? "选择关键点，在画面点击落点。"
-                  : "暂停视频后即可标注。"}
-              </p>
-            </div>
-            <div className="annotation-landmarks">
-              {landmarks.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  data-landmark={key}
-                  aria-pressed={landmark === key}
-                  onClick={() => setLandmark(key)}
-                >
-                  <i aria-hidden="true" />
-                  {labels[key]}
-                  <span>
-                    {current?.points[key]
-                      ? `${current.points[key].x}, ${current.points[key].y}`
-                      : "未标记"}
-                  </span>
-                </button>
+        <div className="scene-options">
+          <label>
+            标注对象
+            <select
+              value={target}
+              onChange={(event) => chooseTarget(event.target.value)}
+            >
+              {Object.entries(pointLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
               ))}
-            </div>
-          </>
-        ) : (
-          <>
-            <SceneControls
-              tool={tool}
-              editing={mode === "edit"}
-              canEdit={canMark}
-              pending={outline.length}
-              shapes={draft.shapes}
-              selected={selectedShape ? selected : null}
-              onTool={changeTool}
-              hidden={hiddenShapes}
-              onToggle={toggleShape}
-              onSelect={selectShape}
-              onFinish={() => finishOutline()}
-              onCancel={cancelOutline}
-              onDelete={deleteShape}
-            />
-            {shapeError && (
-              <p className="annotation-error" role="alert">
-                {shapeError}
-              </p>
-            )}
-          </>
+              {Object.entries(markLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  Mark · {label}
+                </option>
+              ))}
+              <option value="platform">{shapeLabels.platform}</option>
+              <option value="pool">{shapeLabels.pool}</option>
+            </select>
+          </label>
+          {!paused && <p>暂停视频后即可标注。</p>}
+          {paused && mode === "points" && (
+            <p>点击画面放置{pointLabels[landmark]}。</p>
+          )}
+          {paused && mode === "edit" && (
+            <p>拖动标注移动，拖动轮廓控制点调整形状。</p>
+          )}
+        </div>
+        {mode === "draw" && (
+          <ShapeOptions
+            tool={tool}
+            canEdit={canMark}
+            pending={outline.length}
+            onTool={(next) => changeTool(next, false)}
+            onFinish={() => finishOutline()}
+            onCancel={cancelOutline}
+          />
         )}
+        {shapeError && (
+          <p className="annotation-error" role="alert">
+            {shapeError}
+          </p>
+        )}
+        <AnnotationList
+          shapes={[...framePoints, ...draft.shapes]}
+          selected={mode === "edit" && selectedAnnotation ? selected : null}
+          hidden={hiddenShapes}
+          canEdit={canMark}
+          onSelect={selectShape}
+          onDelete={deleteShape}
+          onToggle={toggleShape}
+        />
         <div className="annotation-actions">
           <Button
             type="button"
@@ -830,21 +915,22 @@ function AnnotationEditor({
           >
             <RotateCcw /> 撤销
           </Button>
-          {mode === "points" && (
+          {current && (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              disabled={!current || !canMark}
+              disabled={!canMark}
               onClick={() => {
                 setUndo([
                   ...undo,
                   { kind: "frame", key: timeMs, frame: current },
                 ])
                 updateFrame(timeMs)
+                if (selectedAnnotation?.kind === "point") setSelected(null)
               }}
             >
-              清除本帧
+              清除本帧的点
             </Button>
           )}
         </div>
