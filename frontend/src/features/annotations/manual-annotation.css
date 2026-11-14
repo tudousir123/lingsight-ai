@@ -249,3 +249,97 @@
     margin-left: auto;
   }
 }
+
+.scene-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.annotation-hit[data-mode="edit"] {
+  cursor: default;
+}
+.scene-overlay :is(polygon, polyline, circle) {
+  fill: none;
+  stroke: var(--shape-color);
+  stroke-width: 1.5;
+}
+.scene-overlay [data-selected] :is(polygon, circle),
+.scene-overlay .scene-preview :is(polyline, circle) {
+  stroke-width: 2.5;
+}
+.scene-overlay .scene-preview :is(polyline, circle) {
+  stroke-dasharray: 5 4;
+}
+.scene-overlay .scene-select-shape :is(polygon, circle) {
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.scene-overlay .scene-handle,
+.scene-overlay .scene-vertex {
+  fill: var(--shape-color);
+  stroke: #171717;
+  stroke-dasharray: none;
+  stroke-width: 1;
+}
+.scene-overlay .scene-handle {
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+}
+.scene-overlay .scene-handle:active {
+  cursor: grabbing;
+}
+.annotation-grid [data-kind="mark"] {
+  --shape-color: #ecc374;
+}
+.annotation-grid [data-kind="platform"] {
+  --shape-color: #d7b6f1;
+}
+.annotation-grid [data-kind="pool"] {
+  --shape-color: #8bd9c8;
+}
+.scene-controls,
+.scene-options {
+  display: grid;
+  gap: 9px;
+}
+.scene-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.scene-tools button[aria-pressed="true"],
+.scene-list button[aria-pressed="true"] {
+  border-color: #777;
+  background: #393939;
+}
+.annotation-mode {
+  padding-bottom: 9px;
+  border-bottom: 1px solid #3a3a3a;
+}
+.scene-options label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.scene-options select {
+  padding: 4px 7px;
+  border: 1px solid #484848;
+  border-radius: 6px;
+  background: #191919;
+  color: #eee;
+}
+.scene-swatch {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--shape-color);
+  border-radius: 3px;
+}
+.scene-list p {
+  margin-top: 7px;
+}

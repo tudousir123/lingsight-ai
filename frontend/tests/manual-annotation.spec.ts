@@ -107,6 +107,61 @@ test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) 
     page.getByRole("button", { name: "第 2 帧 1 个点" }),
   ).toBeVisible()
 
+  await page.getByRole("button", { name: "场景标注", exact: true }).click()
+  const drawMark = page.getByRole("button", { name: "绘制Mark", exact: true })
+  await drawMark.click({ position: { x: 42, y: 40 } })
+  await drawMark.click({ position: { x: 95, y: 40 } })
+  await drawMark.press("Escape")
+  await expect(page.getByRole("button", { name: "取消绘制" })).toHaveCount(0)
+  await drawMark.click({ position: { x: 45, y: 48 } })
+  await drawMark.click({ position: { x: 95, y: 48 } })
+  await drawMark.click({ position: { x: 70, y: 100 } })
+  await drawMark.press("Enter")
+  await expect(
+    page.getByRole("button", { name: "Mark · 五角星" }),
+  ).toBeVisible()
+  const vertex = page.locator(".scene-handle").first()
+  const box = await vertex.boundingBox()
+  if (!box) throw new Error("Missing edit vertex")
+  const originalX = await vertex.getAttribute("cx")
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(
+    box.x + box.width / 2 + 56,
+    box.y + box.height / 2 + 10,
+    { steps: 4 },
+  )
+  await page.mouse.up()
+  expect(await vertex.getAttribute("cx")).not.toBe(originalX)
+  await page.getByRole("button", { name: "平台", exact: true }).click()
+  const drawPlatform = page.getByRole("button", {
+    name: "绘制平台",
+    exact: true,
+  })
+  await drawPlatform.click({ position: { x: 179, y: 127 } })
+  await drawPlatform.click({ position: { x: 199, y: 127 } })
+  await expect(page.getByRole("button", { name: "删除轮廓" })).toBeEnabled()
+  await page.getByRole("button", { name: "删除轮廓" }).click()
+  await expect(page.locator(".scene-overlay [data-kind=platform]")).toHaveCount(
+    0,
+  )
+  await page.getByRole("button", { name: "撤销" }).click()
+  await expect(page.locator(".scene-overlay [data-kind=platform]")).toHaveCount(
+    1,
+  )
+  await page.getByRole("button", { name: "水池边缘", exact: true }).click()
+  const drawPool = page.getByRole("button", {
+    name: "绘制水池边缘",
+    exact: true,
+  })
+  await drawPool.click({ position: { x: 220, y: 178 } })
+  await drawPool.click({ position: { x: 300, y: 178 } })
+  await expect(page.locator(".scene-list li")).toHaveCount(3)
+  await page.getByRole("button", { name: "上一帧" }).click()
+  await expect(page.locator(".annotation-time")).toContainText("第 1 帧")
+  await expect(page.locator(".scene-list li")).toHaveCount(3)
+  await page.getByRole("button", { name: "关键点", exact: true }).click()
+
   await page.getByRole("tab", { name: "试次目录" }).click()
   await expect(
     page.getByText("暂无可访问的实验。请联系管理员确认实验权限。"),
@@ -136,4 +191,19 @@ test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) 
     { frameIndex: 1, timeMs: 100, points: { center: { x: 40, y: 24 } } },
   ])
   expect(exported.frames[0].points.tail).toBeUndefined()
+  expect(
+    exported.sceneShapes.map(
+      ({ kind, label, shape_type, frameIndex, points }) => [
+        kind,
+        label,
+        shape_type,
+        frameIndex,
+        points.length,
+      ],
+    ),
+  ).toEqual([
+    ["mark", "pentacle", "polygon", 1, 3],
+    ["platform", "platform", "circle", 1, 2],
+    ["pool", "pool", "circle", 1, 2],
+  ])
 })
