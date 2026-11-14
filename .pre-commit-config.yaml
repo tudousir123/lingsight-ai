@@ -39,7 +39,8 @@ repos:
         entry: uv run python -m unittest discover -s scripts/tests -p 'test_*.py' -v
         language: unsupported
         pass_filenames: false
-        files: ^(scripts/|\.pre-commit-config\.yaml$|pyproject\.toml$|(?:_typos|\.typos|typos)\.toml$|\.github/workflows/)
+        # Fast, offline tests also protect navigated docs and toolchain-only changes.
+        always_run: true
 
       - id: local-biome-check
         name: biome check
