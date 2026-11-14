@@ -1,0 +1,400 @@
+.copilot {
+  --copilot-line: #353535;
+  --copilot-surface: #202020;
+  --copilot-muted: #aaa;
+  --copilot-accent: #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--background);
+  color: #f0f0f0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.copilot-thread {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.copilot-inner,
+.copilot-bottom {
+  width: min(660px, calc(100% - 56px));
+  margin-inline: auto;
+}
+
+.copilot-inner {
+  padding: 26px 0 20px;
+}
+
+.copilot-thread-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.copilot-thread-title {
+  color: #f4f4f4;
+  font-size: 20px;
+  font-weight: 520;
+  overflow-wrap: anywhere;
+}
+
+.copilot-thread-header button {
+  flex-shrink: 0;
+}
+
+.copilot-message {
+  width: fit-content;
+  max-width: 100%;
+  margin: 12px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.copilot-user {
+  max-width: min(88%, 620px);
+  margin-left: auto;
+  padding: 11px 15px;
+  border: 1px solid #464646;
+  border-radius: 14px 14px 4px 14px;
+  background: #262626;
+  color: #f1f1f1;
+}
+
+.copilot-tool {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #c6c6c6;
+  font-size: 13px;
+}
+
+.copilot-tool svg,
+.copilot-card-title svg,
+.copilot-file svg {
+  flex-shrink: 0;
+}
+
+.copilot-agent {
+  padding-inline: 2px;
+  color: #e5e5e5;
+}
+
+.copilot-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--copilot-line);
+  border-radius: 13px;
+  background: var(--copilot-surface);
+}
+
+.copilot-card h2 {
+  font-size: 15px;
+  font-weight: 550;
+}
+
+.copilot-card > h2,
+.copilot-card-title {
+  margin-bottom: 10px;
+}
+
+.copilot-card-title,
+.copilot-card-footer,
+.copilot-controls,
+.copilot-running > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copilot-card-title {
+  color: #ededed;
+}
+
+.copilot-card-title > span {
+  margin-left: auto;
+  color: var(--copilot-muted);
+  font-size: 12px;
+}
+
+.copilot-card-footer {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.copilot-card-footer > span,
+.copilot-card > p,
+.copilot-local > p {
+  color: var(--copilot-muted);
+  font-size: 12px;
+}
+
+.copilot-card > p {
+  margin-bottom: 10px;
+}
+
+.copilot-controls {
+  flex-wrap: wrap;
+}
+
+.copilot-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid #484848;
+  border-radius: 8px;
+  background: #262626;
+  color: #e9e9e9;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.copilot-button:hover:not(:disabled),
+.copilot-button[aria-pressed="true"] {
+  border-color: #666;
+  background: #303030;
+}
+
+.copilot-primary,
+.copilot-primary:hover:not(:disabled) {
+  border-color: #eeeeee;
+  background: var(--copilot-accent);
+  color: #202020;
+}
+
+.copilot button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.copilot :is(button, input, select):focus-visible,
+.copilot-local-button:focus-within {
+  outline: 2px solid #dedede;
+  outline-offset: 2px;
+}
+
+.copilot-file-list,
+.copilot-local {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  margin-top: 12px;
+}
+
+.copilot-file-list legend {
+  padding-bottom: 6px;
+  color: var(--copilot-muted);
+  font-size: 12px;
+}
+
+.copilot-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 6px 9px;
+  border: 1px solid #363636;
+  border-radius: 7px;
+  background: #1b1b1b;
+  font-size: 13px;
+}
+
+.copilot-file > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.copilot-file > small,
+.copilot-file > select {
+  margin-left: auto;
+  color: var(--copilot-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.copilot-file input {
+  accent-color: #e0e0e0;
+}
+
+.copilot-local-button {
+  position: relative;
+  justify-self: start;
+  cursor: pointer;
+}
+
+.copilot-local-button input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.copilot-scope-list {
+  max-height: 155px;
+  overflow: auto;
+  padding-left: 20px;
+  color: var(--copilot-muted);
+  list-style-type: disc;
+  overflow-wrap: anywhere;
+}
+
+.copilot-running {
+  display: grid;
+  gap: 8px;
+}
+
+.copilot-running progress {
+  width: 100%;
+  height: 9px;
+  accent-color: #d0d0d0;
+}
+
+.copilot-running small {
+  color: var(--copilot-muted);
+}
+
+.copilot-table-wrap {
+  overflow: auto;
+}
+
+.copilot-report table {
+  width: 100%;
+  min-width: 430px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.copilot-report :is(th, td) {
+  padding: 8px;
+  border-bottom: 1px solid var(--copilot-line);
+}
+
+.copilot-report th {
+  color: #dddddd;
+  font-weight: 500;
+}
+
+.copilot-error {
+  padding: 10px;
+  color: #f3ac96;
+}
+
+.copilot-bottom {
+  flex: none;
+  padding: 8px 0 12px;
+}
+
+.copilot-progress {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 4px 8px;
+}
+
+.copilot-progress li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-top: 2px solid #393939;
+  padding: 4px 1px 0;
+  color: #a0a0a0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.copilot-progress li[data-complete] {
+  border-color: #969696;
+  color: #ccc;
+}
+
+.copilot-progress li[aria-current="step"] {
+  border-color: #f0f0f0;
+  color: #f0f0f0;
+}
+
+.copilot-composer {
+  overflow: hidden;
+  border: 1px solid #383838;
+  border-radius: 18px;
+  background: #262626;
+}
+
+.copilot-composer:focus-within {
+  border-color: #a0a0a0;
+}
+
+.copilot-composer textarea {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  max-height: 170px;
+  padding: 11px 14px 3px;
+  resize: vertical;
+  border: 0;
+  outline: 0;
+  font-size: 15px;
+}
+
+.copilot-composer textarea::placeholder {
+  color: var(--copilot-muted);
+}
+
+.copilot-composer > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 9px 8px 14px;
+}
+
+.copilot-composer span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--copilot-muted);
+  font-size: 12px;
+}
+
+.copilot-composer button {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  background: var(--copilot-accent);
+  color: #202020;
+}
+
+@media (max-width: 600px) {
+  .copilot-inner,
+  .copilot-bottom {
+    width: calc(100% - 28px);
+  }
+
+  .copilot-inner {
+    padding-top: 17px;
+  }
+
+  .copilot-card {
+    padding: 11px;
+  }
+
+  .copilot-file {
+    flex-wrap: wrap;
+  }
+}

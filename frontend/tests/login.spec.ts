@@ -52,7 +52,7 @@ test("Log in with valid email and password ", async ({ page }) => {
   await page.waitForURL("/")
 
   await expect(
-    page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
+    page.getByRole("heading", { name: "动物行为研究", exact: true }),
   ).toBeVisible()
 })
 
@@ -84,7 +84,7 @@ test("Successful log out", async ({ page }) => {
   await page.waitForURL("/")
 
   await expect(
-    page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
+    page.getByRole("heading", { name: "动物行为研究", exact: true }),
   ).toBeVisible()
 
   await page.getByTestId("user-menu").click()
@@ -101,7 +101,7 @@ test("Logged-out user cannot access protected routes", async ({ page }) => {
   await page.waitForURL("/")
 
   await expect(
-    page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
+    page.getByRole("heading", { name: "动物行为研究", exact: true }),
   ).toBeVisible()
 
   await page.getByTestId("user-menu").click()

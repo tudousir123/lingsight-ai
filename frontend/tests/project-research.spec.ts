@@ -66,9 +66,11 @@ test("project entry carries immutable scope and groups the created task", async 
     })
   })
   await page.goto(`/projects/${projectId}`)
-  await page.getByRole("link", { name: "分析本项目数据", exact: true }).click()
-  await expect(page).toHaveURL(`/project-research/${projectId}`)
-  await expect(page.getByRole("status")).toContainText("当前研究")
+  await expect(page.getByRole("heading", { name: "当前研究" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "项目对话" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "选择视频文件夹" }),
+  ).toHaveCount(0)
   await page
     .getByRole("textbox", { name: "研究问题", exact: true })
     .fill("检查朝向")
@@ -85,10 +87,17 @@ test("project entry carries immutable scope and groups the created task", async 
   await page.getByRole("button", { name: "发送研究问题", exact: true }).click()
   await expect.poll(() => requests.length).toBe(2)
   expect(requests[1].body).toEqual({ text: "补充缺失情况" })
-  await page.goto(`/projects/${projectId}`)
-  await expect(
-    page.locator(".agent-task-list").getByRole("link", { name: /项目分析/ }),
-  ).toBeVisible()
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "当前研究", exact: true })
+    .click()
+  const conversation = page
+    .getByRole("region", { name: "项目对话" })
+    .getByRole("link", { name: /项目分析/ })
+  await expect(conversation).toBeVisible()
+  await conversation.click()
+  await expect(page).toHaveURL(`/tasks/${taskId}?project=${projectId}`)
+  await expect(page.getByRole("heading", { name: "项目分析" })).toBeVisible()
 })
 
 test("unavailable project retains the question without creating an unscoped task", async ({
@@ -153,3 +162,69 @@ test("unexpected upstream scope stops the new run without grouping or resending"
     page.getByRole("textbox", { name: "研究问题", exact: true }),
   ).toHaveValue("只分析本项目")
 })
+
+for (const sourceProject of ["66666666-6666-4666-8666-666666666666", null]) {
+  test(`归组旧对话保留其原有数据范围（${sourceProject ? "其他项目" : "未限定项目"}）`, async ({
+    page,
+  }) => {
+    const messages: unknown[] = []
+    stubProjectsApi(page, [
+      {
+        id: projectId,
+        name: "当前研究",
+        members: [{ kind: "agent_task", id: taskId, label: "旧项目对话" }],
+      },
+      ...(sourceProject
+        ? [{ id: sourceProject, name: "原始研究", members: [] }]
+        : []),
+    ])
+    const task = {
+      id: taskId,
+      project_id: sourceProject,
+      title: "旧项目对话",
+      goal: "检查朝向",
+      created_at: "2026-11-11T00:00:00Z",
+      runs: [],
+      artifacts: [],
+    }
+    await page.route("**/api/v1/agent/**", (route) => {
+      const path = new URL(route.request().url()).pathname
+      if (route.request().method() === "POST") {
+        messages.push(route.request().postDataJSON())
+        return route.fulfill({ status: 202, json: { status: "queued" } })
+      }
+      return route.fulfill({
+        json: path.endsWith("/events")
+          ? []
+          : path.endsWith("/tasks")
+            ? [task]
+            : task,
+      })
+    })
+    await page.goto(`/projects/${projectId}`)
+    await page
+      .getByRole("region", { name: "项目对话" })
+      .getByRole("link", { name: /旧项目对话/ })
+      .click()
+    await expect(page.getByRole("status")).toHaveText(
+      sourceProject
+        ? "分析范围为原始研究的已发布推理数据"
+        : "此对话未限定项目数据范围；归组不会改变分析范围",
+    )
+    await page
+      .getByRole("textbox", { name: "研究问题", exact: true })
+      .fill("继续原范围分析")
+    await page
+      .getByRole("button", { name: "发送研究问题", exact: true })
+      .click()
+    await expect(
+      page.getByRole("textbox", { name: "研究问题", exact: true }),
+    ).toHaveValue("")
+    expect(messages).toEqual([{ text: "继续原范围分析" }])
+    await page
+      .getByRole("main")
+      .getByRole("link", { name: "当前研究", exact: true })
+      .click()
+    await expect(page).toHaveURL(`/projects/${projectId}`)
+  })
+}

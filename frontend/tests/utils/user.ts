@@ -27,7 +27,7 @@ export async function logInUser(page: Page, email: string, password: string) {
   await page.getByRole("button", { name: "Log In" }).click()
   await page.waitForURL("/")
   await expect(
-    page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
+    page.getByRole("heading", { name: "动物行为研究", exact: true }),
   ).toBeVisible()
 }
 

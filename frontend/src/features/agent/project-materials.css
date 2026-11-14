@@ -1,0 +1,206 @@
+.materials-heading,
+.materials-panel-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.materials-heading {
+  margin: 18px 0 22px;
+}
+
+.materials-heading h1 {
+  color: #f4f4f4;
+  font-size: clamp(23px, 2.6vw, 30px);
+  font-weight: 500;
+}
+
+.materials-heading p,
+.materials-note {
+  color: #aaa;
+  font-size: 13px;
+}
+
+.materials-settings {
+  position: relative;
+}
+
+.materials-settings > summary,
+.materials-folder > summary,
+.materials-secondary-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #d6d6d6;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.materials-secondary-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.materials-settings > summary::-webkit-details-marker,
+.materials-folder > summary::-webkit-details-marker {
+  display: none;
+}
+
+.materials-settings .project-details-actions {
+  position: absolute;
+  z-index: 2;
+  top: 100%;
+  right: 0;
+  display: grid;
+  min-width: 145px;
+  padding: 6px;
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+  background: #252525;
+}
+
+.materials-settings .project-action {
+  justify-content: flex-start;
+  border-radius: 6px;
+  background: transparent;
+  color: #e4e4e4;
+}
+
+.materials-settings .project-action:hover,
+.materials-settings > summary:hover,
+.materials-folder > summary:hover,
+.materials-secondary-action:hover {
+  background: #303030;
+  color: #f4f4f4;
+}
+
+.materials-tabs[data-slot="tabs-list"] {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 5px;
+  width: 100%;
+  height: auto;
+  padding: 4px;
+  border: 1px solid #343434;
+  background: #1c1c1c;
+}
+
+.materials-tabs [data-slot="tabs-trigger"] {
+  flex: 0 1 auto;
+  min-height: 38px;
+  padding-inline: 13px;
+  color: #b6b6b6;
+}
+
+.materials-tabs [data-slot="tabs-trigger"][data-state="active"] {
+  border-color: #3d3d3d;
+  background: #2e2e2e;
+  color: #f1f1f1;
+}
+
+.materials-panel {
+  margin-top: 8px;
+  padding: 18px;
+  border: 1px solid #333;
+  border-radius: 12px;
+  background: #1e1e1e;
+}
+
+.materials-panel h2 {
+  color: #eee;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.materials-panel > .materials-note {
+  margin-top: 5px;
+}
+
+.materials-empty {
+  padding: 13px 0;
+  color: #b6b6b6;
+  font-size: 14px;
+}
+
+.materials-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  min-height: 55px;
+  padding: 8px 0;
+  border-bottom: 1px solid #333;
+}
+
+.materials-list li > svg {
+  color: #a8a8a8;
+}
+
+.materials-list strong,
+.materials-list small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.materials-list strong {
+  color: #ebebeb;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.materials-list small {
+  color: #aaa;
+  font-size: 12px;
+}
+
+.materials-folder {
+  margin-top: 12px;
+}
+
+.materials-record {
+  padding: 12px;
+  border: 1px solid #353535;
+  border-radius: 8px;
+}
+
+.materials-file-group {
+  margin-top: 14px;
+}
+
+.materials-file-group > a {
+  color: #ddd;
+  font-size: 14px;
+}
+
+.materials-file-group > a:hover {
+  text-decoration: underline;
+}
+
+.materials-file-group .agent-artifacts {
+  margin-top: 6px;
+}
+
+.materials-player {
+  width: 100%;
+  max-height: 62dvh;
+  border-radius: 8px;
+  background: #111;
+}
+
+@media (max-width: 600px) {
+  .materials-panel {
+    padding: 12px;
+  }
+
+  .materials-tabs [data-slot="tabs-trigger"] {
+    min-height: 35px;
+    padding-inline: 8px;
+    font-size: 13px;
+  }
+}

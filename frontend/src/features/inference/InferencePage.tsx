@@ -11,13 +11,10 @@ import {
   usePublishResult,
   useWorkspaceProjects,
 } from "@/features/agent/projects"
+import { inferenceArtifactUrl } from "@/features/inference/artifacts"
 import type { Entry, Mark, Task } from "@/features/inference/contract"
-import { authHeaders, withTokenQuery } from "@/lib/credentials"
-import {
-  type InferenceArtifactName,
-  inferenceGatewayBase,
-  inferenceRoutes,
-} from "@/lib/upstreamRoutes.gen"
+import { authHeaders } from "@/lib/credentials"
+import { inferenceGatewayBase, inferenceRoutes } from "@/lib/upstreamRoutes.gen"
 
 const labels: Record<string, string> = {
   queued: "排队中",
@@ -54,11 +51,6 @@ async function request<T>(path: string, data?: unknown): Promise<T> {
   }
   return response.json() as Promise<T>
 }
-function artifact(id: string, name: InferenceArtifactName): string {
-  const path = inferenceRoutes.tasksByTaskIdArtifactsByArtifactName(id, name)
-  return withTokenQuery(`${inferenceGatewayBase}/${path}`)
-}
-
 export function InferencePage({
   sourceId,
   initialDirectory = "",
@@ -317,7 +309,7 @@ export function InferencePage({
               )}
               <div className="relative max-w-3xl">
                 <img
-                  src={artifact(current.id, "candidate.jpg")}
+                  src={inferenceArtifactUrl(current.id, "candidate.jpg")}
                   alt="预标注参考帧"
                   className="w-full"
                 />
@@ -441,7 +433,7 @@ export function InferencePage({
               <video
                 controls
                 className="w-full max-w-3xl"
-                src={artifact(current.id, "overlay.mp4")}
+                src={inferenceArtifactUrl(current.id, "overlay.mp4")}
               />
               <p className="text-sm text-muted-foreground">
                 绿色为小鼠
@@ -450,19 +442,19 @@ export function InferencePage({
               <div className="flex flex-wrap gap-4">
                 <a
                   className="underline"
-                  href={artifact(current.id, "tracking.json")}
+                  href={inferenceArtifactUrl(current.id, "tracking.json")}
                 >
                   下载轨迹与 mask
                 </a>
                 <a
                   className="underline"
-                  href={artifact(current.id, "keypoints.json")}
+                  href={inferenceArtifactUrl(current.id, "keypoints.json")}
                 >
                   下载 v9 关键点
                 </a>
                 <a
                   className="underline"
-                  href={artifact(current.id, "provenance.json")}
+                  href={inferenceArtifactUrl(current.id, "provenance.json")}
                 >
                   下载来源记录
                 </a>

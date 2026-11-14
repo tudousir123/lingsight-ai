@@ -83,14 +83,31 @@ async function mock(page: Page) {
 }
 test.beforeEach(async ({ page }) => mock(page))
 
-test("默认进入对话，侧栏三个工具入口", async ({ page }) => {
+test("首页在中央展示研究入口，输入框固定在底部", async ({ page }) => {
   await page.goto("/")
+  const main = page.getByRole("main")
+  const intro = main.locator(".copilot-intro")
   await expect(
-    page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
+    intro.getByRole("heading", { name: "动物行为研究" }),
   ).toBeVisible()
-  await expect(
-    page.getByRole("textbox", { name: "研究问题", exact: true }),
-  ).toBeVisible()
+  await expect(intro.getByRole("button")).toHaveCount(3)
+  await expect(main.getByRole("textbox", { name: "研究问题" })).toBeVisible()
+  await expect(main.getByText("最近任务", { exact: true })).toHaveCount(0)
+  await expect(main.getByText("项目", { exact: true })).toHaveCount(0)
+  await expect(main.getByText("视频与成果", { exact: true })).toHaveCount(0)
+  await expect(main.locator(".agent-composer-wrap")).toBeVisible()
+  expect(
+    await main.evaluate((element) => {
+      const composer = element.querySelector(".agent-composer-wrap")
+      const thread = element.querySelector(".agent-scroll-area")
+      if (!composer || !thread) return false
+      const bottom = composer.getBoundingClientRect().bottom
+      return (
+        !thread.contains(composer) &&
+        Math.abs(element.getBoundingClientRect().bottom - bottom) < 3
+      )
+    }),
+  ).toBe(true)
   const navigation = page.getByRole("navigation", {
     name: "科研工作区导航",
   })
@@ -105,6 +122,62 @@ test("默认进入对话，侧栏三个工具入口", async ({ page }) => {
     page.getByRole("heading", { name: "分析与报告", exact: true }),
   ).toBeVisible()
 })
+for (const entry of [
+  { name: "水迷宫分析", path: "/inference", heading: "视频推理" },
+  { name: "本地视频", path: "/annotations", heading: "视频与标注" },
+]) {
+  test(`默认首页${entry.name}打开真实入口而非填写假视频问题`, async ({
+    page,
+  }) => {
+    test.skip(
+      process.env.VITE_MOCK_VIDEO_WORKFLOW === "true",
+      "Default mode only",
+    )
+    await page.route("**/api/v1/inference/**", (route) =>
+      route.fulfill({ json: { items: [] } }),
+    )
+    let writes = 0
+    page.on("request", (request) => {
+      if (request.method() === "POST") writes++
+    })
+    await page.goto("/")
+    await page.getByRole("button", { name: new RegExp(entry.name) }).click()
+    await expect(page).toHaveURL(entry.path)
+    await expect(
+      page.getByRole("heading", { name: entry.heading, exact: true }),
+    ).toBeVisible()
+    if (entry.path === "/annotations") {
+      await expect(page.getByLabel("选择本地标注视频")).toBeAttached()
+      await expect(page.getByRole("tab", { name: "手动标注" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      )
+    }
+    expect(writes).toBe(0)
+  })
+}
+
+test("待确认的研究任务在左侧栏显示", async ({ page }) => {
+  const waiting = {
+    ...task,
+    id: "waiting-task",
+    title: "等待确认视频范围",
+    runs: [{ ...task.runs[0], status: "waiting_for_input" }],
+  }
+  await page.route("**/api/v1/agent/tasks", (route) =>
+    route.fulfill({ json: [task, waiting] }),
+  )
+  await page.goto("/")
+  await expect(
+    page
+      .locator(".research-sidebar-history")
+      .getByRole("link", { name: /等待确认视频范围.*等待确认/ }),
+  ).toHaveAttribute("href", "/tasks/waiting-task")
+  await expect(
+    page.getByRole("main").getByText("等待确认视频范围"),
+  ).toHaveCount(0)
+})
+
 test("引导完成携带问题和范围但不自动提交", async ({ page }) => {
   let creates = 0
   page.on("request", (r) => {
@@ -143,33 +216,41 @@ test("引导完成携带问题和范围但不自动提交", async ({ page }) => 
   ).toHaveValue(/test-001/)
   expect(creates).toBe(0)
 })
-test("创建任务和刷新重放，交付物安全预览", async ({ page }) => {
-  await page.goto("/")
-  await page
-    .getByRole("textbox", { name: "研究问题", exact: true })
-    .fill("核对视频数据")
-  await page.getByRole("button", { name: "发送研究问题" }).click()
-  await expect(page).toHaveURL(new RegExp(`/tasks/${id}`))
-  await expect(
-    page.getByText("已核对视频数据。", { exact: true }),
-  ).toBeVisible()
-  await page.reload()
-  await expect(
-    page.getByText("已核对视频数据。", { exact: true }),
-  ).toBeVisible()
-  await page.waitForTimeout(1700)
-  expect(
-    await page.getByText("已核对视频数据。", { exact: true }).count(),
-  ).toBe(1)
-  await page.getByRole("button", { name: /report.md/ }).click()
-  await expect(page.getByRole("dialog")).toBeVisible()
-  await expect(
-    page
-      .getByRole("dialog")
-      .getByText("<script>window.bad=true</script>", { exact: true }),
-  ).toBeVisible()
-  expect(await page.evaluate(() => Object.hasOwn(window, "bad"))).toBe(false)
-})
+for (const submission of ["button", "Enter"] as const) {
+  test(`创建任务和刷新重放，交付物安全预览（${submission}）`, async ({
+    page,
+  }) => {
+    await page.goto("/")
+    await page
+      .getByRole("textbox", { name: "研究问题", exact: true })
+      .fill("核对视频数据")
+    if (submission === "Enter")
+      await page
+        .getByRole("textbox", { name: "研究问题", exact: true })
+        .press("Enter")
+    else await page.getByRole("button", { name: "发送研究问题" }).click()
+    await expect(page).toHaveURL(new RegExp(`/tasks/${id}`))
+    await expect(
+      page.getByText("已核对视频数据。", { exact: true }),
+    ).toBeVisible()
+    await page.reload()
+    await expect(
+      page.getByText("已核对视频数据。", { exact: true }),
+    ).toBeVisible()
+    await page.waitForTimeout(1700)
+    expect(
+      await page.getByText("已核对视频数据。", { exact: true }).count(),
+    ).toBe(1)
+    await page.getByRole("button", { name: /report.md/ }).click()
+    await expect(page.getByRole("dialog")).toBeVisible()
+    await expect(
+      page
+        .getByRole("dialog")
+        .getByText("<script>window.bad=true</script>", { exact: true }),
+    ).toBeVisible()
+    expect(await page.evaluate(() => Object.hasOwn(window, "bad"))).toBe(false)
+  })
+}
 test("提交失败保留输入", async ({ page }) => {
   await page.route("**/api/v1/agent/tasks", (r) =>
     r.request().method() === "POST"
@@ -186,6 +267,112 @@ test("提交失败保留输入", async ({ page }) => {
     page.getByRole("textbox", { name: "研究问题", exact: true }),
   ).toHaveValue("请保留这条研究问题")
 })
+for (const submission of ["Enter", "form"] as const) {
+  test(`服务不可用时 ${submission} 不能绕过发送禁用`, async ({ page }) => {
+    await page.route("**/api/v1/agent/tasks", (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({ status: 503, json: { detail: "任务列表暂时不可用" } })
+        : route.fallback(),
+    )
+    await page.goto("/")
+    await expect(page.getByRole("alert")).toContainText("任务列表暂时不可用")
+    const question = page.getByRole("textbox", {
+      name: "研究问题",
+      exact: true,
+    })
+    await question.fill("保留待发送的问题")
+    await expect(
+      page.getByRole("button", { name: "发送研究问题" }),
+    ).toBeDisabled()
+    const unexpectedWrite = page
+      .waitForRequest(
+        (request) =>
+          request.method() === "POST" && request.url().includes("/agent/"),
+        { timeout: 700 },
+      )
+      .then(
+        () => true,
+        () => false,
+      )
+    if (submission === "Enter") await question.press("Enter")
+    else
+      await question.locator("xpath=ancestor::form").evaluate((form) => {
+        if (form instanceof HTMLFormElement) form.requestSubmit()
+      })
+    expect(await unexpectedWrite).toBe(false)
+    await expect(question).toHaveValue("保留待发送的问题")
+    await expect(page).toHaveURL("/")
+  })
+}
+
+test("任务读取失败时 Enter 和表单保留草稿，不发送追问", async ({ page }) => {
+  await page.route(`**/api/v1/agent/tasks/${id}`, (route) =>
+    route.fulfill({
+      status: 503,
+      json: { detail: "任务读取暂时不可用" },
+    }),
+  )
+  await page.goto(`/tasks/${id}`)
+  await expect(page.getByRole("alert")).toContainText("任务读取暂时不可用")
+  const question = page.getByRole("textbox", { name: "研究问题", exact: true })
+  await question.fill("保留追问")
+  await expect(
+    page.getByRole("button", { name: "发送研究问题" }),
+  ).toBeDisabled()
+  const unexpectedWrite = page
+    .waitForRequest(
+      (request) =>
+        request.method() === "POST" && request.url().includes("/agent/"),
+      { timeout: 700 },
+    )
+    .then(
+      () => true,
+      () => false,
+    )
+  await question.press("Enter")
+  await page.locator("form.agent-composer").evaluate((form) => {
+    if (form instanceof HTMLFormElement) form.requestSubmit()
+  })
+  expect(await unexpectedWrite).toBe(false)
+  await expect(question).toHaveValue("保留追问")
+})
+
+test("已有草稿进入等待口径后不能通过表单追问", async ({ page }) => {
+  await page.clock.install()
+  let waiting = false
+  await page.route(`**/api/v1/agent/tasks/${id}`, (route) =>
+    route.fulfill({
+      json: waiting
+        ? { ...task, runs: [{ ...task.runs[0], status: "waiting_for_input" }] }
+        : task,
+    }),
+  )
+  await page.goto(`/tasks/${id}`)
+  const question = page.getByRole("textbox", { name: "研究问题", exact: true })
+  await question.fill("稍后继续的追问")
+  waiting = true
+  await page.clock.runFor(2600)
+  await expect(question).toBeDisabled()
+  await expect(
+    page.getByRole("button", { name: "发送研究问题" }),
+  ).toBeDisabled()
+  const unexpectedWrite = page
+    .waitForRequest(
+      (request) =>
+        request.method() === "POST" && request.url().includes("/agent/"),
+      { timeout: 700 },
+    )
+    .then(
+      () => true,
+      () => false,
+    )
+  await page.locator("form.agent-composer").evaluate((form) => {
+    if (form instanceof HTMLFormElement) form.requestSubmit()
+  })
+  expect(await unexpectedWrite).toBe(false)
+  await expect(question).toHaveValue("稍后继续的追问")
+})
+
 test("待确认口径通过答复入口提交", async ({ page }) => {
   const waiting = {
     ...task,
@@ -362,7 +549,7 @@ test("侧栏与首页使用中文，示例问题只填入草稿", async ({ page 
   })
   await page.goto("/")
   await expect(
-    page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
+    page.getByRole("heading", { name: "动物行为研究" }),
   ).toBeVisible()
   await expect(
     page.getByRole("navigation", { name: "科研工作区导航" }).getByRole("link"),
@@ -373,13 +560,13 @@ test("侧栏与首页使用中文，示例问题只填入草稿", async ({ page 
   await expect(
     page.getByRole("link", { name: "动物行为研究笔记", exact: true }),
   ).toBeVisible()
-  expect(await page.locator("body").innerText()).not.toMatch(
+  expect(await page.locator("body").textContent()).not.toMatch(
     /Start with experimental data|New research task|Your research companion/,
   )
-  await page.getByRole("button", { name: /核对动物身份/ }).click()
+  await page.getByRole("button", { name: /分析已有数据/ }).click()
   await expect(
     page.getByRole("textbox", { name: "研究问题", exact: true }),
-  ).toHaveValue(/核对动物身份/)
+  ).toHaveValue(/比较不同训练日的逃逸潜伏期/)
   expect(writes).toBe(0)
 })
 
@@ -403,26 +590,30 @@ test("项目可新建、归组任务、刷新保留并清空，不写 Agent 服�
   await expect(
     page.getByRole("heading", { name: "Spatial learning pilot" }),
   ).toBeVisible()
-  await page.getByRole("button", { name: "整理任务" }).click()
+  await page.getByRole("link", { name: "项目资料" }).click()
+  await page.getByText("项目设置", { exact: true }).click()
+  await page.getByRole("button", { name: "整理对话" }).click()
   await page.getByRole("checkbox", { name: task.title }).check()
   await page.getByRole("button", { name: "保存项目" }).click()
+  await page.getByRole("link", { name: "返回项目对话" }).click()
   await expect(
     page
-      .locator(".agent-task-list")
+      .getByRole("region", { name: "项目对话" })
       .getByRole("link", { name: new RegExp(task.title) }),
   ).toBeVisible()
   await page.reload()
   await expect(
     page
-      .locator(".agent-task-list")
+      .getByRole("region", { name: "项目对话" })
       .getByRole("link", { name: new RegExp(task.title) }),
   ).toBeVisible()
-  await page.getByRole("button", { name: "整理任务" }).click()
+  await page.getByRole("link", { name: "项目资料" }).click()
+  await page.getByText("项目设置", { exact: true }).click()
+  await page.getByRole("button", { name: "整理对话" }).click()
   await page.getByRole("checkbox", { name: task.title }).uncheck()
   await page.getByRole("button", { name: "保存项目" }).click()
-  await expect(
-    page.getByRole("heading", { name: "选择视频文件夹" }),
-  ).toBeVisible()
+  await page.getByRole("link", { name: "返回项目对话" }).click()
+  await expect(page.getByText("暂无对话，从下方输入框开始。")).toBeVisible()
   await expect(
     page
       .locator(".research-history-list")
@@ -435,13 +626,15 @@ test("项目可改名与删除，删除后任务保留", async ({ page }) => {
   await page.goto("/")
   await page.getByRole("link", { name: "学习与记忆", exact: true }).click()
   await expect(page).toHaveURL(/\/projects\/learning-memory/)
+  await page.getByRole("link", { name: "项目资料" }).click()
+  await page.getByText("项目设置", { exact: true }).click()
   await page.getByRole("button", { name: "重命名项目" }).click()
   const dialog = page.getByRole("dialog")
   await dialog.getByLabel("项目名称").fill("空间学习试点")
   await dialog.getByRole("button", { name: "保存名称" }).click()
   await expect(dialog).toBeHidden()
   await expect(
-    page.getByRole("heading", { name: /空间学习试点/ }),
+    page.getByRole("main").getByText("空间学习试点", { exact: true }),
   ).toBeVisible()
   await expect(
     page.getByRole("link", { name: "空间学习试点", exact: true }),
@@ -579,7 +772,7 @@ test("localStorage 旧项目一次性迁移导入且重放幂等", async ({ page
   await page.getByRole("link", { name: "学习与记忆", exact: true }).click()
   await expect(
     page
-      .locator(".agent-task-list")
+      .getByRole("region", { name: "项目对话" })
       .getByRole("link", { name: new RegExp(task.title) }),
   ).toBeVisible()
   await page.reload()
@@ -645,7 +838,8 @@ test("项目页查看已发布推理结果的逐帧行摘要", async ({ page }) 
       return route.fulfill({ json: frames(offset, 3, 53) })
     },
   )
-  await page.goto("/projects/learning-memory")
+  await page.goto("/projects/learning-memory?view=details")
+  await page.getByRole("tab", { name: "数据库" }).click()
   await expect(
     page.getByRole("heading", { name: "已发布推理结果" }),
   ).toBeVisible()
@@ -661,4 +855,39 @@ test("项目页查看已发布推理结果的逐帧行摘要", async ({ page }) 
   await expect(page.getByText("第 1–3 行，共 53 行")).toBeVisible()
   await page.getByRole("button", { name: "下一页" }).click()
   await expect(page.getByText("第 51–53 行，共 53 行")).toBeVisible()
+
+  await page.getByRole("tab", { name: "推理可视化视频" }).click()
+  const overlayPath = `/api/v1/inference/tasks/${taskId}/artifacts/overlay.mp4`
+  await page.route(`**${overlayPath}?*`, (route) =>
+    route.fulfill({ status: 404 }),
+  )
+  const media = page.waitForRequest(
+    (request) => new URL(request.url()).pathname === overlayPath,
+  )
+  await page.getByRole("button", { name: "播放 day01/maze.mp4" }).click()
+  expect(new URL((await media).url()).searchParams.has("token")).toBe(true)
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+    "暂时无法播放",
+  )
+})
+
+test("项目资料中的分析产物可打开原对话报告", async ({ page }) => {
+  stubProjectsApi(page, [
+    {
+      id: "learning-memory",
+      name: "学习与记忆",
+      members: [{ kind: "agent_task", id, label: task.title }],
+    },
+  ])
+  await page.goto("/projects/learning-memory?view=details")
+  await expect(page.getByRole("tab", { name: "原始视频" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  )
+  await expect(page.getByLabel("视频来源", { exact: true })).toHaveCount(0)
+  await page.getByRole("tab", { name: "分析产物" }).click()
+  await page.getByRole("button", { name: /report.md/ }).click()
+  await expect(
+    page.getByRole("dialog").getByText("研究报告", { exact: true }),
+  ).toBeVisible()
 })
