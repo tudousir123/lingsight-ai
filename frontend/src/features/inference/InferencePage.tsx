@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { z } from "zod"
 import {
   Dialog,
   DialogContent,
@@ -52,6 +53,15 @@ function numberError(raw: string, integer = false): string | null {
 }
 const numberOrZero = (raw: string) => (numberError(raw) ? 0 : Number(raw))
 
+const pointSchema = z.tuple([z.number().finite(), z.number().finite()])
+const marksSchema = z.array(
+  z.object({
+    label: z.string(),
+    polygon: z.array(pointSchema).nullable(),
+    confidence: z.number().finite().optional(),
+  }),
+)
+
 function parseMarks(
   text: string,
 ): { value: Mark[]; error: null } | { value: null; error: string } {
@@ -60,6 +70,18 @@ function parseMarks(
     if (!Array.isArray(parsed)) {
       return { value: null, error: "轮廓需为 JSON 数组" }
     }
+    const checked = marksSchema.safeParse(parsed)
+    if (!checked.success) {
+      const issue = checked.error.issues[0]
+      const where = issue.path.length
+        ? `（第 ${Number(issue.path[0]) + 1} 项）`
+        : ""
+      return {
+        value: null,
+        error: `轮廓格式有误${where}：每项需含字符串 label 和 polygon（[x, y] 数字点数组或 null）`,
+      }
+    }
+    // 返回原始解析结果而非 zod 输出，避免静默丢弃服务端附带的额外字段。
     return { value: parsed as Mark[], error: null }
   } catch (e) {
     return {
