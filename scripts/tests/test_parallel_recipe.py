@@ -1,8 +1,7 @@
 """The navigated parallel-work recipe must route to current isolated runners."""
 
-from pathlib import Path
 import unittest
-
+from pathlib import Path
 
 RECIPE = Path(__file__).resolve().parents[2] / "docs/agents/parallel-tickets.md"
 

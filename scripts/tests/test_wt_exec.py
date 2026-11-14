@@ -1,11 +1,10 @@
 """Exercise the public worktree CLI in disposable repositories, never this checkout."""
 
-from pathlib import Path
 import os
 import subprocess
 import tempfile
 import unittest
-
+from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "wt-exec.sh"
 
@@ -17,9 +16,7 @@ class WorktreeExecutionTests(unittest.TestCase):
         self.base = Path(self.tmp.name)
         self.main = self.base / "main checkout"
         self.target = self.base / "task checkout"
-        self.env = {
-            k: v for k, v in os.environ.items() if not k.startswith("GIT_")
-        }
+        self.env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
         self.env.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull)
         self.git("init", "-b", "main", str(self.main), cwd=self.base)
         self.git("config", "user.name", "Guard Fixture")
@@ -57,6 +54,7 @@ class WorktreeExecutionTests(unittest.TestCase):
             env=env or self.env,
             capture_output=True,
             text=True,
+            check=False,
         )
 
     def test_wrong_caller_directory_writes_only_in_explicit_worktree(self):
@@ -77,7 +75,9 @@ class WorktreeExecutionTests(unittest.TestCase):
         for branch, path in [("main", self.main), ("master", master)]:
             with self.subTest(branch=branch):
                 marker = self.base / f"denied-{branch}"
-                result = self.run_guard(["touch", str(marker)], target=path, branch=branch)
+                result = self.run_guard(
+                    ["touch", str(marker)], target=path, branch=branch
+                )
                 self.assertEqual(result.returncode, 2, result.stderr)
                 self.assertIn("protected", result.stderr)
                 self.assertFalse(marker.exists())
@@ -141,7 +141,11 @@ class WorktreeExecutionTests(unittest.TestCase):
     def test_missing_command_has_usage_error(self):
         result = subprocess.run(
             ["bash", str(SCRIPT), str(self.target), "task/safe", "--"],
-            cwd=self.main, env=self.env, capture_output=True, text=True,
+            cwd=self.main,
+            env=self.env,
+            capture_output=True,
+            text=True,
+            check=False,
         )
         self.assertEqual(result.returncode, 2)
         self.assertIn("usage:", result.stderr)
