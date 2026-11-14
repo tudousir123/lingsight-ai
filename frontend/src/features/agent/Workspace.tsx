@@ -275,8 +275,16 @@ export function AgentWorkspace({
     void queryClient.invalidateQueries({ queryKey: tasksKey })
     void queryClient.invalidateQueries({ queryKey: taskKey(taskId) })
   }
+  const blocked = run?.status === "waiting_for_input"
+  const canSend =
+    (!!draft.trim() || (canAttach && videos.length > 0)) &&
+    !pending &&
+    !blocked &&
+    !tasks.error &&
+    !task.error &&
+    (!taskId || !!task.data)
   const send = async () => {
-    if ((!draft.trim() && !videos.length) || pending) return
+    if (!canSend) return
     if (!taskId && projectId && !project) {
       setError("项目不可用，请返回项目页重试。你的问题已保留。")
       return
@@ -371,6 +379,10 @@ export function AgentWorkspace({
     input.current?.focus({ preventScroll: true })
   }
   const startVideoAnalysis = (source: WorkflowVideo["source"]) => {
+    if (!canAttach) {
+      void navigate({ to: source === "drive" ? "/inference" : "/annotations" })
+      return
+    }
     start(
       source === "drive"
         ? "比较水迷宫不同训练日的逃逸潜伏期和轨迹。"
@@ -381,7 +393,6 @@ export function AgentWorkspace({
       setAttachmentOpen(true)
     }
   }
-  const blocked = run?.status === "waiting_for_input"
   const serviceError = tasks.error?.message
   const composer = (
     <div className="agent-composer-wrap">
@@ -475,13 +486,7 @@ export function AgentWorkspace({
               type="submit"
               className="agent-send"
               aria-label="发送研究问题"
-              disabled={
-                (!draft.trim() && !videos.length) ||
-                pending ||
-                blocked ||
-                (!videos.length && !!tasks.error) ||
-                !!task.error
-              }
+              disabled={!canSend}
             >
               {pending ? (
                 <LoaderCircle size={19} className="animate-spin" />
@@ -515,13 +520,13 @@ export function AgentWorkspace({
                 >
                   <ArrowLeft size={14} /> {returnProject?.name ?? "返回项目"}
                 </Link>
-                {scopeId && (
-                  <span role="status">
-                    {scopeId === returnProjectId
+                <span role="status">
+                  {!scopeId
+                    ? "此对话未限定项目数据范围；归组不会改变分析范围"
+                    : scopeId === returnProjectId
                       ? "分析范围为当前项目的已发布推理数据"
                       : `分析范围为${scopeProject?.name ?? "任务所属项目"}的已发布推理数据`}
-                  </span>
-                )}
+                </span>
               </div>
             )}
             {isProjectHome ? (
@@ -540,6 +545,7 @@ export function AgentWorkspace({
             ) : !taskId ? (
               <WorkspaceIntro
                 onUsePrompt={start}
+                videoMode={canAttach ? "preview" : "connected"}
                 onChooseVideo={startVideoAnalysis}
                 onAnalyzeData={() =>
                   start(

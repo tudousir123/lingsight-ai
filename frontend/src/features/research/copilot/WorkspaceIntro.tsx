@@ -12,10 +12,12 @@ export function WorkspaceIntro({
   onUsePrompt,
   onChooseVideo,
   onAnalyzeData,
+  videoMode = "preview",
 }: {
   onUsePrompt: (prompt: string) => void
   onChooseVideo?: (source: "drive" | "local") => void
   onAnalyzeData?: () => void
+  videoMode?: "preview" | "connected"
 }) {
   const analysisTile = (
     <>
@@ -52,7 +54,11 @@ export function WorkspaceIntro({
           >
             <span className="copilot-launch-copy">
               <strong>水迷宫分析</strong>
-              <span>从网盘选视频，比较训练日</span>
+              <span>
+                {videoMode === "connected"
+                  ? "浏览已有视频并进入推理"
+                  : "从网盘选视频，比较训练日"}
+              </span>
             </span>
             <ArrowUpRight size={16} aria-hidden="true" />
           </button>
@@ -68,8 +74,14 @@ export function WorkspaceIntro({
           }
         >
           <span className="copilot-launch-copy">
-            <strong>本地视频</strong>
-            <span>选择本次实验录像</span>
+            <strong>
+              {videoMode === "connected" ? "本地视频标注" : "本地视频"}
+            </strong>
+            <span>
+              {videoMode === "connected"
+                ? "在本机打开视频，不上传"
+                : "选择本次实验录像"}
+            </span>
           </span>
           <ArrowUpRight size={16} aria-hidden="true" />
           <span

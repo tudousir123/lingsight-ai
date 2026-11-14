@@ -1,4 +1,26 @@
 import { expect, test } from "@playwright/test"
+import { stubProjectsApi } from "./utils/projectsApi"
+
+test.use({ storageState: { cookies: [], origins: [] } })
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("access_token", "directory-test")
+    localStorage.setItem("lingsight.onboarding-seen.v1", "1")
+  })
+  await page.route("**/api/v1/users/me", (route) =>
+    route.fulfill({
+      json: {
+        id: "directory-user",
+        email: "directory@example.com",
+        is_active: true,
+      },
+    }),
+  )
+  stubProjectsApi(page, [])
+  await page.route("**/api/v1/agent/tasks", (route) =>
+    route.fulfill({ json: [] }),
+  )
+})
 
 const experiment = { id: "fixture-e1", name: "示例实验一", trial_count: 2 }
 const trial = {
@@ -39,7 +61,11 @@ test("researcher filters the retained directory and reloads it", async ({
   await page.route("**/api/v1/experiments/fixture-e1/trials?*", (route) =>
     route.fulfill({ json: { data: [trial, otherTrial], count: 2 } }),
   )
-  await page.goto("/annotations")
+  await page.goto("/annotations?view=directory")
+  await expect(page.getByRole("tab", { name: "试次目录" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  )
   await expect(page.getByText("sample-a.mp4")).toBeVisible()
   await page.getByRole("textbox", { name: "搜索试次" }).fill("A2 2")
   await expect(page.getByText("sample-b.mp4")).toHaveCount(0)
@@ -68,7 +94,7 @@ test("empty experiment list and retryable load failure are distinct", async ({
     return route.fulfill({ json: { data: [] } })
   })
 
-  await page.goto("/annotations")
+  await page.goto("/annotations?view=directory")
   await expect(page.getByText("实验列表加载失败")).toBeVisible()
   await page.getByRole("button", { name: "重试" }).click()
   await expect(page.getByText("暂无可访问的实验")).toBeVisible()
@@ -84,7 +110,7 @@ test("an ungranted experiment never reveals its trials", async ({ page }) => {
       json: { detail: "Experiment access denied" },
     }),
   )
-  await page.goto("/annotations")
+  await page.goto("/annotations?view=directory")
   await expect(page.getByText("试次列表加载失败")).toBeVisible()
   await expect(page.getByText("sample-a.mp4")).toHaveCount(0)
 })
@@ -98,7 +124,7 @@ test("an experiment with no matching trials has an empty state", async ({
   await page.route("**/api/v1/experiments/fixture-e1/trials?*", (route) =>
     route.fulfill({ json: { data: [], count: 0 } }),
   )
-  await page.goto("/annotations")
+  await page.goto("/annotations?view=directory")
   await expect(page.getByText("该实验没有符合条件的试次。")).toBeVisible()
 })
 
@@ -116,7 +142,7 @@ test("researcher filters by training-day number", async ({ page }) => {
     })
   })
 
-  await page.goto("/annotations")
+  await page.goto("/annotations?view=directory")
   await page.getByRole("combobox", { name: "训练日" }).click()
   await page.getByRole("option", { name: "第 1 训练日" }).click()
   await expect(page.getByText("sample-a.mp4")).toBeVisible()

@@ -1,11 +1,13 @@
 import { readFile } from "node:fs/promises"
 import { expect, test } from "@playwright/test"
+import { stubProjectsApi } from "./utils/projectsApi"
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
 test("同一工作台能绘制、编辑、恢复和导出本帧与整段标注", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("access_token", "annotation-test")
+    localStorage.setItem("lingsight.onboarding-seen.v1", "1")
   })
   await page.route("**/api/v1/users/me", (route) =>
     route.fulfill({
@@ -19,13 +21,13 @@ test("同一工作台能绘制、编辑、恢复和导出本帧与整段标注",
   await page.route("**/api/v1/agent/tasks", (route) =>
     route.fulfill({ json: [] }),
   )
-  await page.route("**/api/v1/projects", (route) =>
-    route.fulfill({ json: { data: [], count: 0 } }),
-  )
+  stubProjectsApi(page, [])
   await page.route("**/api/v1/experiments", (route) =>
     route.fulfill({ json: { data: [], count: 0 } }),
   )
   await page.goto("/annotations")
+  await expect(page).toHaveURL("/annotations")
+  await expect(page.getByLabel("选择本地标注视频")).toBeAttached()
   await expect(page.getByRole("tab", { name: "手动标注" })).toHaveAttribute(
     "aria-selected",
     "true",

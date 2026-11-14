@@ -122,6 +122,41 @@ test("首页在中央展示研究入口，输入框固定在底部", async ({ pa
     page.getByRole("heading", { name: "分析与报告", exact: true }),
   ).toBeVisible()
 })
+for (const entry of [
+  { name: "水迷宫分析", path: "/inference", heading: "视频推理" },
+  { name: "本地视频", path: "/annotations", heading: "视频与标注" },
+]) {
+  test(`默认首页${entry.name}打开真实入口而非填写假视频问题`, async ({
+    page,
+  }) => {
+    test.skip(
+      process.env.VITE_MOCK_VIDEO_WORKFLOW === "true",
+      "Default mode only",
+    )
+    await page.route("**/api/v1/inference/**", (route) =>
+      route.fulfill({ json: { items: [] } }),
+    )
+    let writes = 0
+    page.on("request", (request) => {
+      if (request.method() === "POST") writes++
+    })
+    await page.goto("/")
+    await page.getByRole("button", { name: new RegExp(entry.name) }).click()
+    await expect(page).toHaveURL(entry.path)
+    await expect(
+      page.getByRole("heading", { name: entry.heading, exact: true }),
+    ).toBeVisible()
+    if (entry.path === "/annotations") {
+      await expect(page.getByLabel("选择本地标注视频")).toBeAttached()
+      await expect(page.getByRole("tab", { name: "手动标注" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      )
+    }
+    expect(writes).toBe(0)
+  })
+}
+
 test("待确认的研究任务在左侧栏显示", async ({ page }) => {
   const waiting = {
     ...task,
@@ -181,33 +216,41 @@ test("引导完成携带问题和范围但不自动提交", async ({ page }) => 
   ).toHaveValue(/test-001/)
   expect(creates).toBe(0)
 })
-test("创建任务和刷新重放，交付物安全预览", async ({ page }) => {
-  await page.goto("/")
-  await page
-    .getByRole("textbox", { name: "研究问题", exact: true })
-    .fill("核对视频数据")
-  await page.getByRole("button", { name: "发送研究问题" }).click()
-  await expect(page).toHaveURL(new RegExp(`/tasks/${id}`))
-  await expect(
-    page.getByText("已核对视频数据。", { exact: true }),
-  ).toBeVisible()
-  await page.reload()
-  await expect(
-    page.getByText("已核对视频数据。", { exact: true }),
-  ).toBeVisible()
-  await page.waitForTimeout(1700)
-  expect(
-    await page.getByText("已核对视频数据。", { exact: true }).count(),
-  ).toBe(1)
-  await page.getByRole("button", { name: /report.md/ }).click()
-  await expect(page.getByRole("dialog")).toBeVisible()
-  await expect(
-    page
-      .getByRole("dialog")
-      .getByText("<script>window.bad=true</script>", { exact: true }),
-  ).toBeVisible()
-  expect(await page.evaluate(() => Object.hasOwn(window, "bad"))).toBe(false)
-})
+for (const submission of ["button", "Enter"] as const) {
+  test(`创建任务和刷新重放，交付物安全预览（${submission}）`, async ({
+    page,
+  }) => {
+    await page.goto("/")
+    await page
+      .getByRole("textbox", { name: "研究问题", exact: true })
+      .fill("核对视频数据")
+    if (submission === "Enter")
+      await page
+        .getByRole("textbox", { name: "研究问题", exact: true })
+        .press("Enter")
+    else await page.getByRole("button", { name: "发送研究问题" }).click()
+    await expect(page).toHaveURL(new RegExp(`/tasks/${id}`))
+    await expect(
+      page.getByText("已核对视频数据。", { exact: true }),
+    ).toBeVisible()
+    await page.reload()
+    await expect(
+      page.getByText("已核对视频数据。", { exact: true }),
+    ).toBeVisible()
+    await page.waitForTimeout(1700)
+    expect(
+      await page.getByText("已核对视频数据。", { exact: true }).count(),
+    ).toBe(1)
+    await page.getByRole("button", { name: /report.md/ }).click()
+    await expect(page.getByRole("dialog")).toBeVisible()
+    await expect(
+      page
+        .getByRole("dialog")
+        .getByText("<script>window.bad=true</script>", { exact: true }),
+    ).toBeVisible()
+    expect(await page.evaluate(() => Object.hasOwn(window, "bad"))).toBe(false)
+  })
+}
 test("提交失败保留输入", async ({ page }) => {
   await page.route("**/api/v1/agent/tasks", (r) =>
     r.request().method() === "POST"
@@ -224,6 +267,112 @@ test("提交失败保留输入", async ({ page }) => {
     page.getByRole("textbox", { name: "研究问题", exact: true }),
   ).toHaveValue("请保留这条研究问题")
 })
+for (const submission of ["Enter", "form"] as const) {
+  test(`服务不可用时 ${submission} 不能绕过发送禁用`, async ({ page }) => {
+    await page.route("**/api/v1/agent/tasks", (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({ status: 503, json: { detail: "任务列表暂时不可用" } })
+        : route.fallback(),
+    )
+    await page.goto("/")
+    await expect(page.getByRole("alert")).toContainText("任务列表暂时不可用")
+    const question = page.getByRole("textbox", {
+      name: "研究问题",
+      exact: true,
+    })
+    await question.fill("保留待发送的问题")
+    await expect(
+      page.getByRole("button", { name: "发送研究问题" }),
+    ).toBeDisabled()
+    const unexpectedWrite = page
+      .waitForRequest(
+        (request) =>
+          request.method() === "POST" && request.url().includes("/agent/"),
+        { timeout: 700 },
+      )
+      .then(
+        () => true,
+        () => false,
+      )
+    if (submission === "Enter") await question.press("Enter")
+    else
+      await question.locator("xpath=ancestor::form").evaluate((form) => {
+        if (form instanceof HTMLFormElement) form.requestSubmit()
+      })
+    expect(await unexpectedWrite).toBe(false)
+    await expect(question).toHaveValue("保留待发送的问题")
+    await expect(page).toHaveURL("/")
+  })
+}
+
+test("任务读取失败时 Enter 和表单保留草稿，不发送追问", async ({ page }) => {
+  await page.route(`**/api/v1/agent/tasks/${id}`, (route) =>
+    route.fulfill({
+      status: 503,
+      json: { detail: "任务读取暂时不可用" },
+    }),
+  )
+  await page.goto(`/tasks/${id}`)
+  await expect(page.getByRole("alert")).toContainText("任务读取暂时不可用")
+  const question = page.getByRole("textbox", { name: "研究问题", exact: true })
+  await question.fill("保留追问")
+  await expect(
+    page.getByRole("button", { name: "发送研究问题" }),
+  ).toBeDisabled()
+  const unexpectedWrite = page
+    .waitForRequest(
+      (request) =>
+        request.method() === "POST" && request.url().includes("/agent/"),
+      { timeout: 700 },
+    )
+    .then(
+      () => true,
+      () => false,
+    )
+  await question.press("Enter")
+  await page.locator("form.agent-composer").evaluate((form) => {
+    if (form instanceof HTMLFormElement) form.requestSubmit()
+  })
+  expect(await unexpectedWrite).toBe(false)
+  await expect(question).toHaveValue("保留追问")
+})
+
+test("已有草稿进入等待口径后不能通过表单追问", async ({ page }) => {
+  await page.clock.install()
+  let waiting = false
+  await page.route(`**/api/v1/agent/tasks/${id}`, (route) =>
+    route.fulfill({
+      json: waiting
+        ? { ...task, runs: [{ ...task.runs[0], status: "waiting_for_input" }] }
+        : task,
+    }),
+  )
+  await page.goto(`/tasks/${id}`)
+  const question = page.getByRole("textbox", { name: "研究问题", exact: true })
+  await question.fill("稍后继续的追问")
+  waiting = true
+  await page.clock.runFor(2600)
+  await expect(question).toBeDisabled()
+  await expect(
+    page.getByRole("button", { name: "发送研究问题" }),
+  ).toBeDisabled()
+  const unexpectedWrite = page
+    .waitForRequest(
+      (request) =>
+        request.method() === "POST" && request.url().includes("/agent/"),
+      { timeout: 700 },
+    )
+    .then(
+      () => true,
+      () => false,
+    )
+  await page.locator("form.agent-composer").evaluate((form) => {
+    if (form instanceof HTMLFormElement) form.requestSubmit()
+  })
+  expect(await unexpectedWrite).toBe(false)
+  await expect(question).toHaveValue("稍后继续的追问")
+})
+
 test("待确认口径通过答复入口提交", async ({ page }) => {
   const waiting = {
     ...task,

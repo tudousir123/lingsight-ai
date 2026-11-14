@@ -163,46 +163,68 @@ test("unexpected upstream scope stops the new run without grouping or resending"
   ).toHaveValue("只分析本项目")
 })
 
-test("归组旧对话保留其原有数据范围", async ({ page }) => {
-  const sourceProject = "66666666-6666-4666-8666-666666666666"
-  stubProjectsApi(page, [
-    {
-      id: projectId,
-      name: "当前研究",
-      members: [{ kind: "agent_task", id: taskId, label: "旧项目对话" }],
-    },
-    { id: sourceProject, name: "原始研究", members: [] },
-  ])
-  const task = {
-    id: taskId,
-    project_id: sourceProject,
-    title: "旧项目对话",
-    goal: "检查朝向",
-    created_at: "2026-11-11T00:00:00Z",
-    runs: [],
-    artifacts: [],
-  }
-  await page.route("**/api/v1/agent/**", (route) => {
-    const path = new URL(route.request().url()).pathname
-    return route.fulfill({
-      json: path.endsWith("/events")
-        ? []
-        : path.endsWith("/tasks")
-          ? [task]
-          : task,
+for (const sourceProject of ["66666666-6666-4666-8666-666666666666", null]) {
+  test(`归组旧对话保留其原有数据范围（${sourceProject ? "其他项目" : "未限定项目"}）`, async ({
+    page,
+  }) => {
+    const messages: unknown[] = []
+    stubProjectsApi(page, [
+      {
+        id: projectId,
+        name: "当前研究",
+        members: [{ kind: "agent_task", id: taskId, label: "旧项目对话" }],
+      },
+      ...(sourceProject
+        ? [{ id: sourceProject, name: "原始研究", members: [] }]
+        : []),
+    ])
+    const task = {
+      id: taskId,
+      project_id: sourceProject,
+      title: "旧项目对话",
+      goal: "检查朝向",
+      created_at: "2026-11-11T00:00:00Z",
+      runs: [],
+      artifacts: [],
+    }
+    await page.route("**/api/v1/agent/**", (route) => {
+      const path = new URL(route.request().url()).pathname
+      if (route.request().method() === "POST") {
+        messages.push(route.request().postDataJSON())
+        return route.fulfill({ status: 202, json: { status: "queued" } })
+      }
+      return route.fulfill({
+        json: path.endsWith("/events")
+          ? []
+          : path.endsWith("/tasks")
+            ? [task]
+            : task,
+      })
     })
+    await page.goto(`/projects/${projectId}`)
+    await page
+      .getByRole("region", { name: "项目对话" })
+      .getByRole("link", { name: /旧项目对话/ })
+      .click()
+    await expect(page.getByRole("status")).toHaveText(
+      sourceProject
+        ? "分析范围为原始研究的已发布推理数据"
+        : "此对话未限定项目数据范围；归组不会改变分析范围",
+    )
+    await page
+      .getByRole("textbox", { name: "研究问题", exact: true })
+      .fill("继续原范围分析")
+    await page
+      .getByRole("button", { name: "发送研究问题", exact: true })
+      .click()
+    await expect(
+      page.getByRole("textbox", { name: "研究问题", exact: true }),
+    ).toHaveValue("")
+    expect(messages).toEqual([{ text: "继续原范围分析" }])
+    await page
+      .getByRole("main")
+      .getByRole("link", { name: "当前研究", exact: true })
+      .click()
+    await expect(page).toHaveURL(`/projects/${projectId}`)
   })
-  await page.goto(`/projects/${projectId}`)
-  await page
-    .getByRole("region", { name: "项目对话" })
-    .getByRole("link", { name: /旧项目对话/ })
-    .click()
-  await expect(page.getByRole("status")).toHaveText(
-    "分析范围为原始研究的已发布推理数据",
-  )
-  await page
-    .getByRole("main")
-    .getByRole("link", { name: "当前研究", exact: true })
-    .click()
-  await expect(page).toHaveURL(`/projects/${projectId}`)
-})
+}
