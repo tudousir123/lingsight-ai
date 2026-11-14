@@ -1,0 +1,1 @@
+{"status": "passed", "transport": "FastAPI HTTP -> Node HTTP -> temporary SQLite", "checks": ["workspace authorization", "create and status", "SSE cursor replay", "immutable report editing", "artifact download", "ZIP", "follow-up", "clarification", "cancellation"], "model": "stub", "research_database": "unused"}

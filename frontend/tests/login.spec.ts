@@ -4,6 +4,12 @@ import { randomPassword } from "./utils/random.ts"
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("lingsight.onboarding-seen.v1", "1"),
+  )
+})
+
 const fillForm = async (page: Page, email: string, password: string) => {
   await page.getByTestId("email-input").fill(email)
   await page.getByTestId("password-input").fill(password)
@@ -33,7 +39,7 @@ test("Forgot Password link is visible", async ({ page }) => {
   await page.goto("/login")
 
   await expect(
-    page.getByRole("link", { name: "Forgot your password?" }),
+    page.getByRole("link", { name: "Forgot password?" }),
   ).toBeVisible()
 })
 
@@ -46,7 +52,7 @@ test("Log in with valid email and password ", async ({ page }) => {
   await page.waitForURL("/")
 
   await expect(
-    page.getByRole("heading", { name: "实验与视频管理" }),
+    page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
   ).toBeVisible()
 })
 
@@ -78,11 +84,11 @@ test("Successful log out", async ({ page }) => {
   await page.waitForURL("/")
 
   await expect(
-    page.getByRole("heading", { name: "实验与视频管理" }),
+    page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
   ).toBeVisible()
 
   await page.getByTestId("user-menu").click()
-  await page.getByRole("menuitem", { name: "Log out" }).click()
+  await page.getByRole("menuitem", { name: "退出登录" }).click()
   await page.waitForURL("/login")
 })
 
@@ -95,11 +101,11 @@ test("Logged-out user cannot access protected routes", async ({ page }) => {
   await page.waitForURL("/")
 
   await expect(
-    page.getByRole("heading", { name: "实验与视频管理" }),
+    page.getByRole("heading", { name: "从实验数据，开启新的探索。" }),
   ).toBeVisible()
 
   await page.getByTestId("user-menu").click()
-  await page.getByRole("menuitem", { name: "Log out" }).click()
+  await page.getByRole("menuitem", { name: "退出登录" }).click()
   await page.waitForURL("/login")
 
   await page.goto("/settings")

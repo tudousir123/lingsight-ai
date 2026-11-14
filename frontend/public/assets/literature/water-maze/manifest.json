@@ -1,0 +1,261 @@
+{
+  "description": "从本地论文提取的前端文献示例素材，不是 LingSight 实验或模型输出。",
+  "sources": {
+    "sanchez": {
+      "title": "Search Strategy Analysis of 5xFAD Alzheimer Mice in the Morris Water Maze Reveals Sex- and Age-Specific Spatial Navigation Deficits",
+      "authors": "Quintanilla Sánchez et al.",
+      "year": 2023,
+      "doi": "https://doi.org/10.3390/biomedicines11020599",
+      "license_page": 2,
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_filename": "01_Quintanilla_Sanchez_2023_5xFAD搜索策略.pdf",
+      "sha256": "91ebf9833a00a100f73e164747b56a8ea75e6d429baa9078682244e1308b5a48"
+    },
+    "pathfinder": {
+      "title": "Pathfinder: open source software for analyzing spatial navigation search strategies",
+      "authors": "Cooke et al.",
+      "year": 2020,
+      "doi": "https://doi.org/10.12688/f1000research.20352.2",
+      "version": "version 2; first published 2019, revised 2020",
+      "license_page": 2,
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_filename": "Cooke 等 - 2019 - Pathfinder open source software for analyzing spatial navigation search strategies.pdf",
+      "sha256": "9bbc6d7b63638592d340acb54d74e63ea10c083a1e7dd332b5e05bb693de1b3d"
+    },
+    "lakatos": {
+      "title": "AI-Driven Framework for Enhanced and Automated Behavioral Analysis in Morris Water Maze Studies",
+      "authors": "Lakatos et al.",
+      "year": 2025,
+      "doi": "https://doi.org/10.3390/s25051564",
+      "license_page": 1,
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_filename": "Lakatos 等 - 2025 - AI-Driven Framework for Enhanced and Automated Behavioral Analysis in Morris Water Maze Studies.pdf",
+      "sha256": "499334374b11b132f7ce18d5a82a8018c3448432893fdf4550fba1ff6dd1a83a"
+    }
+  },
+  "assets": [
+    {
+      "id": "01-spatial-occupancy-heatmaps",
+      "title": "空间占据热图 · 完整图",
+      "description": "训练与反转任务的空间占据热图；保留自动色标和共同色标。",
+      "alt": "文献示例：空间占据热图 · 完整图，Cooke et al. (2020), Figure 5",
+      "png": "/assets/literature/water-maze/01-spatial-occupancy-heatmaps.png",
+      "webp": "/assets/literature/water-maze/01-spatial-occupancy-heatmaps.webp",
+      "width": 1512,
+      "height": 1437,
+      "source_id": "pathfinder",
+      "figure": "5",
+      "panel": "full figure",
+      "pdf_page": 10,
+      "crop_points": [
+        54,
+        96,
+        558,
+        575
+      ],
+      "render_dpi": 216,
+      "attribution": "Cooke et al. (2020), Figure 5. CC BY 4.0. Cropped from the original PDF."
+    },
+    {
+      "id": "02-acquisition-heatmaps",
+      "title": "学习阶段热图 · 横向素材",
+      "description": "学习阶段 Day 1、Day 3、Day 8 和探测试次；上下两行采用不同的缩放方式。",
+      "alt": "文献示例：学习阶段热图 · 横向素材，Cooke et al. (2020), Figure 5",
+      "png": "/assets/literature/water-maze/02-acquisition-heatmaps.png",
+      "webp": "/assets/literature/water-maze/02-acquisition-heatmaps.webp",
+      "width": 1512,
+      "height": 687,
+      "source_id": "pathfinder",
+      "figure": "5",
+      "panel": "Acquisition panel",
+      "pdf_page": 10,
+      "crop_points": [
+        54,
+        96,
+        558,
+        325
+      ],
+      "render_dpi": 216,
+      "attribution": "Cooke et al. (2020), Figure 5. CC BY 4.0. Cropped from the original PDF."
+    },
+    {
+      "id": "03-reversal-heatmaps",
+      "title": "反转阶段热图 · 横向素材",
+      "description": "反转阶段 Day 1、Day 3 和探测试次；保留两种色标及阶段标题。",
+      "alt": "文献示例：反转阶段热图 · 横向素材，Cooke et al. (2020), Figure 5",
+      "png": "/assets/literature/water-maze/03-reversal-heatmaps.png",
+      "webp": "/assets/literature/water-maze/03-reversal-heatmaps.webp",
+      "width": 1179,
+      "height": 687,
+      "source_id": "pathfinder",
+      "figure": "5",
+      "panel": "Reversal panel",
+      "pdf_page": 10,
+      "crop_points": [
+        125,
+        346,
+        518,
+        575
+      ],
+      "render_dpi": 216,
+      "attribution": "Cooke et al. (2020), Figure 5. CC BY 4.0. Cropped from the original PDF."
+    },
+    {
+      "id": "04-search-strategy-analysis",
+      "title": "搜索策略分类与分布",
+      "description": "搜索策略堆叠柱状图、行为指标及分类比较；保留全部图例。",
+      "alt": "文献示例：搜索策略分类与分布，Cooke et al. (2020), Figure 4",
+      "png": "/assets/literature/water-maze/04-search-strategy-analysis.png",
+      "webp": "/assets/literature/water-maze/04-search-strategy-analysis.webp",
+      "width": 1506,
+      "height": 1377,
+      "source_id": "pathfinder",
+      "figure": "4",
+      "panel": "full figure",
+      "pdf_page": 8,
+      "crop_points": [
+        56,
+        143,
+        558,
+        602
+      ],
+      "render_dpi": 216,
+      "attribution": "Cooke et al. (2020), Figure 4. CC BY 4.0. Cropped from the original PDF."
+    },
+    {
+      "id": "05-acquisition-reversal-curves",
+      "title": "学习与反转的多指标曲线",
+      "description": "任务时序示意和潜伏期、路径效率、朝向误差、熵等指标。",
+      "alt": "文献示例：学习与反转的多指标曲线，Cooke et al. (2020), Figure 3",
+      "png": "/assets/literature/water-maze/05-acquisition-reversal-curves.png",
+      "webp": "/assets/literature/water-maze/05-acquisition-reversal-curves.webp",
+      "width": 1251,
+      "height": 1581,
+      "source_id": "pathfinder",
+      "figure": "3",
+      "panel": "full figure",
+      "pdf_page": 7,
+      "crop_points": [
+        98,
+        74,
+        515,
+        601
+      ],
+      "render_dpi": 216,
+      "attribution": "Cooke et al. (2020), Figure 3. CC BY 4.0. Cropped from the original PDF."
+    },
+    {
+      "id": "06-learning-curves-5xfad",
+      "title": "5xFAD 学习曲线与游泳速度",
+      "description": "雌性 5xFAD 与 WT 的三个年龄组；潜伏期和游泳速度随训练日变化。",
+      "alt": "文献示例：5xFAD 学习曲线与游泳速度，Quintanilla Sánchez et al. (2023), Figure 2",
+      "png": "/assets/literature/water-maze/06-learning-curves-5xfad.png",
+      "webp": "/assets/literature/water-maze/06-learning-curves-5xfad.webp",
+      "width": 1230,
+      "height": 1407,
+      "source_id": "sanchez",
+      "figure": "2",
+      "panel": "full figure",
+      "pdf_page": 6,
+      "crop_points": [
+        160,
+        91,
+        570,
+        560
+      ],
+      "render_dpi": 216,
+      "attribution": "Quintanilla Sánchez et al. (2023), Figure 2. CC BY 4.0. Cropped from the original PDF."
+    },
+    {
+      "id": "07-probe-quadrant-results",
+      "title": "探测试次的象限停留结果",
+      "description": "雌性小鼠不同年龄组的象限停留百分比及游泳速度。",
+      "alt": "文献示例：探测试次的象限停留结果，Quintanilla Sánchez et al. (2023), Figure 4",
+      "png": "/assets/literature/water-maze/07-probe-quadrant-results.png",
+      "webp": "/assets/literature/water-maze/07-probe-quadrant-results.webp",
+      "width": 1530,
+      "height": 1119,
+      "source_id": "sanchez",
+      "figure": "4",
+      "panel": "full figure",
+      "pdf_page": 8,
+      "crop_points": [
+        43,
+        264,
+        553,
+        637
+      ],
+      "render_dpi": 216,
+      "attribution": "Quintanilla Sánchez et al. (2023), Figure 4. CC BY 4.0. Cropped from the original PDF."
+    },
+    {
+      "id": "08-strategy-distribution-5xfad",
+      "title": "5xFAD 搜索策略随训练变化",
+      "description": "三个年龄组的 WT 与 5xFAD 搜索策略分布；包含训练及探测试次。",
+      "alt": "文献示例：5xFAD 搜索策略随训练变化，Quintanilla Sánchez et al. (2023), Figure 6",
+      "png": "/assets/literature/water-maze/08-strategy-distribution-5xfad.png",
+      "webp": "/assets/literature/water-maze/08-strategy-distribution-5xfad.webp",
+      "width": 1530,
+      "height": 1170,
+      "source_id": "sanchez",
+      "figure": "6",
+      "panel": "full figure",
+      "pdf_page": 10,
+      "crop_points": [
+        41,
+        295,
+        551,
+        685
+      ],
+      "render_dpi": 216,
+      "attribution": "Quintanilla Sánchez et al. (2023), Figure 6. CC BY 4.0. Cropped from the original PDF."
+    },
+    {
+      "id": "09-trajectory-postprocessing",
+      "title": "轨迹检测与后处理示例",
+      "description": "方法效果示例：原始轨迹、过滤、插值及修正后轨迹。",
+      "alt": "文献示例：轨迹检测与后处理示例，Lakatos et al. (2025), Figure 6",
+      "png": "/assets/literature/water-maze/09-trajectory-postprocessing.png",
+      "webp": "/assets/literature/water-maze/09-trajectory-postprocessing.webp",
+      "width": 1203,
+      "height": 867,
+      "source_id": "lakatos",
+      "figure": "6",
+      "panel": "full figure",
+      "pdf_page": 8,
+      "crop_points": [
+        162,
+        68,
+        563,
+        357
+      ],
+      "render_dpi": 216,
+      "attribution": "Lakatos et al. (2025), Figure 6. CC BY 4.0. Cropped from the original PDF."
+    },
+    {
+      "id": "10-behavior-metrics-summary",
+      "title": "潜伏期、速度与距离对比",
+      "description": "Young 与 Old 两组的三项指标均值及标准误，分组名称沿用原论文。",
+      "alt": "文献示例：潜伏期、速度与距离对比，Lakatos et al. (2025), Figure 8",
+      "png": "/assets/literature/water-maze/10-behavior-metrics-summary.png",
+      "webp": "/assets/literature/water-maze/10-behavior-metrics-summary.webp",
+      "width": 1173,
+      "height": 570,
+      "source_id": "lakatos",
+      "figure": "8",
+      "panel": "full figure",
+      "pdf_page": 10,
+      "crop_points": [
+        162,
+        68,
+        553,
+        258
+      ],
+      "render_dpi": 216,
+      "attribution": "Lakatos et al. (2025), Figure 8. CC BY 4.0. Cropped from the original PDF."
+    }
+  ]
+}

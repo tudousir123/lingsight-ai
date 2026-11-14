@@ -1,0 +1,6 @@
+{"width":2048,"scrollWidth":2048,"title":{"left":384,"top":166,"width":960,"height":83.1875},"buttonColors":["rgb(25, 25, 25)","rgb(25, 25, 25)","rgb(25, 25, 25)"]}
+{"width":1440,"scrollWidth":1440,"title":{"left":80,"top":166,"width":960,"height":74.84375},"buttonColors":["rgb(25, 25, 25)","rgb(25, 25, 25)","rgb(25, 25, 25)"]}
+{"width":1024,"scrollWidth":1024,"title":{"left":40,"top":166,"width":944,"height":67.59375},"buttonColors":["rgb(25, 25, 25)","rgb(25, 25, 25)","rgb(25, 25, 25)"]}
+{"width":390,"scrollWidth":390,"title":{"left":22,"top":130,"width":346,"height":150},"buttonColors":["rgb(25, 25, 25)","rgb(25, 25, 25)","rgb(25, 25, 25)"]}
+interactions: capabilities anchor, export tab, login link, unauthenticated workspace redirect passed
+pageErrors []

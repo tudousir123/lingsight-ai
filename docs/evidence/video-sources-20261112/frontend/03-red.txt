@@ -1,0 +1,33 @@
+
+Running 1 test using 1 worker
+
+(node:1183378) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] [chromium] › tests/project-video-folder.spec.ts:85:1 › 来源离线和保存失败给出错误，取消更换保留原文件夹
+  1) [chromium] › tests/project-video-folder.spec.ts:85:1 › 来源离线和保存失败给出错误，取消更换保留原文件夹 ───────────────
+
+    Test timeout of 10000ms exceeded.
+
+    Error: locator.click: Test timeout of 10000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '取消更换' })
+        - waiting for "http://127.0.0.1:5198/projects/folder-project" navigation to finish...
+        - navigated to "http://127.0.0.1:5198/projects/folder-project"
+
+
+       99 |   await expect(page.getByRole("alert")).toContainText("无法保存视频文件夹")
+      100 |   await expect(page.getByText("NAS 视频 / 十月", { exact: true })).toBeVisible()
+    > 101 |   await page.getByRole("button", { name: "取消更换" }).click()
+          |                                                    ^
+      102 |   await expect(page.getByRole("checkbox", { name: "选择视频 鼠1.mp4" })).toBeVisible()
+      103 |   await expect(page.getByRole("alert")).toHaveCount(0)
+      104 | })
+        at /home/x/Documents/Codex/2026-11-11/wo-de/work/video-sources-platform/frontend/tests/project-video-folder.spec.ts:101:52
+
+    Error Context: test-results/project-video-folder-来源离线和保存失败给出错误，取消更换保留原文件夹-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › tests/project-video-folder.spec.ts:85:1 › 来源离线和保存失败给出错误，取消更换保留原文件夹 ────────────────

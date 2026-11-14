@@ -2,6 +2,10 @@
 
 双轴 code-review 的 Standards 轴以此为准。只收录自动化检查（`backend/scripts/lint.sh` 的 mypy/ty/ruff、pre-commit、CI）无法机械判定的规则；机械规则一律做成检查，不写在这里。规则来源是双轴评审与 retro 实际执行过的裁决（docs/evidence/m1-t9/、工单 #16 会话）。
 
+## 退役同步
+
+删除或退役模块的变更，导航层引用必须同时清零：AGENTS.md（含 §0 指针与约束章节）、根 README、backend/README 中指向被删模块的行全部同步改写；progress.md 与 docs/evidence/ 是历史记录，不在清理范围。评审动作：对 diff 里每个被删路径名 grep 三个导航文件，命中即 blocker（2026-11-10 实测两次漏网：semantic_layer.yaml 指针、§3 管线约束在删除提交后仍指向已删代码）。
+
 ## 单一来源
 
 常量、口径、黄金基准值只允许存在一处，跨模块 `import` 引用。同一事实的第二份字面量拷贝——即使值相同——即违规（实例：permission reason-code 家族、`ALGO_VERSION`、`REL_TOL`、黄金 group×day 矩阵）。
@@ -29,3 +33,7 @@ target-version py314 下 `except A, B:`（PEP 758）合法，且是 `ruff format
 ## 证据纪律
 
 声称"测试通过 / 已运行 / 已验证"必须附可重放命令与输出（docs/evidence/、提交信息或工单），无证据的声称按未发生处理。
+
+## 特征化测试先行（行为保持型重构）
+
+凡声称「行为不变」的重构（收敛复印、抽内核、换实现），必须先在与实现无关的既有缝上补齐特征化测试，并**在旧代码上跑绿**后才动结构；重构后断言一字不改，唯一允许的夹具机械变化是上游假件的 patch 目标随实现移动。断言钉可观测契约——状态码、detail 文案、响应头、上游实际收到的请求形状（方法/路径/头/参数/体）——不钉内部结构。「先跑绿」是反想当然的实证步骤：想象出的可观测行为可能是错的（实例：#39 会话以为 TestClient 不发 Accept，实测恒发 `*/*`；以为 `headers={"location": None}` 合法，实测 httpx 拒绝）。范例：`tests/api/routes/test_agent_gateway.py` 与 `test_inference_gateway.py`（2026-11-10 工单 #39，27 项先在旧代码全绿，重构后原样全绿）。

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/home/shuncheng/桌面/lingsight-ai/docs/architecture/backend-current.architecture.json",
+  "output": "/home/shuncheng/桌面/lingsight-ai/docs/architecture/backend-current.html",
+  "specification": {
+    "sha256": "be5478e5b110a0a22b0568a8c73d6d507a1d14296b2ef4052e2b3871b1d50636",
+    "bytes": 6538
+  },
+  "artifact": {
+    "sha256": "37729c6dbe51cbdefc375948bc724dda45900e265d6b9ac1f1d49dc995b16161",
+    "bytes": 812179
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  },
+  "evidence": {
+    "verified": true,
+    "repository": "https://github.com/tudousir123/lingsight-ai",
+    "revision": "98b38a27f95ebc21383c35e14734d8aeed918c83",
+    "references": 9
+  }
+}

@@ -1,0 +1,24 @@
+
+Running 16 tests using 1 worker
+
+(node:59092) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/16] [chromium] › tests/onboarding.spec.ts:26:1 › the final desktop screen offers examples and optional scope
+[2/16] [chromium] › tests/onboarding.spec.ts:61:3 › Explore trajectories & headings: saves and restores the question and optional scope
+[3/16] [chromium] › tests/onboarding.spec.ts:61:3 › Compare training days: saves and restores the question and optional scope
+[4/16] [chromium] › tests/onboarding.spec.ts:61:3 › Draft a research report: saves and restores the question and optional scope
+[5/16] [chromium] › tests/onboarding.spec.ts:86:1 › a custom question needs no example or scope
+[6/16] [chromium] › tests/onboarding.spec.ts:104:1 › switching examples keeps the scope and does not submit a task
+[7/16] [chromium] › tests/onboarding.spec.ts:135:1 › empty input and blocked storage preserve the recovery download
+[8/16] [chromium] › tests/onboarding.spec.ts:174:1 › keyboard selection works with invalid saved data
+[9/16] [chromium] › tests/onboarding.spec.ts:192:1 › entering without a question marks onboarding seen without saving a brief
+[10/16] [chromium] › tests/onboarding.spec.ts:212:1 › a long question scrolls inside its editor
+[11/16] [chromium] › tests/onboarding.spec.ts:230:1 › the guide types its introduction and shows completed text when revisiting
+[12/16] [chromium] › tests/onboarding.spec.ts:250:1 › the mouse wheel advances one scene at a time and can go back
+[13/16] [chromium] › tests/onboarding.spec.ts:267:1 › every introduction scene is English and fits a narrow viewport
+[14/16] [chromium] › tests/onboarding.spec.ts:302:1 › typing leaves time to read and reduced motion reveals the full text immediately
+[15/16] [chromium] › tests/onboarding.spec.ts:325:3 › characters fade in without shifting while typing at 1440px
+[16/16] [chromium] › tests/onboarding.spec.ts:325:3 › characters fade in without shifting while typing at 390px
+  16 passed (32.0s)

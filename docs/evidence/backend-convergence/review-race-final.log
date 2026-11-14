@@ -1,0 +1,69 @@
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> da969c656440, initial schema for mysql
+INFO  [alembic.runtime.migration] Running upgrade da969c656440 -> b19a1e7c90a1, Store per-user experiment access for the trial catalog.
+INFO  [alembic.runtime.migration] Running upgrade b19a1e7c90a1 -> c3f8a1d204b7, Store human preparation reviews per trial (ticket #21).
+INFO  [alembic.runtime.migration] Running upgrade c3f8a1d204b7 -> d4e5f6a7b8c9, Keep preparation reviews for each version of trial materials.
+.....................                                                    [100%]
+=============================== warnings summary ===============================
+../.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /home/shuncheng/桌面/lingsight-ai/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+21 passed, 1 warning in 3.66s
+Name                                Stmts   Miss  Cover   Missing
+-----------------------------------------------------------------
+app/trials/settings.py                 13      0   100%
+app/trials/schemas.py                  81      0   100%
+app/trials/__init__.py                  0      0   100%
+app/text_to_sql/__init__.py             0      0   100%
+app/metrics/definitions.py             32      0   100%
+app/metrics/__init__.py                 5      0   100%
+app/core/security.py                   18      0   100%
+app/core/db.py                         10      0   100%
+app/core/config.py                      3      0   100%
+app/core/__init__.py                    0      0   100%
+app/api/routes/__init__.py              0      0   100%
+app/api/main.py                        14      0   100%
+app/api/__init__.py                     0      0   100%
+app/__init__.py                         0      0   100%
+app/models.py                          91      2    98%   28, 35
+app/trials/service.py                 109      6    94%   305, 307, 309, 311, 355, 357
+app/trials/derive.py                   51      3    94%   32, 97, 106
+app/text_to_sql/settings.py            16      1    94%   49
+app/main.py                            16      1    94%   19
+app/api/deps.py                        37      3    92%   44, 46, 59
+app/core/settings.py                   58      6    90%   49, 80-87, 104
+app/core/research.py                   16      2    88%   27, 32
+app/trials/fixture_store.py            78     12    85%   44-45, 54-68, 81-90, 125
+app/api/routes/trials.py              122     32    74%   55-56, 65, 72, 102-110, 126-141, 152-159, 181-182, 215-216, 238-239, 282-285
+app/api/routes/private.py              15      4    73%   29-38
+app/api/routes/utils.py                14      4    71%   20-26, 31
+app/trials/media.py                    56     24    57%   29, 32, 34, 52-53, 70, 73-82, 85-91, 94
+app/crud.py                            48     23    52%   21-31, 50-51, 54, 56-59, 64-68
+app/api/routes/research.py             50     24    52%   61, 76-81, 101-121, 138
+app/api/routes/login.py                53     26    51%   34, 36, 50, 58-72, 82-97, 109-121
+app/metrics/store.py                   21     13    38%   62, 73-101
+app/text_to_sql/pipeline.py           130     83    36%   145, 150-153, 158-165, 178, 195-200, 214-217, 237-240, 248-346, 357-364, 387-426
+app/text_to_sql/semantic.py           119     76    36%   61, 80-86, 96, 110-136, 140, 149, 156-196, 201-205
+app/api/routes/users.py               104     68    35%   42-51, 63, 70-73, 89-100, 110-121, 129, 137-143, 151-159, 169-179, 197-211, 221-232
+app/text_to_sql/executor.py            58     38    34%   42, 54-60, 67, 70-105, 116-133
+app/utils.py                           64     42    34%   26-31, 40-57, 61-67, 71-84, 90-102, 106-115, 119-125
+app/api/routes/inference.py            64     44    31%   26-30, 34-79, 84-87, 92-94
+app/api/routes/items.py                58     41    29%   21-45, 53-58, 68-72, 86-96, 106-113
+app/trials/assets.py                   97     69    29%   51-56, 61, 64-68, 71-72, 81-85, 88-94, 103-115, 122-136, 149-166, 175-181, 184-188, 191-196, 200-202, 206-209, 220-222
+app/trials/catalog.py                  59     42    29%   30-55, 70-71, 76, 79-94, 114-135, 138-142, 145-156
+app/metrics/compute.py                 51     39    24%   63, 67, 88-162
+app/api/routes/agent.py                58     45    22%   29-103
+app/text_to_sql/gateway.py            103     83    19%   26-35, 42-43, 48, 72-75, 84-87, 90-119, 143-148, 152-155, 158-203, 208-235
+app/text_to_sql/validator.py          140    113    19%   69, 83-98, 105-114, 118-135, 145-179, 186-223, 233-248, 257-260, 264-266, 271-283, 290-295, 299-301
+app/metrics/events.py                 177    158    11%   77-92, 103-125, 132-133, 145-172, 188-214, 219, 228-229, 246-359
+app/text_to_sql/views.py                5      5     0%   21-62
+app/text_to_sql/eval/questions.py      53     53     0%   42-959
+app/text_to_sql/eval/grading.py       261    261     0%   20-680
+app/text_to_sql/eval/__init__.py        2      2     0%   8-19
+app/initial_data.py                    14     14     0%   1-23
+-----------------------------------------------------------------
+TOTAL                                2644   1462    45%
+Wrote HTML report to htmlcov/index.html

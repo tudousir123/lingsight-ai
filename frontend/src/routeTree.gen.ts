@@ -11,20 +11,21 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
-import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
-import { Route as LayoutPrepareRouteImport } from './routes/_layout/prepare'
-import { Route as LayoutQaRouteImport } from './routes/_layout/qa'
-import { Route as LayoutReportsRouteImport } from './routes/_layout/reports'
-import { Route as LayoutResultsRouteImport } from './routes/_layout/results'
+import { Route as LayoutAnalysisRouteImport } from './routes/_layout/analysis'
+import { Route as LayoutAnnotationsRouteImport } from './routes/_layout/annotations'
+import { Route as LayoutInferenceRouteImport } from './routes/_layout/inference'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
-import { Route as LayoutExperimentsExperimentIdTrialsTrialIdRouteImport } from './routes/_layout/experiments.$experimentId.trials.$trialId'
-import { Route as LayoutExperimentsExperimentIdTrialsTrialIdIndexRouteImport } from './routes/_layout/experiments.$experimentId.trials.$trialId.index'
-import { Route as LayoutExperimentsExperimentIdTrialsTrialIdResultRouteImport } from './routes/_layout/experiments.$experimentId.trials.$trialId.result'
+import { Route as LayoutExperimentsIndexRouteImport } from './routes/_layout/experiments.index'
+import { Route as LayoutProjectResearchProjectIdRouteImport } from './routes/_layout/project-research.$projectId'
+import { Route as LayoutProjectsProjectIdRouteImport } from './routes/_layout/projects.$projectId'
+import { Route as LayoutTasksTaskIdRouteImport } from './routes/_layout/tasks.$taskId'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -33,6 +34,11 @@ const LayoutRoute = LayoutRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecoverPasswordRoute = RecoverPasswordRouteImport.update({
@@ -50,6 +56,11 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -60,29 +71,19 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutItemsRoute = LayoutItemsRouteImport.update({
-  id: '/items',
-  path: '/items',
+const LayoutAnalysisRoute = LayoutAnalysisRouteImport.update({
+  id: '/analysis',
+  path: '/analysis',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutPrepareRoute = LayoutPrepareRouteImport.update({
-  id: '/prepare',
-  path: '/prepare',
+const LayoutAnnotationsRoute = LayoutAnnotationsRouteImport.update({
+  id: '/annotations',
+  path: '/annotations',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutQaRoute = LayoutQaRouteImport.update({
-  id: '/qa',
-  path: '/qa',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutReportsRoute = LayoutReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutResultsRoute = LayoutResultsRouteImport.update({
-  id: '/results',
-  path: '/results',
+const LayoutInferenceRoute = LayoutInferenceRouteImport.update({
+  id: '/inference',
+  path: '/inference',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
@@ -90,137 +91,150 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutExperimentsExperimentIdTrialsTrialIdRoute =
-  LayoutExperimentsExperimentIdTrialsTrialIdRouteImport.update({
-    id: '/experiments/$experimentId/trials/$trialId',
-    path: '/experiments/$experimentId/trials/$trialId',
+const LayoutExperimentsIndexRoute = LayoutExperimentsIndexRouteImport.update({
+  id: '/experiments/',
+  path: '/experiments/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutProjectResearchProjectIdRoute =
+  LayoutProjectResearchProjectIdRouteImport.update({
+    id: '/project-research/$projectId',
+    path: '/project-research/$projectId',
     getParentRoute: () => LayoutRoute,
   } as any)
-const LayoutExperimentsExperimentIdTrialsTrialIdIndexRoute =
-  LayoutExperimentsExperimentIdTrialsTrialIdIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => LayoutExperimentsExperimentIdTrialsTrialIdRoute,
-  } as any)
-const LayoutExperimentsExperimentIdTrialsTrialIdResultRoute =
-  LayoutExperimentsExperimentIdTrialsTrialIdResultRouteImport.update({
-    id: '/result',
-    path: '/result',
-    getParentRoute: () => LayoutExperimentsExperimentIdTrialsTrialIdRoute,
-  } as any)
+const LayoutProjectsProjectIdRoute = LayoutProjectsProjectIdRouteImport.update({
+  id: '/projects/$projectId',
+  path: '/projects/$projectId',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutTasksTaskIdRoute = LayoutTasksTaskIdRouteImport.update({
+  id: '/tasks/$taskId',
+  path: '/tasks/$taskId',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/welcome': typeof WelcomeRoute
   '/admin': typeof LayoutAdminRoute
-  '/items': typeof LayoutItemsRoute
-  '/prepare': typeof LayoutPrepareRoute
-  '/qa': typeof LayoutQaRoute
-  '/reports': typeof LayoutReportsRoute
-  '/results': typeof LayoutResultsRoute
+  '/analysis': typeof LayoutAnalysisRoute
+  '/annotations': typeof LayoutAnnotationsRoute
+  '/inference': typeof LayoutInferenceRoute
   '/settings': typeof LayoutSettingsRoute
-  '/experiments/$experimentId/trials/$trialId': typeof LayoutExperimentsExperimentIdTrialsTrialIdRouteWithChildren
-  '/experiments/$experimentId/trials/$trialId/result': typeof LayoutExperimentsExperimentIdTrialsTrialIdResultRoute
-  '/experiments/$experimentId/trials/$trialId/': typeof LayoutExperimentsExperimentIdTrialsTrialIdIndexRoute
+  '/project-research/$projectId': typeof LayoutProjectResearchProjectIdRoute
+  '/projects/$projectId': typeof LayoutProjectsProjectIdRoute
+  '/tasks/$taskId': typeof LayoutTasksTaskIdRoute
+  '/experiments/': typeof LayoutExperimentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/welcome': typeof WelcomeRoute
   '/admin': typeof LayoutAdminRoute
-  '/items': typeof LayoutItemsRoute
-  '/prepare': typeof LayoutPrepareRoute
-  '/qa': typeof LayoutQaRoute
-  '/reports': typeof LayoutReportsRoute
-  '/results': typeof LayoutResultsRoute
+  '/analysis': typeof LayoutAnalysisRoute
+  '/annotations': typeof LayoutAnnotationsRoute
+  '/inference': typeof LayoutInferenceRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
-  '/experiments/$experimentId/trials/$trialId/result': typeof LayoutExperimentsExperimentIdTrialsTrialIdResultRoute
-  '/experiments/$experimentId/trials/$trialId': typeof LayoutExperimentsExperimentIdTrialsTrialIdIndexRoute
+  '/project-research/$projectId': typeof LayoutProjectResearchProjectIdRoute
+  '/projects/$projectId': typeof LayoutProjectsProjectIdRoute
+  '/tasks/$taskId': typeof LayoutTasksTaskIdRoute
+  '/experiments': typeof LayoutExperimentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/welcome': typeof WelcomeRoute
   '/_layout/admin': typeof LayoutAdminRoute
-  '/_layout/items': typeof LayoutItemsRoute
-  '/_layout/prepare': typeof LayoutPrepareRoute
-  '/_layout/qa': typeof LayoutQaRoute
-  '/_layout/reports': typeof LayoutReportsRoute
-  '/_layout/results': typeof LayoutResultsRoute
+  '/_layout/analysis': typeof LayoutAnalysisRoute
+  '/_layout/annotations': typeof LayoutAnnotationsRoute
+  '/_layout/inference': typeof LayoutInferenceRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
-  '/_layout/experiments/$experimentId/trials/$trialId': typeof LayoutExperimentsExperimentIdTrialsTrialIdRouteWithChildren
-  '/_layout/experiments/$experimentId/trials/$trialId/result': typeof LayoutExperimentsExperimentIdTrialsTrialIdResultRoute
-  '/_layout/experiments/$experimentId/trials/$trialId/': typeof LayoutExperimentsExperimentIdTrialsTrialIdIndexRoute
+  '/_layout/project-research/$projectId': typeof LayoutProjectResearchProjectIdRoute
+  '/_layout/projects/$projectId': typeof LayoutProjectsProjectIdRoute
+  '/_layout/tasks/$taskId': typeof LayoutTasksTaskIdRoute
+  '/_layout/experiments/': typeof LayoutExperimentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
+    | '/onboarding'
     | '/recover-password'
     | '/reset-password'
     | '/signup'
+    | '/welcome'
     | '/admin'
-    | '/items'
-    | '/prepare'
-    | '/qa'
-    | '/reports'
-    | '/results'
+    | '/analysis'
+    | '/annotations'
+    | '/inference'
     | '/settings'
-    | '/experiments/$experimentId/trials/$trialId'
-    | '/experiments/$experimentId/trials/$trialId/result'
-    | '/experiments/$experimentId/trials/$trialId/'
+    | '/project-research/$projectId'
+    | '/projects/$projectId'
+    | '/tasks/$taskId'
+    | '/experiments/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/onboarding'
     | '/recover-password'
     | '/reset-password'
     | '/signup'
+    | '/welcome'
     | '/admin'
-    | '/items'
-    | '/prepare'
-    | '/qa'
-    | '/reports'
-    | '/results'
+    | '/analysis'
+    | '/annotations'
+    | '/inference'
     | '/settings'
     | '/'
-    | '/experiments/$experimentId/trials/$trialId/result'
-    | '/experiments/$experimentId/trials/$trialId'
+    | '/project-research/$projectId'
+    | '/projects/$projectId'
+    | '/tasks/$taskId'
+    | '/experiments'
   id:
     | '__root__'
     | '/_layout'
     | '/login'
+    | '/onboarding'
     | '/recover-password'
     | '/reset-password'
     | '/signup'
+    | '/welcome'
     | '/_layout/admin'
-    | '/_layout/items'
-    | '/_layout/prepare'
-    | '/_layout/qa'
-    | '/_layout/reports'
-    | '/_layout/results'
+    | '/_layout/analysis'
+    | '/_layout/annotations'
+    | '/_layout/inference'
     | '/_layout/settings'
     | '/_layout/'
-    | '/_layout/experiments/$experimentId/trials/$trialId'
-    | '/_layout/experiments/$experimentId/trials/$trialId/result'
-    | '/_layout/experiments/$experimentId/trials/$trialId/'
+    | '/_layout/project-research/$projectId'
+    | '/_layout/projects/$projectId'
+    | '/_layout/tasks/$taskId'
+    | '/_layout/experiments/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
   LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
   RecoverPasswordRoute: typeof RecoverPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  WelcomeRoute: typeof WelcomeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -237,6 +251,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recover-password': {
@@ -260,6 +281,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_layout/': {
       id: '/_layout/'
       path: '/'
@@ -274,39 +302,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/items': {
-      id: '/_layout/items'
-      path: '/items'
-      fullPath: '/items'
-      preLoaderRoute: typeof LayoutItemsRouteImport
+    '/_layout/analysis': {
+      id: '/_layout/analysis'
+      path: '/analysis'
+      fullPath: '/analysis'
+      preLoaderRoute: typeof LayoutAnalysisRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/prepare': {
-      id: '/_layout/prepare'
-      path: '/prepare'
-      fullPath: '/prepare'
-      preLoaderRoute: typeof LayoutPrepareRouteImport
+    '/_layout/annotations': {
+      id: '/_layout/annotations'
+      path: '/annotations'
+      fullPath: '/annotations'
+      preLoaderRoute: typeof LayoutAnnotationsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/qa': {
-      id: '/_layout/qa'
-      path: '/qa'
-      fullPath: '/qa'
-      preLoaderRoute: typeof LayoutQaRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/reports': {
-      id: '/_layout/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof LayoutReportsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/results': {
-      id: '/_layout/results'
-      path: '/results'
-      fullPath: '/results'
-      preLoaderRoute: typeof LayoutResultsRouteImport
+    '/_layout/inference': {
+      id: '/_layout/inference'
+      path: '/inference'
+      fullPath: '/inference'
+      preLoaderRoute: typeof LayoutInferenceRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/settings': {
@@ -316,71 +330,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSettingsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/experiments/$experimentId/trials/$trialId': {
-      id: '/_layout/experiments/$experimentId/trials/$trialId'
-      path: '/experiments/$experimentId/trials/$trialId'
-      fullPath: '/experiments/$experimentId/trials/$trialId'
-      preLoaderRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdRouteImport
+    '/_layout/experiments/': {
+      id: '/_layout/experiments/'
+      path: '/experiments'
+      fullPath: '/experiments/'
+      preLoaderRoute: typeof LayoutExperimentsIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/experiments/$experimentId/trials/$trialId/': {
-      id: '/_layout/experiments/$experimentId/trials/$trialId/'
-      path: '/'
-      fullPath: '/experiments/$experimentId/trials/$trialId/'
-      preLoaderRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdIndexRouteImport
-      parentRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdRoute
+    '/_layout/project-research/$projectId': {
+      id: '/_layout/project-research/$projectId'
+      path: '/project-research/$projectId'
+      fullPath: '/project-research/$projectId'
+      preLoaderRoute: typeof LayoutProjectResearchProjectIdRouteImport
+      parentRoute: typeof LayoutRoute
     }
-    '/_layout/experiments/$experimentId/trials/$trialId/result': {
-      id: '/_layout/experiments/$experimentId/trials/$trialId/result'
-      path: '/result'
-      fullPath: '/experiments/$experimentId/trials/$trialId/result'
-      preLoaderRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdResultRouteImport
-      parentRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdRoute
+    '/_layout/projects/$projectId': {
+      id: '/_layout/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof LayoutProjectsProjectIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/tasks/$taskId': {
+      id: '/_layout/tasks/$taskId'
+      path: '/tasks/$taskId'
+      fullPath: '/tasks/$taskId'
+      preLoaderRoute: typeof LayoutTasksTaskIdRouteImport
+      parentRoute: typeof LayoutRoute
     }
   }
 }
-
-interface LayoutExperimentsExperimentIdTrialsTrialIdRouteChildren {
-  LayoutExperimentsExperimentIdTrialsTrialIdResultRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdResultRoute
-  LayoutExperimentsExperimentIdTrialsTrialIdIndexRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdIndexRoute
-}
-
-const LayoutExperimentsExperimentIdTrialsTrialIdRouteChildren: LayoutExperimentsExperimentIdTrialsTrialIdRouteChildren =
-  {
-    LayoutExperimentsExperimentIdTrialsTrialIdResultRoute:
-      LayoutExperimentsExperimentIdTrialsTrialIdResultRoute,
-    LayoutExperimentsExperimentIdTrialsTrialIdIndexRoute:
-      LayoutExperimentsExperimentIdTrialsTrialIdIndexRoute,
-  }
-
-const LayoutExperimentsExperimentIdTrialsTrialIdRouteWithChildren =
-  LayoutExperimentsExperimentIdTrialsTrialIdRoute._addFileChildren(
-    LayoutExperimentsExperimentIdTrialsTrialIdRouteChildren,
-  )
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
-  LayoutItemsRoute: typeof LayoutItemsRoute
-  LayoutPrepareRoute: typeof LayoutPrepareRoute
-  LayoutQaRoute: typeof LayoutQaRoute
-  LayoutReportsRoute: typeof LayoutReportsRoute
-  LayoutResultsRoute: typeof LayoutResultsRoute
+  LayoutAnalysisRoute: typeof LayoutAnalysisRoute
+  LayoutAnnotationsRoute: typeof LayoutAnnotationsRoute
+  LayoutInferenceRoute: typeof LayoutInferenceRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
-  LayoutExperimentsExperimentIdTrialsTrialIdRoute: typeof LayoutExperimentsExperimentIdTrialsTrialIdRouteWithChildren
+  LayoutProjectResearchProjectIdRoute: typeof LayoutProjectResearchProjectIdRoute
+  LayoutProjectsProjectIdRoute: typeof LayoutProjectsProjectIdRoute
+  LayoutTasksTaskIdRoute: typeof LayoutTasksTaskIdRoute
+  LayoutExperimentsIndexRoute: typeof LayoutExperimentsIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
-  LayoutItemsRoute: LayoutItemsRoute,
-  LayoutPrepareRoute: LayoutPrepareRoute,
-  LayoutQaRoute: LayoutQaRoute,
-  LayoutReportsRoute: LayoutReportsRoute,
-  LayoutResultsRoute: LayoutResultsRoute,
+  LayoutAnalysisRoute: LayoutAnalysisRoute,
+  LayoutAnnotationsRoute: LayoutAnnotationsRoute,
+  LayoutInferenceRoute: LayoutInferenceRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
-  LayoutExperimentsExperimentIdTrialsTrialIdRoute:
-    LayoutExperimentsExperimentIdTrialsTrialIdRouteWithChildren,
+  LayoutProjectResearchProjectIdRoute: LayoutProjectResearchProjectIdRoute,
+  LayoutProjectsProjectIdRoute: LayoutProjectsProjectIdRoute,
+  LayoutTasksTaskIdRoute: LayoutTasksTaskIdRoute,
+  LayoutExperimentsIndexRoute: LayoutExperimentsIndexRoute,
 }
 
 const LayoutRouteWithChildren =
@@ -389,9 +393,11 @@ const LayoutRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
   LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
   RecoverPasswordRoute: RecoverPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

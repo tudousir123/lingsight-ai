@@ -1,0 +1,26 @@
+{
+  "backend": {
+    "passed": 247,
+    "skipped": 7,
+    "coverage_percent": 92
+  },
+  "migration": {
+    "isolated_mysql": true,
+    "started_at_revision": "b7d8e9f0a1c2",
+    "finished_at_revision": "d9f0a1b2c3e4",
+    "old_references_preserved": 2,
+    "unicode_labels_preserved": true,
+    "public_api_long_reference_add_remove": true,
+    "production_accessed": false
+  },
+  "tdd_red": {
+    "long_reference": "422 at 128 limit",
+    "project_folder": "404 before new PUT",
+    "sources_gateway": "404 before allowlist addition"
+  },
+  "tdd_green": {
+    "projects_and_publishing": 59,
+    "gateway": 16
+  },
+  "real_project_modified": false
+}

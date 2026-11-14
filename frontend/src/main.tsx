@@ -12,11 +12,12 @@ import { client } from "./client/client.gen"
 import { ThemeProvider } from "./components/theme-provider"
 import { Toaster } from "./components/ui/sonner"
 import "./index.css"
+import { getToken, TOKEN_STORAGE_KEY } from "./lib/credentials"
 import { routeTree } from "./routeTree.gen"
 
 client.setConfig({
   baseURL: import.meta.env.VITE_API_URL ?? "",
-  auth: () => localStorage.getItem("access_token") || "",
+  auth: () => getToken() ?? "",
 })
 
 const handleApiError = (error: Error) => {
@@ -26,7 +27,7 @@ const handleApiError = (error: Error) => {
       (error.response?.status === 403 &&
         error.response?.data?.detail === "Could not validate credentials"))
   ) {
-    localStorage.removeItem("access_token")
+    localStorage.removeItem(TOKEN_STORAGE_KEY)
     window.location.href = "/login"
   }
 }
@@ -39,6 +40,21 @@ const queryClient = new QueryClient({
   }),
 })
 
+// Clear landing-page anchors before the router reads the initial location.
+// A refresh should open the hero; explicit links to sections still work.
+const navigation = performance.getEntriesByType("navigation")[0] as
+  | PerformanceNavigationTiming
+  | undefined
+if (
+  navigation?.type === "reload" &&
+  window.location.pathname === "/welcome" &&
+  window.location.hash
+) {
+  const landingUrl = new URL(window.location.href)
+  landingUrl.hash = ""
+  window.history.replaceState(window.history.state, "", landingUrl)
+}
+
 const router = createRouter({ routeTree })
 declare module "@tanstack/react-router" {
   interface Register {
@@ -48,7 +64,7 @@ declare module "@tanstack/react-router" {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
         <Toaster richColors closeButton />

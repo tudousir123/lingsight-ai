@@ -1,0 +1,90 @@
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> da969c656440, initial schema for mysql
+INFO  [alembic.runtime.migration] Running upgrade da969c656440 -> b19a1e7c90a1, Store per-user experiment access for the trial catalog.
+INFO  [alembic.runtime.migration] Running upgrade b19a1e7c90a1 -> c3f8a1d204b7, Store human preparation reviews per trial (ticket #21).
+INFO  [alembic.runtime.migration] Running upgrade c3f8a1d204b7 -> d4e5f6a7b8c9, Keep preparation reviews for each version of trial materials.
+INFO  [alembic.runtime.migration] Running upgrade d4e5f6a7b8c9 -> a1b2c3d4e5f6, Project entity: user-owned research organization unit (ticket #42).
+INFO  [alembic.runtime.migration] Running upgrade a1b2c3d4e5f6 -> b7d8e9f0a1c2, Published inference results: v3-form summary + per-frame rows (ticket #43).
+============================= test session starts ==============================
+platform linux -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /home/x/Documents/Codex/2026-11-11/wo-de/work/inference-publish/backend
+configfile: pyproject.toml
+plugins: anyio-4.14.2
+collected 218 items
+
+tests/api/routes/test_agent_gateway.py ............                      [  5%]
+tests/api/routes/test_gateway_single_source.py ...                       [  6%]
+tests/api/routes/test_inference_gateway.py ...............               [ 13%]
+tests/api/routes/test_login.py .........                                 [ 17%]
+tests/api/routes/test_private.py .                                       [ 18%]
+tests/api/routes/test_projects.py .........                              [ 22%]
+tests/api/routes/test_publish.py ....................................... [ 40%]
+                                                                         [ 40%]
+tests/api/routes/test_trials.py ....                                     [ 42%]
+tests/api/routes/test_trials_flow.py .....................               [ 51%]
+tests/api/routes/test_users.py ...........................               [ 64%]
+tests/crud/test_user.py ..........                                       [ 68%]
+tests/metrics/test_compute.py .............                              [ 74%]
+tests/metrics/test_events.py ...................                         [ 83%]
+tests/metrics/test_store.py .....                                        [ 85%]
+tests/scripts/test_export_frontend_routes.py .                           [ 86%]
+tests/test_database_safety.py .........                                  [ 90%]
+tests/trials/test_assets_research_live.py ssssss                         [ 93%]
+tests/trials/test_derive.py ...........                                  [ 98%]
+tests/trials/test_media.py ....                                          [100%]
+
+=============================== warnings summary ===============================
+../.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /home/x/Documents/Codex/2026-11-11/wo-de/work/inference-publish/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================== 212 passed, 6 skipped, 1 warning in 35.48s ==================
+Name                          Stmts   Miss  Cover   Missing
+-----------------------------------------------------------
+app/trials/settings.py           13      0   100%
+app/trials/schemas.py            81      0   100%
+app/trials/__init__.py            0      0   100%
+app/metrics/definitions.py       32      0   100%
+app/metrics/compute.py           51      0   100%
+app/metrics/__init__.py           5      0   100%
+app/core/security.py             18      0   100%
+app/core/research.py             16      0   100%
+app/core/db.py                   10      0   100%
+app/core/config.py                3      0   100%
+app/core/__init__.py              0      0   100%
+app/api/routes/users.py         102      0   100%
+app/api/routes/results.py        34      0   100%
+app/api/routes/projects.py       56      0   100%
+app/api/routes/private.py        15      0   100%
+app/api/routes/inference.py      22      0   100%
+app/api/routes/agent.py          15      0   100%
+app/api/routes/__init__.py        0      0   100%
+app/api/main.py                  14      0   100%
+app/api/__init__.py               0      0   100%
+app/__init__.py                   0      0   100%
+app/api/gateway.py               98      1    99%   80
+app/models.py                   188      2    99%   37, 44
+app/metrics/events.py           177      5    97%   118, 148, 161, 271, 304
+app/crud.py                     119      4    97%   189-193
+app/api/deps.py                  55      2    96%   46, 48
+app/trials/derive.py             51      2    96%   32, 106
+app/publishing.py               311     16    95%   118-119, 152, 166, 169, 199-200, 545-549, 585, 627, 635, 655-656
+app/inference_client.py          94      5    95%   86, 102, 128, 148, 169
+app/trials/service.py           109      6    94%   305, 307, 309, 311, 355, 357
+app/main.py                      17      1    94%   19
+app/core/settings.py             58      6    90%   49, 80-87, 104
+app/utils.py                     64      7    89%   50-51, 55, 61-67
+app/trials/media.py              56      8    86%   29, 32, 34, 52-53, 75, 87, 90
+app/metrics/store.py             21      3    86%   98-100
+app/trials/fixture_store.py      78     12    85%   44-45, 54-68, 81-90, 125
+app/api/routes/trials.py        113     18    84%   53-54, 63, 70, 138-139, 153-154, 179-180, 213-214, 236-237, 260-263
+app/api/routes/login.py          53      9    83%   36, 88, 90, 109-121
+app/api/routes/utils.py          14      4    71%   20-26, 31
+app/trials/catalog.py            59     22    63%   44-55, 80, 84-87, 94, 114-135
+app/trials/assets.py             97     52    46%   81-85, 88-94, 103-115, 122-136, 149-166, 175-181, 184-188, 196, 200-202, 206-209, 220-222
+app/initial_data.py              14     14     0%   1-23
+-----------------------------------------------------------
+TOTAL                          2333    199    91%
+Wrote HTML report to htmlcov/index.html

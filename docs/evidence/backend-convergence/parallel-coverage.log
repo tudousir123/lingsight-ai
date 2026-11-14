@@ -1,0 +1,4 @@
+runner a: 9 passed, 1 warning in 0.64s
+runner a: TOTAL                                2577   2397     7%
+runner b: 9 passed, 1 warning in 0.66s
+runner b: TOTAL                                2577   2397     7%

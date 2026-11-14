@@ -1,14 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { ExperimentPage } from "@/features/mwm-demo/pages"
-import { TrialDirectoryPage } from "@/features/trials/directory"
-
-function HomePage() {
-  const isDemo =
-    import.meta.env.DEV && import.meta.env.VITE_DEMO_PREVIEW === "true"
-  return isDemo ? <ExperimentPage /> : <TrialDirectoryPage />
-}
-
+import { createFileRoute, redirect } from "@tanstack/react-router"
+import { AgentWorkspace } from "@/features/agent/Workspace"
+import { onboardingSeen } from "@/features/research/entry"
+import { isLoggedIn } from "@/hooks/useAuth"
 export const Route = createFileRoute("/_layout/")({
-  component: HomePage,
-  head: () => ({ meta: [{ title: "实验与视频管理 - LingSight AI" }] }),
+  beforeLoad: () => {
+    if (isLoggedIn() && !onboardingSeen()) throw redirect({ to: "/onboarding" })
+  },
+  component: AgentWorkspace,
+  head: () => ({ meta: [{ title: "科研工作区 - 灵视科技" }] }),
 })

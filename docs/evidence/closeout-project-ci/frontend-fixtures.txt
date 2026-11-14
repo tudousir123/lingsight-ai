@@ -1,0 +1,49 @@
+
+Running 37 tests using 2 workers
+
+(node:406942) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:406941) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/37] [chromium] › tests/agent-workspace.spec.ts:108:1 › 引导完成携带问题和范围但不自动提交
+[2/37] [chromium] › tests/agent-workspace.spec.ts:86:1 › 默认进入对话，侧栏三个工具入口
+[3/37] [chromium] › tests/agent-workspace.spec.ts:148:1 › 创建任务和刷新重放，交付物安全预览
+[4/37] [chromium] › tests/agent-workspace.spec.ts:175:1 › 提交失败保留输入
+[5/37] [chromium] › tests/agent-workspace.spec.ts:191:1 › 待确认口径通过答复入口提交
+[6/37] [chromium] › tests/agent-workspace.spec.ts:221:1 › 窄屏输入框可见，侧栏可展开
+[7/37] [chromium] › tests/agent-workspace.spec.ts:234:1 › 报告编辑失败保留修改，重试另存新版本
+[8/37] [chromium] › tests/agent-workspace.spec.ts:270:1 › 侧栏品牌菜单、真实任务状态与选中状态
+[9/37] [chromium] › tests/agent-workspace.spec.ts:288:1 › 搜索研究筛选完整任务列表，关闭后恢复最近任务
+[10/37] [chromium] › tests/agent-workspace.spec.ts:319:1 › 折叠侧栏仍可展开搜索，手机选择任务后关闭抽屉
+[11/37] [chromium] › tests/agent-workspace.spec.ts:345:1 › 侧栏与首页使用中文，示例问题只填入草稿
+[12/37] [chromium] › tests/agent-workspace.spec.ts:388:1 › 项目可新建、归组任务、刷新保留并清空，不写 Agent 服务
+[13/37] [chromium] › tests/agent-workspace.spec.ts:436:1 › 项目可改名与删除，删除后任务保留
+[14/37] [chromium] › tests/agent-workspace.spec.ts:467:1 › 新建项目失败保留名称并允许重试
+[15/37] [chromium] › tests/agent-workspace.spec.ts:497:1 › 项目接口失败不阻塞科研任务
+[16/37] [chromium] › tests/agent-workspace.spec.ts:516:1 › localStorage 旧项目一次性迁移导入且重放幂等
+[17/37] [chromium] › tests/inference-workspace.spec.ts:25:1 › 预标注编辑在轮询后保留，并作为独立确认提交
+[18/37] [chromium] › tests/inference-workspace.spec.ts:88:1 › 视频目录浏览可归入项目并从项目页移出
+[19/37] [chromium] › tests/landing-navigation.spec.ts:5:1 › refreshing the model section returns to the homepage hero
+[20/37] [chromium] › tests/landing-navigation.spec.ts:26:1 › refreshing after manual scrolling returns to the homepage hero
+[21/37] [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile
+[22/37] [chromium] › tests/onboarding.spec.ts:26:1 › the final desktop screen offers examples and optional scope
+[23/37] [chromium] › tests/onboarding.spec.ts:61:3 › Explore trajectories & headings: saves and restores the question and optional scope
+[24/37] [chromium] › tests/onboarding.spec.ts:61:3 › Compare training days: saves and restores the question and optional scope
+[25/37] [chromium] › tests/onboarding.spec.ts:61:3 › Draft a research report: saves and restores the question and optional scope
+[26/37] [chromium] › tests/onboarding.spec.ts:86:1 › a custom question needs no example or scope
+[27/37] [chromium] › tests/onboarding.spec.ts:104:1 › switching examples keeps the scope and does not submit a task
+[28/37] [chromium] › tests/onboarding.spec.ts:135:1 › empty input and blocked storage preserve the recovery download
+[29/37] [chromium] › tests/onboarding.spec.ts:174:1 › keyboard selection works with invalid saved data
+[30/37] [chromium] › tests/onboarding.spec.ts:192:1 › entering without a question marks onboarding seen without saving a brief
+[31/37] [chromium] › tests/onboarding.spec.ts:212:1 › a long question scrolls inside its editor
+[32/37] [chromium] › tests/onboarding.spec.ts:230:1 › the guide types its introduction and shows completed text when revisiting
+[33/37] [chromium] › tests/onboarding.spec.ts:250:1 › the mouse wheel advances one scene at a time and can go back
+[34/37] [chromium] › tests/onboarding.spec.ts:274:1 › every introduction scene is English and fits a narrow viewport
+[35/37] [chromium] › tests/onboarding.spec.ts:309:1 › typing leaves time to read and reduced motion reveals the full text immediately
+[36/37] [chromium] › tests/onboarding.spec.ts:332:3 › characters fade in without shifting while typing at 1440px
+[37/37] [chromium] › tests/onboarding.spec.ts:332:3 › characters fade in without shifting while typing at 390px
+  37 passed (46.5s)

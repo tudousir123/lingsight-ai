@@ -1,0 +1,36 @@
+
+Running 1 test using 1 worker
+
+(node:1214996) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] [chromium] › tests/project-video-folder.spec.ts:414:1 › 后台刷新项目文件夹后，视频列表跟随已保存的新目录
+  1) [chromium] › tests/project-video-folder.spec.ts:414:1 › 后台刷新项目文件夹后，视频列表跟随已保存的新目录 ──────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('checkbox', { name: '选择视频 新视频.mp4' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('checkbox', { name: '选择视频 新视频.mp4' }) with timeout 5000ms
+      - waiting for getByRole('checkbox', { name: '选择视频 新视频.mp4' })
+
+
+      428 |   await page.evaluate(() => window.dispatchEvent(new Event("visibilitychange")))
+      429 |   await expect(page.getByText("NAS 视频 / 十一月", { exact: true })).toBeVisible()
+    > 430 |   await expect(page.getByRole("checkbox", { name: "选择视频 新视频.mp4" })).toBeVisible()
+          |                                                                      ^
+      431 |   await expect(page.getByRole("checkbox", { name: "选择视频 旧视频.mp4" })).toHaveCount(0)
+      432 | })
+      433 |
+        at /home/x/Documents/Codex/2026-11-11/wo-de/work/video-sources-platform/frontend/tests/project-video-folder.spec.ts:430:70
+
+    Error Context: test-results/project-video-folder-后台刷新项目文件夹后，视频列表跟随已保存的新目录-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › tests/project-video-folder.spec.ts:414:1 › 后台刷新项目文件夹后，视频列表跟随已保存的新目录 ───────────────

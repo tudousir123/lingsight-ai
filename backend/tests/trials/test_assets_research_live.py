@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from app.text_to_sql.settings import get_research_settings
+from app.core.research import get_research_database_settings
 from app.metrics.definitions import ALGO_VERSION, ALGO_VERSION_EVENTS
 from app.trials.assets import ResearchTrialAssets
 from app.trials.catalog import CatalogUnavailable, TrialCatalog
@@ -31,7 +31,7 @@ SAMPLE_VIDEO_ID = "0809第一象限-A2-2-4"
 
 @pytest.fixture(scope="module")
 def catalog() -> TrialCatalog:
-    settings = get_research_settings()
+    settings = get_research_database_settings()
     try:
         TrialCatalog(settings).list_experiments(None)
     except CatalogUnavailable:
@@ -41,7 +41,7 @@ def catalog() -> TrialCatalog:
 
 @pytest.fixture(scope="module")
 def assets(catalog: TrialCatalog) -> ResearchTrialAssets:
-    return ResearchTrialAssets(get_research_settings(), get_trials_settings())
+    return ResearchTrialAssets(get_research_database_settings(), get_trials_settings())
 
 
 @pytest.fixture(scope="module")

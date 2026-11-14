@@ -30,7 +30,7 @@ const otherTrial = {
   trial_no: "1",
 }
 
-test("researcher selects a trial and reloads its stable address", async ({
+test("researcher filters the retained directory and reloads it", async ({
   page,
 }) => {
   await page.route("**/api/v1/experiments", (route) =>
@@ -39,47 +39,18 @@ test("researcher selects a trial and reloads its stable address", async ({
   await page.route("**/api/v1/experiments/fixture-e1/trials?*", (route) =>
     route.fulfill({ json: { data: [trial, otherTrial], count: 2 } }),
   )
-  await page.route("**/api/v1/experiments/fixture-e1/trials/trial-a", (route) =>
-    route.fulfill({ json: trial }),
-  )
-  await page.route(
-    "**/api/v1/experiments/fixture-e1/trials/trial-a/preparation",
-    (route) =>
-      route.fulfill({
-        json: {
-          trial,
-          video: { kind: "source", status: "missing", reason: "mock" },
-          geometry: {
-            pool: { status: "missing" },
-            markers: { status: "missing" },
-            platform: { status: "missing" },
-          },
-          tracking: { status: "missing", reason: "mock" },
-          source_version: "mock0000000000000",
-        },
-      }),
-  )
-
-  await page.goto("/")
-  await expect(
-    page.getByRole("heading", { name: "实验与视频管理" }),
-  ).toBeVisible()
+  await page.goto("/annotations")
   await expect(page.getByText("sample-a.mp4")).toBeVisible()
   await page.getByRole("textbox", { name: "搜索试次" }).fill("A2 2")
   await expect(page.getByText("sample-b.mp4")).toHaveCount(0)
-  await page
-    .getByRole("link", { name: "打开分析准备 sample-a.mp4" })
-    .click()
-
-  await expect(page).toHaveURL(/\/experiments\/fixture-e1\/trials\/trial-a$/)
+  // ADR-0014 retired trial preparation; the retained directory exposes IDs.
   await expect(
-    page.getByRole("heading", { name: "分析准备 · sample-a.mp4" }),
-  ).toBeVisible()
-  await expect(page.getByText("A2 · 鼠 2")).toBeVisible()
+    page.getByTitle("试次详情页已随旧分析闭环下线：sample-a.mp4"),
+  ).toHaveText("trial-a")
+  await expect(page.getByRole("link", { name: /打开分析准备/ })).toHaveCount(0)
   await page.reload()
-  await expect(
-    page.getByRole("heading", { name: "分析准备 · sample-a.mp4" }),
-  ).toBeVisible()
+  await expect(page.getByText("sample-a.mp4")).toBeVisible()
+  await expect(page.getByText("sample-b.mp4")).toBeVisible()
 })
 
 test("empty experiment list and retryable load failure are distinct", async ({
@@ -97,24 +68,25 @@ test("empty experiment list and retryable load failure are distinct", async ({
     return route.fulfill({ json: { data: [] } })
   })
 
-  await page.goto("/")
+  await page.goto("/annotations")
   await expect(page.getByText("实验列表加载失败")).toBeVisible()
   await page.getByRole("button", { name: "重试" }).click()
   await expect(page.getByText("暂无可访问的实验")).toBeVisible()
 })
 
-test("a trial in an ungranted experiment stays forbidden", async ({ page }) => {
-  await page.route(
-    "**/api/v1/experiments/fixture-e2/trials/trial-c/preparation",
-    (route) =>
-      route.fulfill({
-        status: 403,
-        json: { detail: "Experiment access denied" },
-      }),
+test("an ungranted experiment never reveals its trials", async ({ page }) => {
+  await page.route("**/api/v1/experiments", (route) =>
+    route.fulfill({ json: { data: [experiment] } }),
   )
-  await page.goto("/experiments/fixture-e2/trials/trial-c")
-  await expect(page.getByText("无权访问此实验")).toBeVisible()
-  await expect(page).toHaveURL(/\/experiments\/fixture-e2\/trials\/trial-c$/)
+  await page.route("**/api/v1/experiments/fixture-e1/trials?*", (route) =>
+    route.fulfill({
+      status: 403,
+      json: { detail: "Experiment access denied" },
+    }),
+  )
+  await page.goto("/annotations")
+  await expect(page.getByText("试次列表加载失败")).toBeVisible()
+  await expect(page.getByText("sample-a.mp4")).toHaveCount(0)
 })
 
 test("an experiment with no matching trials has an empty state", async ({
@@ -126,7 +98,7 @@ test("an experiment with no matching trials has an empty state", async ({
   await page.route("**/api/v1/experiments/fixture-e1/trials?*", (route) =>
     route.fulfill({ json: { data: [], count: 0 } }),
   )
-  await page.goto("/")
+  await page.goto("/annotations")
   await expect(page.getByText("该实验没有符合条件的试次。")).toBeVisible()
 })
 
@@ -144,7 +116,7 @@ test("researcher filters by training-day number", async ({ page }) => {
     })
   })
 
-  await page.goto("/")
+  await page.goto("/annotations")
   await page.getByRole("combobox", { name: "训练日" }).click()
   await page.getByRole("option", { name: "第 1 训练日" }).click()
   await expect(page.getByText("sample-a.mp4")).toBeVisible()

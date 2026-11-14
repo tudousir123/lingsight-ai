@@ -1,0 +1,5 @@
+{"login":"passed","gateway":"passed","existingTaskCount":3}
+{"createFromBrowser":"passed","taskId":"a65c3d29-251d-4101-8cef-36b8ef6000e0"}
+{"runStatus":"waiting_for_input","clarifications":1}
+Browser cancellation verified
+{"pageErrors":[],"reload":"passed"}

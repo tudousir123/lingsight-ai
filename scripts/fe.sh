@@ -9,8 +9,10 @@
 #   scripts/fe.sh regen-routes        # 只再生成 routeTree.gen.ts（加新路由后 tsc
 #                                     #               报未知路径时用）
 #   scripts/fe.sh check <files...>    # biome check（只查指定文件，等价 prek 钩子
-#                                     #               对改动文件的行为；--write 修复）
-#   scripts/fe.sh fix <files...>      # biome check --write（定向格式化/修复）
+#                                     # 对改动文件的行为；--write 修复）。
+#                                     # 路径相对 frontend/（如 src/features/x.ts）
+#   scripts/fe.sh fix <files...>      # biome check --write（定向格式化/修复）。
+#                                     # 路径同样相对 frontend/
 #
 # 注意：本机没有 bun.lock 之外的工具链时，不要用 `npm run lint`（全仓
 # --write --unsafe，见 docs/agents/local-e2e.md §3）。
@@ -30,6 +32,17 @@ run_in_bun() {
     oven/bun:1 sh -c "$*"
 }
 
+# biome 在容器内以 frontend/ 为工作目录跑，文件参数必须是 frontend 相对路径；
+# 仓库根相对路径会被静默当成不匹配文件（"Checked 0 files"），先挡掉（retro-4）。
+require_frontend_files() {
+  for f in "$@"; do
+    if [ ! -e "frontend/$f" ]; then
+      echo "fe.sh: '$f' 在 frontend/ 下不存在。文件参数须相对 frontend/（如 src/features/x.ts），当前传的是仓库根相对路径？" >&2
+      exit 2
+    fi
+  done
+}
+
 case "$cmd" in
   build)
     run_in_bun "bun install >/dev/null 2>&1 && bun run build"
@@ -41,10 +54,12 @@ case "$cmd" in
     ;;
   check)
     [ "$#" -ge 1 ] || { echo "usage: scripts/fe.sh check <files...>" >&2; exit 2; }
+    require_frontend_files "$@"
     run_in_bun "bun install >/dev/null 2>&1 && bunx biome check --no-errors-on-unmatched $*"
     ;;
   fix)
     [ "$#" -ge 1 ] || { echo "usage: scripts/fe.sh fix <files...>" >&2; exit 2; }
+    require_frontend_files "$@"
     run_in_bun "bun install >/dev/null 2>&1 && bunx biome check --write --no-errors-on-unmatched $*"
     ;;
   *)

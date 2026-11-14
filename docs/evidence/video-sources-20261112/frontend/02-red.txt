@@ -1,0 +1,31 @@
+
+Running 1 test using 1 worker
+
+(node:1180773) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] [chromium] › tests/project-video-folder.spec.ts:54:1 › 批量归入所选视频，部分失败后保留失败项供重试，长视频标识完整保存
+  1) [chromium] › tests/project-video-folder.spec.ts:54:1 › 批量归入所选视频，部分失败后保留失败项供重试，长视频标识完整保存 ───────
+
+    Test timeout of 10000ms exceeded.
+
+    Error: locator.click: Test timeout of 10000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '将所选视频归入项目' })
+
+
+      72 |   await page.getByRole("checkbox", { name: "选择视频 鼠1.mp4" }).check()
+      73 |   await page.getByRole("checkbox", { name: "选择视频 鼠2.mp4" }).check()
+    > 74 |   await page.getByRole("button", { name: "将所选视频归入项目" }).click()
+         |                                                         ^
+      75 |   await expect(page.getByRole("alert")).toContainText("1 个视频未归入")
+      76 |   await expect(page.getByRole("checkbox", { name: "选择视频 鼠1.mp4" })).toBeDisabled()
+      77 |   await expect(page.getByRole("checkbox", { name: "选择视频 鼠2.mp4" })).toBeChecked()
+        at /home/x/Documents/Codex/2026-11-11/wo-de/work/video-sources-platform/frontend/tests/project-video-folder.spec.ts:74:57
+
+    Error Context: test-results/project-video-folder-批量归入所选视频，部分失败后保留失败项供重试，长视频标识完整保存-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › tests/project-video-folder.spec.ts:54:1 › 批量归入所选视频，部分失败后保留失败项供重试，长视频标识完整保存 ────────

@@ -1,0 +1,25 @@
+
+Running 17 tests using 1 worker
+
+(node:42125) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/17] [chromium] › tests/agent-workspace.spec.ts:83:1 › 默认进入对话，侧栏三个工具入口
+[2/17] [chromium] › tests/agent-workspace.spec.ts:107:1 › 引导完成携带问题和范围但不自动提交
+[3/17] [chromium] › tests/agent-workspace.spec.ts:142:1 › 创建任务和刷新重放，交付物安全预览
+[4/17] [chromium] › tests/agent-workspace.spec.ts:169:1 › 提交失败保留输入
+[5/17] [chromium] › tests/agent-workspace.spec.ts:185:1 › 待确认口径通过答复入口提交
+[6/17] [chromium] › tests/agent-workspace.spec.ts:217:1 › 窄屏输入框可见，侧栏可展开
+[7/17] [chromium] › tests/agent-workspace.spec.ts:230:1 › 报告编辑失败保留修改，重试另存新版本
+[8/17] [chromium] › tests/agent-workspace.spec.ts:266:1 › 侧栏品牌菜单、真实任务状态与选中状态
+[9/17] [chromium] › tests/agent-workspace.spec.ts:290:1 › 搜索研究筛选完整任务列表，关闭后恢复最近任务
+[10/17] [chromium] › tests/agent-workspace.spec.ts:323:1 › 折叠侧栏仍可展开搜索，手机选择任务后关闭抽屉
+[11/17] [chromium] › tests/agent-workspace.spec.ts:353:1 › reference sidebar and the new task homepage use English without submitting examples
+[12/17] [chromium] › tests/agent-workspace.spec.ts:403:1 › projects can be created, filled, reloaded and emptied without deleting tasks
+[13/17] [chromium] › tests/agent-workspace.spec.ts:455:1 › blocked project storage keeps the entered name and permits retry
+[14/17] [chromium] › tests/agent-workspace.spec.ts:486:1 › project folders are isolated by account and invalid saved state does not break tasks
+[15/17] [chromium] › tests/landing-navigation.spec.ts:5:1 › refreshing the model section returns to the homepage hero
+[16/17] [chromium] › tests/landing-navigation.spec.ts:26:1 › refreshing after manual scrolling returns to the homepage hero
+[17/17] [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile
+  17 passed (26.1s)

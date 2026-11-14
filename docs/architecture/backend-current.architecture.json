@@ -1,0 +1,309 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "LingSight AI · 当前后端架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1380,
+      720
+    ],
+    "repository": {
+      "url": "https://github.com/tudousir123/lingsight-ai",
+      "provider": "github",
+      "revision": "98b38a27f95ebc21383c35e14734d8aeed918c83"
+    }
+  },
+  "components": [
+    {
+      "id": "research-ui",
+      "type": "frontend",
+      "label": "科研工作台",
+      "sublabel": "React · 试次浏览 / 科研问答",
+      "pos": [
+        25,
+        320
+      ],
+      "size": [
+        230,
+        88
+      ],
+      "sources": [
+        {
+          "path": "frontend/src/main.tsx",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "api-entry",
+      "type": "backend",
+      "label": "FastAPI 入口",
+      "sublabel": "/api/v1 · JWT 身份校验",
+      "pos": [
+        365,
+        320
+      ],
+      "size": [
+        230,
+        88
+      ],
+      "sources": [
+        {
+          "path": "backend/app/main.py",
+          "line": 21
+        }
+      ],
+      "tag": "同步数据访问"
+    },
+    {
+      "id": "query-pipeline",
+      "type": "backend",
+      "label": "Text-to-SQL 管线",
+      "sublabel": "语义层 → SQLGlot → 只读执行",
+      "pos": [
+        735,
+        320
+      ],
+      "size": [
+        230,
+        88
+      ],
+      "sources": [
+        {
+          "path": "backend/app/text_to_sql/pipeline.py",
+          "line": 226
+        }
+      ],
+      "tag": "默认最多修复 2 次"
+    },
+    {
+      "id": "research-store",
+      "type": "database",
+      "label": "科研库 · water_maze",
+      "sublabel": "轨迹视图 / 指标 / 视频元数据",
+      "pos": [
+        1100,
+        320
+      ],
+      "size": [
+        230,
+        88
+      ],
+      "sources": [
+        {
+          "path": "backend/app/text_to_sql/executor.py",
+          "line": 63
+        }
+      ],
+      "tag": "lingsight_ro"
+    },
+    {
+      "id": "account-store",
+      "type": "database",
+      "label": "应用库 · MySQL",
+      "sublabel": "用户 / 实验授权 / 人工核对",
+      "pos": [
+        365,
+        65
+      ],
+      "size": [
+        230,
+        88
+      ],
+      "sources": [
+        {
+          "path": "backend/app/models.py",
+          "line": 78
+        }
+      ],
+      "tag": "SQLModel + Alembic"
+    },
+    {
+      "id": "model-gateway",
+      "type": "external",
+      "label": "可替换 LLM 端点",
+      "sublabel": "httpx · OpenAI / Anthropic 协议",
+      "pos": [
+        735,
+        65
+      ],
+      "size": [
+        230,
+        88
+      ],
+      "sources": [
+        {
+          "path": "backend/app/text_to_sql/gateway.py",
+          "line": 54
+        }
+      ],
+      "tag": "仅生成 SQL 候选"
+    },
+    {
+      "id": "metric-batch",
+      "type": "backend",
+      "label": "离线指标计算脚本",
+      "sublabel": "确定性 Python · 版本化结果",
+      "pos": [
+        1100,
+        65
+      ],
+      "size": [
+        230,
+        88
+      ],
+      "sources": [
+        {
+          "path": "backend/scripts/metrics/compute_trial_metrics.py",
+          "line": 236
+        }
+      ],
+      "tag": "独立写入凭据"
+    },
+    {
+      "id": "trial-service",
+      "type": "backend",
+      "label": "试次服务 · trials",
+      "sublabel": "目录 / 素材聚合 / 人工核对",
+      "pos": [
+        735,
+        575
+      ],
+      "size": [
+        230,
+        88
+      ],
+      "sources": [
+        {
+          "path": "backend/app/trials/service.py",
+          "line": 100
+        }
+      ],
+      "tag": "实验级授权"
+    },
+    {
+      "id": "local-materials",
+      "type": "external",
+      "label": "本地挂载素材",
+      "sublabel": "原视频 / Overlay / 标志物 JSON",
+      "pos": [
+        365,
+        575
+      ],
+      "size": [
+        230,
+        88
+      ],
+      "sources": [
+        {
+          "path": "backend/app/trials/assets.py",
+          "line": 45
+        }
+      ],
+      "tag": "读取现有离线产物"
+    }
+  ],
+  "connections": [
+    {
+      "id": "ui-http",
+      "from": "research-ui",
+      "to": "api-entry",
+      "label": "HTTP / SSE",
+      "variant": "emphasis"
+    },
+    {
+      "id": "dispatch-query",
+      "from": "api-entry",
+      "to": "query-pipeline",
+      "label": "科研问答",
+      "variant": "emphasis"
+    },
+    {
+      "id": "guarded-select",
+      "from": "query-pipeline",
+      "to": "research-store",
+      "label": "受限 SELECT",
+      "variant": "security"
+    },
+    {
+      "id": "app-state",
+      "from": "api-entry",
+      "to": "account-store",
+      "label": "鉴权 / 状态读写",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "llm-call",
+      "from": "query-pipeline",
+      "to": "model-gateway",
+      "label": "生成 / 修复 SQL",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "metrics-write",
+      "from": "metric-batch",
+      "to": "research-store",
+      "label": "预计算 / 写入",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        1215,
+        236
+      ]
+    },
+    {
+      "id": "dispatch-trials",
+      "from": "api-entry",
+      "to": "trial-service",
+      "label": "试次 API",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "trial-reads",
+      "from": "trial-service",
+      "to": "research-store",
+      "label": "固定 SQL 只读",
+      "fromSide": "right",
+      "toSide": "bottom"
+    },
+    {
+      "id": "material-reads",
+      "from": "trial-service",
+      "to": "local-materials",
+      "label": "素材读取",
+      "fromSide": "left",
+      "toSide": "right"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "一个后端进程，两条业务链路",
+      "items": [
+        "trials 与 Text-to-SQL 是进程内模块。",
+        "SSE = 守护线程 + queue + StreamingResponse。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "权限边界需要区分",
+      "items": [
+        "试次按实验授权；核对记录写入应用库。",
+        "问答登录即可查询白名单数据，不套实验 ACL。"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "实现边界 · main @ 98b38a2",
+      "items": [
+        "尚未接入 RAG、通用 Agent 与 GPU 推理调度。",
+        "本图依据源码；未启动服务或核验运行环境。"
+      ]
+    }
+  ]
+}

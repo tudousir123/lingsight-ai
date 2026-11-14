@@ -1,0 +1,32 @@
+
+Running 20 tests using 2 workers
+
+(node:575159) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:575158) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/20] [chromium] › tests/landing-navigation.spec.ts:26:1 › refreshing after manual scrolling returns to the homepage hero
+[2/20] [chromium] › tests/landing-navigation.spec.ts:5:1 › refreshing the model section returns to the homepage hero
+[3/20] [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage switches languages on desktop and mobile
+[4/20] [chromium] › tests/landing-navigation.spec.ts:78:1 › the public homepage remains usable when browser storage is blocked
+[5/20] [chromium] › tests/onboarding.spec.ts:26:1 › the final desktop screen offers examples and optional scope
+[6/20] [chromium] › tests/onboarding.spec.ts:54:3 › 探索轨迹与朝向: saves and restores the question and optional scope
+[7/20] [chromium] › tests/onboarding.spec.ts:54:3 › 比较训练日: saves and restores the question and optional scope
+[8/20] [chromium] › tests/onboarding.spec.ts:54:3 › 起草研究报告: saves and restores the question and optional scope
+[9/20] [chromium] › tests/onboarding.spec.ts:77:1 › a custom question needs no example or scope
+[10/20] [chromium] › tests/onboarding.spec.ts:93:1 › switching examples keeps the scope and does not submit a task
+[11/20] [chromium] › tests/onboarding.spec.ts:122:1 › empty input and blocked storage preserve the recovery download
+[12/20] [chromium] › tests/onboarding.spec.ts:155:1 › keyboard selection works with invalid saved data
+[13/20] [chromium] › tests/onboarding.spec.ts:169:1 › entering without a question marks onboarding seen without saving a brief
+[14/20] [chromium] › tests/onboarding.spec.ts:187:1 › a long question scrolls inside its editor
+[15/20] [chromium] › tests/onboarding.spec.ts:205:1 › the guide types its introduction and shows completed text when revisiting
+[16/20] [chromium] › tests/onboarding.spec.ts:225:1 › the mouse wheel advances one scene at a time and can go back
+[17/20] [chromium] › tests/onboarding.spec.ts:249:1 › every introduction scene is Chinese and fits a narrow viewport
+[18/20] [chromium] › tests/onboarding.spec.ts:282:1 › typing leaves time to read and reduced motion reveals the full text immediately
+[19/20] [chromium] › tests/onboarding.spec.ts:306:3 › characters fade in without shifting while typing at 1440px
+[20/20] [chromium] › tests/onboarding.spec.ts:306:3 › characters fade in without shifting while typing at 390px
+  20 passed (20.8s)

@@ -8,6 +8,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-brand: var(--brand);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -42,14 +43,16 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
+  color-scheme: light;
+  --brand: #c2410c;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.5982 0.10687 182.4689);
+  --primary: #262626;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -68,46 +71,12 @@
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.5982 0.10687 182.4689);
+  --sidebar-primary: #262626;
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.65 0.10687 182.4689);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.65 0.10687 182.4689);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer base {
@@ -121,4 +90,82 @@
   [role="button"] {
     cursor: pointer;
   }
+}
+
+/* LingSight Science / application-first monochrome tokens.
+   Default dark palette is painted before React mounts to prevent white flashes. */
+:root:not(.light),
+.dark {
+  color-scheme: dark;
+  --brand: #fa5f29;
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #171717;
+  --card-foreground: #fafafa;
+  --popover: #1f1f1f;
+  --popover-foreground: #fafafa;
+  --primary: #e5e5e5;
+  --primary-foreground: #151515;
+  --secondary: #252525;
+  --secondary-foreground: #e5e5e5;
+  --muted: #232323;
+  --muted-foreground: #929292;
+  --accent: #292929;
+  --accent-foreground: #fafafa;
+  --destructive: #fb6b5e;
+  --border: #262626;
+  --input: #333333;
+  --ring: #848484;
+  --chart-1: #d0d0d0;
+  --chart-2: #fa5f29;
+  --chart-3: #8fb5a4;
+  --chart-4: #a1a1a1;
+  --chart-5: #7f8c99;
+  --sidebar: #131313;
+  --sidebar-foreground: #cbcbcb;
+  --sidebar-primary: #e5e5e5;
+  --sidebar-primary-foreground: #151515;
+  --sidebar-accent: #292929;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #262626;
+  --sidebar-ring: #848484;
+}
+:root:not(.light),
+:root:not(.light) body,
+:root:not(.light) #root {
+  background-color: #0a0a0a;
+}
+.lingsight-app {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--background);
+}
+.lingsight-app [data-slot="card"] {
+  border: 1px solid var(--border);
+  box-shadow: none;
+  min-width: 0;
+}
+.lingsight-app a,
+.lingsight-app button {
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lingsight-app *,
+  .lingsight-app *::before,
+  .lingsight-app *::after {
+    transition: none;
+    animation: none;
+  }
+}
+
+.lingsight-app .recharts-cartesian-axis-tick text {
+  fill: var(--muted-foreground);
+}
+.lingsight-app .recharts-cartesian-axis-line,
+.lingsight-app .recharts-cartesian-axis-tick-line {
+  stroke: var(--border);
 }

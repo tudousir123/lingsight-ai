@@ -15,6 +15,16 @@
 5. **合并收口**（主会话）：先 `git diff --name-only` 查两票文件交集；顺序 merge；合并后全量 pytest + ruff + mypy；把 worktree `.env` 里的新凭据变量并回主 `.env` 再删 worktree/分支/临时库。
 6. **推送后看 CI 再收口**：本地合并不开 PR 的分支在推送 main 前没有任何 CI——批次推送后、写验收/closeout 之前，先确认 GitHub Actions 全绿（2026-10-13 的 33 提交大推送一次踩爆两个潜伏工作流 bug，均到推送后才暴露）。
 
+## 分叉合并预演（两条线都已存在时）
+
+不是从 main 切的并行票，而是两条线各自前进了（2026-11-10 实例：`codex/infer` 与 `codex/backend-convergence-review` 分叉 10 小时、都携带网关副本）。合并前先列冲突清单：
+
+`git merge-tree --write-tree --name-only <A> <B>`
+
+- 清单全是文档/配置 → 直接合，逐块按「叙述取更新的、事实取更具体的」解（实测 9 个冲突全中、代码层零意外）。
+- 出现代码文件 → 先 `git diff A B -- <file>` 比两版再定（实例：agent.py 两线内容一致，只是都改过周围文件）。
+- 离开一条未合并的工作线时：当天并回，或开 issue 记「分支名 / 基线 / 未完事项」——无名分叉是下一次考古的账单（squash 历史的仓库里 `git log` 帮不上忙，progress.md 是唯一史源）。
+
 ## 什么时候不用
 
 - 两票都要改同一批文件（如都动 semantic_layer.yaml）。

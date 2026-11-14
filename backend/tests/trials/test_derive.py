@@ -142,6 +142,16 @@ class TestSourceVersion:
         heavier = media.model_copy(update={"fingerprint": "bytes:999"})
         assert source_version("t", heavier, geometry, track) != first
 
+    def test_same_count_coordinate_or_time_correction_changes_version(self) -> None:
+        media, geometry, track = self._bundle()
+        first = source_version("t", media, geometry, track)
+        corrected = track.model_copy(deep=True)
+        corrected.frames[0].center = [99.0, 88.0]
+        assert source_version("t", media, geometry, corrected) != first
+        retimed = track.model_copy(deep=True)
+        retimed.frames[0].time_s = 1.0
+        assert source_version("t", media, geometry, retimed) != first
+
     def test_changes_with_track_and_geometry(self) -> None:
         media, geometry, track = self._bundle()
         first = source_version("t", media, geometry, track)

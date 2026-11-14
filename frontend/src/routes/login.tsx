@@ -44,7 +44,7 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       {
-        title: "Log In - FastAPI Template",
+        title: "Sign in · LingSight Science",
       },
     ],
   }),
@@ -75,7 +75,9 @@ function Login() {
           className="flex flex-col gap-6"
         >
           <div className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-bold">Login to your account</h1>
+            <h1 className="text-2xl font-normal tracking-tight">
+              Sign in to LingSight
+            </h1>
           </div>
 
           <div className="grid gap-4">
@@ -109,7 +111,7 @@ function Login() {
                       to="/recover-password"
                       className="ml-auto text-sm underline-offset-4 hover:underline"
                     >
-                      Forgot your password?
+                      Forgot password?
                     </RouterLink>
                   </div>
                   <FormControl>
@@ -130,7 +132,7 @@ function Login() {
           </div>
 
           <div className="text-center text-sm">
-            Don't have an account yet?{" "}
+            New to LingSight?{" "}
             <RouterLink to="/signup" className="underline underline-offset-4">
               Sign up
             </RouterLink>

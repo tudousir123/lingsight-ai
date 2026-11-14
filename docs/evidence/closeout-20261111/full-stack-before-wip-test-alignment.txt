@@ -1,0 +1,355 @@
+Running isolated stack: lingsight-e2e-lingsight-e2e-7atr9gep
+ Image lingsight-e2e-lingsight-e2e-7atr9gep-backend:local Building
+ Image lingsight-e2e-lingsight-e2e-7atr9gep-playwright:local Building
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.51kB done
+#1 DONE 0.0s
+
+#2 [backend internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 1.90kB done
+#2 DONE 0.0s
+
+#3 [playwright internal] load build definition from Dockerfile.playwright
+#3 transferring dockerfile: 691B done
+#3 DONE 0.0s
+
+#4 [backend internal] load metadata for docker.io/library/python:3.14
+#4 DONE 0.0s
+
+#5 [playwright internal] load metadata for docker.io/oven/bun:1.3.12
+#5 ...
+
+#6 [playwright internal] load metadata for mcr.microsoft.com/playwright:v1.63.0-noble
+#6 DONE 2.9s
+
+#7 [backend internal] load metadata for ghcr.io/astral-sh/uv:0.9.26
+#7 ...
+
+#5 [playwright internal] load metadata for docker.io/oven/bun:1.3.12
+#5 DONE 3.9s
+
+#8 [playwright internal] load .dockerignore
+#8 transferring context: 227B done
+#8 DONE 0.0s
+
+#9 [playwright] FROM docker.io/oven/bun:1.3.12@sha256:8956c7667fa17beb6e3c664115e66bdacfe502da5d99603626e74c197bdef160
+#9 resolve docker.io/oven/bun:1.3.12@sha256:8956c7667fa17beb6e3c664115e66bdacfe502da5d99603626e74c197bdef160 0.0s done
+#9 DONE 0.0s
+
+#10 [playwright stage-0  1/11] FROM mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+#10 resolve mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27 0.0s done
+#10 DONE 0.0s
+
+#11 [playwright internal] load build context
+#11 transferring context: 13.86MB 0.2s done
+#11 DONE 0.3s
+
+#12 [playwright stage-0  6/11] COPY frontend/package.json /app/frontend/
+#12 CACHED
+
+#13 [playwright stage-0  3/11] COPY --from=oven/bun:1.3.12 /usr/local/bin/bun /usr/local/bin/bun
+#13 CACHED
+
+#14 [playwright stage-0  5/11] COPY package.json bun.lock /app/
+#14 CACHED
+
+#15 [playwright stage-0  7/11] COPY packages/react-email/package.json /app/packages/react-email/
+#15 CACHED
+
+#16 [playwright stage-0  8/11] WORKDIR /app/frontend
+#16 CACHED
+
+#17 [playwright stage-0  4/11] RUN ln -s /usr/local/bin/bun /usr/local/bin/bunx
+#17 CACHED
+
+#18 [playwright stage-0  2/11] WORKDIR /app
+#18 CACHED
+
+#19 [playwright stage-0  9/11] RUN bun ci
+#19 CACHED
+
+#20 [playwright stage-0 10/11] COPY ./frontend /app/frontend
+#20 DONE 0.1s
+
+#7 [backend internal] load metadata for ghcr.io/astral-sh/uv:0.9.26
+#7 DONE 4.5s
+
+#8 [backend internal] load .dockerignore
+#8 transferring context: 227B done
+#8 DONE 0.0s
+
+#9 [backend] FROM docker.io/oven/bun:1.3.12@sha256:8956c7667fa17beb6e3c664115e66bdacfe502da5d99603626e74c197bdef160
+#9 resolve docker.io/oven/bun:1.3.12@sha256:8956c7667fa17beb6e3c664115e66bdacfe502da5d99603626e74c197bdef160 0.0s done
+#9 DONE 0.0s
+
+#21 [backend internal] load build context
+#21 ...
+
+#22 [backend] FROM ghcr.io/astral-sh/uv:0.9.26@sha256:9a23023be68b2ed09750ae636228e903a54a05ea56ed03a934d00fe9fbeded4b
+#22 resolve ghcr.io/astral-sh/uv:0.9.26@sha256:9a23023be68b2ed09750ae636228e903a54a05ea56ed03a934d00fe9fbeded4b 0.0s done
+#22 DONE 0.0s
+
+#23 [backend stage-1  1/10] FROM docker.io/library/python:3.14@sha256:d18055009f327b22993de14458aa5a6bac032cdf459ea2a2e9bbdc3d3d49e4fb
+#23 resolve docker.io/library/python:3.14@sha256:d18055009f327b22993de14458aa5a6bac032cdf459ea2a2e9bbdc3d3d49e4fb 0.0s done
+#23 DONE 0.0s
+
+#24 [playwright stage-0 11/11] RUN chmod a+rwx /app/frontend && mkdir -p playwright/.auth && chmod -R a+rwX playwright
+#24 DONE 0.1s
+
+#21 [backend internal] load build context
+#21 transferring context: 17.18MB 0.3s done
+#21 DONE 0.3s
+
+#25 [backend stage-1  2/10] COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /uvx /bin/
+#25 CACHED
+
+#26 [backend stage-1  4/10] RUN --mount=type=cache,target=/root/.cache/uv     --mount=type=bind,source=uv.lock,target=uv.lock     --mount=type=bind,source=pyproject.toml,target=pyproject.toml     uv sync --frozen --no-install-workspace --package app
+#26 CACHED
+
+#27 [backend stage-1  5/10] COPY ./backend/scripts /app/backend/scripts
+#27 CACHED
+
+#28 [backend stage-1  3/10] WORKDIR /app/
+#28 CACHED
+
+#29 [backend stage-1  6/10] COPY ./backend/pyproject.toml ./backend/alembic.ini /app/backend/
+#29 CACHED
+
+#30 [backend frontend-build 2/9] WORKDIR /app
+#30 CACHED
+
+#31 [backend frontend-build 6/9] WORKDIR /app/frontend
+#31 CACHED
+
+#32 [backend frontend-build 3/9] COPY package.json bun.lock /app/
+#32 CACHED
+
+#33 [backend frontend-build 4/9] COPY frontend/package.json /app/frontend/
+#33 CACHED
+
+#34 [backend frontend-build 5/9] COPY packages/react-email/package.json /app/packages/react-email/
+#34 CACHED
+
+#35 [backend frontend-build 7/9] RUN bun ci
+#35 CACHED
+
+#36 [backend stage-1  7/10] COPY ./backend/app /app/backend/app
+#36 DONE 0.1s
+
+#37 [backend frontend-build 8/9] COPY ./frontend /app/frontend
+#37 DONE 0.1s
+
+#38 [backend frontend-build 9/9] RUN bun run build
+#38 0.111 $ tsc -p tsconfig.build.json && vite build
+#38 ...
+
+#39 [playwright] exporting to image
+#39 exporting layers 1.3s done
+#39 exporting manifest sha256:19d3ab5f2c6e433e778e0e75cac4048cc2fb8914f266bb029de3bea09544b22f 0.0s done
+#39 exporting config sha256:9840969539a7ad151dfa5f12fc1db143c403a4a82862350bbf7237abe5ef9cad 0.0s done
+#39 exporting attestation manifest sha256:05fd844c1f62004603ee81ea38d4c0c35a961974af89507ae327420dad032ee5 0.0s done
+#39 exporting manifest list sha256:c587964a3b3ebfa29e392db4d2f004efaab86188c705fb26c79350849ec51005 done
+#39 naming to docker.io/library/lingsight-e2e-lingsight-e2e-7atr9gep-playwright:local 0.0s done
+#39 unpacking to docker.io/library/lingsight-e2e-lingsight-e2e-7atr9gep-playwright:local
+#39 ...
+
+#38 [backend frontend-build 9/9] RUN bun run build
+#38 11.61 vite v8.3.1 building client environment for production...
+#38 11.64 transforming...
+#38 12.37 ✓ 2491 modules transformed.
+#38 12.54 rendering chunks...
+#38 12.72 computing gzip size...
+#38 12.73 ../backend/app/frontend/index.html                                             1.83 kB │ gzip:  0.69 kB
+#38 12.73 ../backend/app/frontend/assets/06-learning-curves-5xfad-BccWZhVI.webp        150.78 kB
+#38 12.73 ../backend/app/frontend/assets/07-probe-quadrant-results-CCx4BqaF.webp       193.75 kB
+#38 12.73 ../backend/app/frontend/assets/08-strategy-distribution-5xfad-HKYsuHKX.webp  384.55 kB
+#38 12.73 ../backend/app/frontend/assets/02-acquisition-heatmaps-C8Ik0x7b.webp         836.84 kB
+#38 12.73 ../backend/app/frontend/assets/_layout-CSrGBrem.css                            4.58 kB │ gzip:  1.34 kB
+#38 12.73 ../backend/app/frontend/assets/Workspace-C5lLbz76.css                          5.57 kB │ gzip:  1.65 kB
+#38 12.73 ../backend/app/frontend/assets/onboarding-BIhGuVaT.css                         7.55 kB │ gzip:  2.02 kB
+#38 12.73 ../backend/app/frontend/assets/welcome-DhXBzc1x.css                           44.56 kB │ gzip:  9.78 kB
+#38 12.73 ../backend/app/frontend/assets/index-DNQFNwDV.css                             77.04 kB │ gzip: 14.54 kB
+#38 12.73 ../backend/app/frontend/assets/_layout-9B1u9W3E.js                             0.07 kB │ gzip:  0.08 kB
+#38 12.73 ../backend/app/frontend/assets/analysis-P_Biwc3X.js                            0.07 kB │ gzip:  0.09 kB
+#38 12.73 ../backend/app/frontend/assets/annotations-CUt_WDkq.js                         0.07 kB │ gzip:  0.08 kB
+#38 12.73 ../backend/app/frontend/assets/experiments.index-CUt_WDkq.js                   0.07 kB │ gzip:  0.08 kB
+#38 12.73 ../backend/app/frontend/assets/check-Ch3i76Sx.js                               0.16 kB │ gzip:  0.16 kB
+#38 12.73 ../backend/app/frontend/assets/chevron-down-CNUXZg7I.js                        0.16 kB │ gzip:  0.16 kB
+#38 12.73 ../backend/app/frontend/assets/plus-S-QSLQeG.js                                0.19 kB │ gzip:  0.17 kB
+#38 12.73 ../backend/app/frontend/assets/arrow-up-right-DiClziNN.js                      0.20 kB │ gzip:  0.18 kB
+#38 12.73 ../backend/app/frontend/assets/search-DXbUuEFz.js                              0.21 kB │ gzip:  0.19 kB
+#38 12.73 ../backend/app/frontend/assets/project-research._projectId-BIg6STGR.js         0.23 kB │ gzip:  0.19 kB
+#38 12.73 ../backend/app/frontend/assets/useNavigate-TgQsUvxv.js                         0.23 kB │ gzip:  0.19 kB
+#38 12.73 ../backend/app/frontend/assets/tasks._taskId-B50aG_8V.js                       0.23 kB │ gzip:  0.19 kB
+#38 12.73 ../backend/app/frontend/assets/panel-left-BTisn8B4.js                          0.24 kB │ gzip:  0.21 kB
+#38 12.73 ../backend/app/frontend/assets/folder-open--o0fJ8dX.js                         0.33 kB │ gzip:  0.24 kB
+#38 12.73 ../backend/app/frontend/assets/arrow-up-CCQwXnUv.js                            0.33 kB │ gzip:  0.23 kB
+#38 12.73 ../backend/app/frontend/assets/scan-line-q9SoOjR3.js                           0.37 kB │ gzip:  0.24 kB
+#38 12.73 ../backend/app/frontend/assets/file-text-k5TwxNOx.js                           0.42 kB │ gzip:  0.27 kB
+#38 12.73 ../backend/app/frontend/assets/chart-no-axes-combined-OsiWviFG.js              0.43 kB │ gzip:  0.28 kB
+#38 12.73 ../backend/app/frontend/assets/trash-JVmTx83_.js                               0.63 kB │ gzip:  0.37 kB
+#38 12.73 ../backend/app/frontend/assets/message-square-BPIwGgXz.js                      0.65 kB │ gzip:  0.37 kB
+#38 12.73 ../backend/app/frontend/assets/useMatch-Dv27Sc23.js                            0.68 kB │ gzip:  0.42 kB
+#38 12.73 ../backend/app/frontend/assets/useAuth-BtFHS5zm.js                             1.07 kB │ gzip:  0.60 kB
+#38 12.73 ../backend/app/frontend/assets/queries-Cx7XnfCk.js                             1.27 kB │ gzip:  0.82 kB
+#38 12.73 ../backend/app/frontend/assets/recover-password-C-qI1dPJ.js                    1.71 kB │ gzip:  0.85 kB
+#38 12.73 ../backend/app/frontend/assets/useSelector-BQZJn2cB.js                         1.89 kB │ gzip:  0.83 kB
+#38 12.73 ../backend/app/frontend/assets/password-input-CRR-Grgu.js                      2.04 kB │ gzip:  1.02 kB
+#38 12.73 ../backend/app/frontend/assets/login-B2f2oAJc.js                               2.14 kB │ gzip:  0.91 kB
+#38 12.73 ../backend/app/frontend/assets/reset-password-D2uW_4J0.js                      2.42 kB │ gzip:  1.03 kB
+#38 12.73 ../backend/app/frontend/assets/dialog-Dp6yqLLj.js                              2.47 kB │ gzip:  0.90 kB
+#38 12.73 ../backend/app/frontend/assets/signup-DzbjS9Vz.js                              2.75 kB │ gzip:  1.00 kB
+#38 12.73 ../backend/app/frontend/assets/AuthLayout-BcRSY481.js                          3.46 kB │ gzip:  1.32 kB
+#38 12.73 ../backend/app/frontend/assets/dist-C35I1Pb5.js                                4.19 kB │ gzip:  1.84 kB
+#38 12.73 ../backend/app/frontend/assets/projects-DoIKyvcj.js                            4.40 kB │ gzip:  1.55 kB
+#38 12.73 ../backend/app/frontend/assets/dist-Cr77GPjD.js                                4.91 kB │ gzip:  1.81 kB
+#38 12.73 ../backend/app/frontend/assets/preload-helper-CSVEnwiU.js                      5.14 kB │ gzip:  2.00 kB
+#38 12.73 ../backend/app/frontend/assets/input-XVBzqHgv.js                               8.09 kB │ gzip:  3.00 kB
+#38 12.73 ../backend/app/frontend/assets/directory-CNIDnskg.js                           9.05 kB │ gzip:  3.21 kB
+#38 12.73 ../backend/app/frontend/assets/link-BXnxpSvL.js                                9.38 kB │ gzip:  4.31 kB
+#38 12.73 ../backend/app/frontend/assets/settings-BfsjNGwK.js                           10.47 kB │ gzip:  3.52 kB
+#38 12.73 ../backend/app/frontend/assets/projects._projectId-BXdVjh5G.js                10.95 kB │ gzip:  3.69 kB
+#38 12.73 ../backend/app/frontend/assets/onboarding-BNjZrAZD.js                         11.79 kB │ gzip:  4.51 kB
+#38 12.73 ../backend/app/frontend/assets/createLucideIcon-BXLm2Wke.js                   11.93 kB │ gzip:  4.69 kB
+#38 12.73 ../backend/app/frontend/assets/inference-DFjRc5VE.js                          12.32 kB │ gzip:  4.57 kB
+#38 12.73 ../backend/app/frontend/assets/skeleton-CpI3T49z.js                           13.97 kB │ gzip:  4.78 kB
+#38 12.73 ../backend/app/frontend/assets/_layout-CT8Mncyn.js                            14.71 kB │ gzip:  5.33 kB
+#38 12.73 ../backend/app/frontend/assets/useQuery-B0qopTas.js                           15.53 kB │ gzip:  5.22 kB
+#38 12.73 ../backend/app/frontend/assets/Appearance-EjcCUEbn.js                         22.02 kB │ gzip:  7.07 kB
+#38 12.73 ../backend/app/frontend/assets/Workspace-Dk6DV40U.js                          22.67 kB │ gzip:  8.15 kB
+#38 12.73 ../backend/app/frontend/assets/table-0wKsvG7T.js                              25.19 kB │ gzip:  8.30 kB
+#38 12.73 ../backend/app/frontend/assets/welcome-DkyU25Jc.js                            27.24 kB │ gzip:  8.93 kB
+#38 12.73 ../backend/app/frontend/assets/dist-DBj_2f08.js                               27.62 kB │ gzip: 10.59 kB
+#38 12.73 ../backend/app/frontend/assets/Combination-ChSH6x9N.js                        30.43 kB │ gzip: 10.69 kB
+#38 12.73 ../backend/app/frontend/assets/utils-D4MtPf17.js                              30.59 kB │ gzip:  9.93 kB
+#38 12.73 ../backend/app/frontend/assets/useCustomToast-C4Y1JA5w.js                     39.84 kB │ gzip: 11.28 kB
+#38 12.73 ../backend/app/frontend/assets/loading-button-Bf7DonzX.js                     42.44 kB │ gzip: 14.87 kB
+#38 12.73 ../backend/app/frontend/assets/admin-OYpq5gXI.js                              48.86 kB │ gzip: 14.00 kB
+#38 12.73 ../backend/app/frontend/assets/client-D2GANpgd.js                             75.10 kB │ gzip: 25.97 kB
+#38 12.73 ../backend/app/frontend/assets/schemas-D3tkzAe4.js                            80.24 kB │ gzip: 22.98 kB
+#38 12.73 ../backend/app/frontend/assets/index-DSTBTP8z.js                             298.26 kB │ gzip: 96.26 kB
+#38 12.73
+#38 12.75 ✓ built in 1.14s
+#38 DONE 13.4s
+
+#39 [playwright] exporting to image
+#39 ...
+
+#40 [backend stage-1  8/10] COPY --from=frontend-build /app/backend/app/frontend /app/backend/app/frontend
+#40 DONE 0.1s
+
+#41 [backend stage-1  9/10] RUN --mount=type=cache,target=/root/.cache/uv     --mount=type=bind,source=uv.lock,target=uv.lock     --mount=type=bind,source=pyproject.toml,target=pyproject.toml     uv sync --frozen --package app
+#41 0.136 Installed 1 package in 7ms
+#41 0.366 Bytecode compiled 2930 files in 229ms
+#41 0.366  + app==0.1.0 (from file:///app/backend)
+#41 DONE 0.4s
+
+#42 [backend stage-1 10/10] WORKDIR /app/backend/
+#42 DONE 0.0s
+
+#39 [playwright] exporting to image
+#39 ...
+
+#43 [backend] exporting to image
+#43 exporting layers
+#43 exporting layers 0.4s done
+#43 exporting manifest sha256:fc6c53bfb7ebc1d0b4c9f18f4c2f513dc9167d40254186294f3ad5735de60520 0.0s done
+#43 exporting config sha256:e9373bf99cb45e69cf3993512245d50ba3cfbd68f150d8e5d2cff0b1e035a990 done
+#43 exporting attestation manifest sha256:8277e6d8a8e7c336cab570a5a6b9d256017b688f950d4adc1aefaa4299a2f1c1 0.0s done
+#43 exporting manifest list sha256:2dc7cf45502e6db71ce698b33d68ff8e0a6c26572f5307f36dfea117603f3261 done
+#43 naming to docker.io/library/lingsight-e2e-lingsight-e2e-7atr9gep-backend:local done
+#43 unpacking to docker.io/library/lingsight-e2e-lingsight-e2e-7atr9gep-backend:local
+#43 unpacking to docker.io/library/lingsight-e2e-lingsight-e2e-7atr9gep-backend:local 5.9s done
+#43 DONE 6.4s
+
+#39 [playwright] exporting to image
+#39 ...
+
+#44 [backend] resolving provenance for metadata file
+#44 DONE 0.0s
+
+#39 [playwright] exporting to image
+#39 unpacking to docker.io/library/lingsight-e2e-lingsight-e2e-7atr9gep-playwright:local 30.1s done
+#39 DONE 31.6s
+
+#45 [playwright] resolving provenance for metadata file
+#45 DONE 0.0s
+ Image lingsight-e2e-lingsight-e2e-7atr9gep-playwright:local Built
+ Image lingsight-e2e-lingsight-e2e-7atr9gep-backend:local Built
+ Network lingsight-e2e-lingsight-e2e-7atr9gep_default Creating
+ Network lingsight-e2e-lingsight-e2e-7atr9gep_default Creating
+ Volume lingsight-e2e-lingsight-e2e-7atr9gep_app-db-data Creating
+ Volume lingsight-e2e-lingsight-e2e-7atr9gep_app-db-data Creating
+ Volume lingsight-e2e-lingsight-e2e-7atr9gep_app-db-data Created
+ Volume lingsight-e2e-lingsight-e2e-7atr9gep_app-db-data Created
+ Network lingsight-e2e-lingsight-e2e-7atr9gep_default Created
+ Network lingsight-e2e-lingsight-e2e-7atr9gep_default Created
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Creating
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Created
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Starting
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Started
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-run-11a36e2eccd2 Creating
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-run-11a36e2eccd2 Created
++ alembic upgrade head
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> da969c656440, initial schema for mysql
+INFO  [alembic.runtime.migration] Running upgrade da969c656440 -> b19a1e7c90a1, Store per-user experiment access for the trial catalog.
+INFO  [alembic.runtime.migration] Running upgrade b19a1e7c90a1 -> c3f8a1d204b7, Store human preparation reviews per trial (ticket #21).
+INFO  [alembic.runtime.migration] Running upgrade c3f8a1d204b7 -> d4e5f6a7b8c9, Keep preparation reviews for each version of trial materials.
+INFO  [alembic.runtime.migration] Running upgrade d4e5f6a7b8c9 -> a1b2c3d4e5f6, Project entity: user-owned research organization unit (ticket #42).
+INFO  [alembic.runtime.migration] Running upgrade a1b2c3d4e5f6 -> b7d8e9f0a1c2, Published inference results: v3-form summary + per-frame rows (ticket #43).
++ python app/initial_data.py
+INFO:__main__:Creating initial data
+INFO:__main__:Initial data created
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Running
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-mailpit-1 Creating
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Creating
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-mailpit-1 Created
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Created
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-mailpit-1 Starting
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-mailpit-1 Started
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Starting
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Started
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-mailpit-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-mailpit-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Running
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Running
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-mailpit-1 Running
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Waiting
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Healthy
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-playwright-run-1f9d2a9f7a8d Creating
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-playwright-run-1f9d2a9f7a8d Created
+◇ injected env (0) from ../.env
+
+Running 102 tests using 1 worker
+◇ injected env (0) from ../.env
+·◇ injected env (0) from ../.env
+·············××T··················
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-mailpit-1 Stopping
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Stopping
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-mailpit-1 Stopped
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-mailpit-1 Removing
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-mailpit-1 Removed
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Stopped
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Removing
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-backend-1 Removed
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Stopping
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Stopped
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Removing
+ Container lingsight-e2e-lingsight-e2e-7atr9gep-db-1 Removed
+ Volume lingsight-e2e-lingsight-e2e-7atr9gep_app-db-data Removing
+ Network lingsight-e2e-lingsight-e2e-7atr9gep_default Removing
+ Volume lingsight-e2e-lingsight-e2e-7atr9gep_app-db-data Removed
+ Network lingsight-e2e-lingsight-e2e-7atr9gep_default Removed

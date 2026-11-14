@@ -1,0 +1,9 @@
+
+Running 1 test using 1 worker
+
+(node:1179452) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] [chromium] › tests/project-video-folder.spec.ts:41:1 › 项目先选择来源和视频文件夹，刷新后保留
+  1 passed (4.5s)

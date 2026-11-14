@@ -1,0 +1,31 @@
+
+Running 12 tests using 2 workers
+
+
+
+
+[1/12] [setup] › tests/auth.setup.ts:6:1 › authenticate
+
+
+
+
+[2/12] [chromium] › tests/qa-page.spec.ts:127:1 › empty result is a success channel with suggestion, never a table
+[3/12] [chromium] › tests/qa-page.spec.ts:85:1 › example question streams stages, answer, caliber note and SQL details
+[4/12] [chromium] › tests/qa-page.spec.ts:151:1 › typed rejection shows reason without a table and without a retry for 403 class
+[5/12] [chromium] › tests/qa-page.spec.ts:183:1 › provider failure offers one-click retry of the same question
+[6/12] [chromium] › tests/qa-page.spec.ts:217:1 › in-session history replays cached answers without re-sending
+[7/12] [chromium] › tests/qa-page.spec.ts:261:1 › loading state shows elapsed seconds and no fake progress
+[8/12] [chromium] › tests/trial-directory.spec.ts:33:1 › researcher selects a trial and reloads its stable address
+[9/12] [chromium] › tests/trial-directory.spec.ts:85:1 › empty experiment list and retryable load failure are distinct
+[10/12] [chromium] › tests/trial-directory.spec.ts:106:1 › a trial in an ungranted experiment stays forbidden
+[11/12] [chromium] › tests/trial-directory.spec.ts:120:1 › an experiment with no matching trials has an empty state
+[12/12] [chromium] › tests/trial-directory.spec.ts:133:1 › researcher filters by training-day number
+  12 passed (12.2s)
+◇ injected env (0) from ../.env
+(node:3061748) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+◇ injected env (0) from ../.env
+(node:3062015) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3062014) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)

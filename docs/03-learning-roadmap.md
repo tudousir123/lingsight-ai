@@ -1,5 +1,19 @@
 # LingSight AI 开发路线
 
+## 2026-11-09 目标路线评审
+
+产品方向已由 [ADR-0009](adr/0009-independent-research-agent-via-dbhub.md) 至 [ADR-0012](adr/0012-agent-repository-owns-tasks-and-artifacts.md) 调整；新工程方案已整体确认，独立私有仓库 [lingsight-agent](https://github.com/tudousir123/lingsight-agent) 已完成首个真实视频级闭环（含人工图表复核与修正）；本仓库主站联调尚未实施。完整范围和验收以 [产品规格首节](01-product-spec.md) 为准。
+
+1. **独立 Agent 基座**：新仓库、Pi SDK 适配、任务与产物所有权、持久化及事件接口。
+2. **真实分析闭环**：DBHub/v3 数据工具、科研 Skills、独立 Python 分析、一个真实视频级任务到报告及完整下载。
+3. **任务可靠性与交互**：澄清、关闭网页继续运行、中断后恢复、代码与图表版本，以及失败/取消路径。
+4. **LingSight 集成**：任务工作区、平台 API 网关、独立服务的契约测试；保留实验浏览。
+5. **旧管线退出**：新闭环验收后替换旧 `/qa` 和专用 SQL 生成/修复管线；原始科研数据不随页面迁移删除。
+
+## 历史 M0—M4 路线
+
+以下保留原方案背景，M1 已有实现；“先专用 Text-to-SQL、再 RAG、再 Agent”的目标顺序已由上述新方向取代。
+
 **当前阶段：M0 → M1。先使用云端大模型 API。**
 
 | 阶段 | 实现 | 验收 |

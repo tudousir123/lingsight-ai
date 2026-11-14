@@ -1,0 +1,8 @@
++ mypy app scripts
+Success: no issues found in 61 source files
++ ty check app scripts
+All checks passed!
++ ruff check app scripts
+All checks passed!
++ ruff format app scripts --check
+61 files already formatted

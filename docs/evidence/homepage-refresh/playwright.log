@@ -1,0 +1,26 @@
+
+Running 14 tests using 2 workers
+
+(node:68258) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:68264) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/14] [chromium] › tests/agent-workspace.spec.ts:83:1 › 默认进入对话，侧栏三个工具入口
+[2/14] [chromium] › tests/agent-workspace.spec.ts:107:1 › 引导完成携带问题和范围但不自动提交
+[3/14] [chromium] › tests/agent-workspace.spec.ts:147:1 › 创建任务和刷新重放，交付物安全预览
+[4/14] [chromium] › tests/agent-workspace.spec.ts:174:1 › 提交失败保留输入
+[5/14] [chromium] › tests/agent-workspace.spec.ts:190:1 › 待确认口径通过答复入口提交
+[6/14] [chromium] › tests/agent-workspace.spec.ts:222:1 › 窄屏输入框可见，侧栏可展开
+[7/14] [chromium] › tests/agent-workspace.spec.ts:235:1 › 报告编辑失败保留修改，重试另存新版本
+[8/14] [chromium] › tests/agent-workspace.spec.ts:271:1 › 侧栏品牌菜单、真实任务状态与选中状态
+[9/14] [chromium] › tests/agent-workspace.spec.ts:295:1 › 搜索研究筛选完整任务列表，关闭后恢复最近任务
+[10/14] [chromium] › tests/agent-workspace.spec.ts:328:1 › 折叠侧栏仍可展开搜索，手机选择任务后关闭抽屉
+[11/14] [chromium] › tests/agent-workspace.spec.ts:358:1 › reference sidebar and the new task homepage use English without submitting examples
+[12/14] [chromium] › tests/agent-workspace.spec.ts:408:1 › projects can be created, filled, reloaded and emptied without deleting tasks
+[13/14] [chromium] › tests/agent-workspace.spec.ts:460:1 › blocked project storage keeps the entered name and permits retry
+[14/14] [chromium] › tests/agent-workspace.spec.ts:491:1 › project folders are isolated by account and invalid saved state does not break tasks
+  14 passed (16.7s)

@@ -123,12 +123,12 @@ def source_version(
 ) -> str:
     """Fingerprint of the materials a preparation review acknowledges.
 
-    Covers the playable media (kind + byte size), pool / markers / platform
-    geometry, and the tracking result (pipeline marker + frame counts). A
-    review saved against one version is rejected (409) when the fingerprint
-    changes, so stale confirmations cannot attach to new materials.
+    Covers media content, geometry and the full tracking material, including
+    timing and calibration dimensions. Version 2 intentionally invalidates
+    older count-only fingerprints; historical reviews remain stored.
     """
     payload = {
+        "version": 2,
         "trial_id": trial_id,
         "media": {
             "kind": video.kind,
@@ -138,13 +138,7 @@ def source_version(
         "pool": geometry.pool.model_dump(mode="json"),
         "markers": geometry.markers.model_dump(mode="json"),
         "platform": geometry.platform.model_dump(mode="json"),
-        "track": {
-            "status": track.status,
-            "source": track.source,
-            "frames": len(track.frames),
-            "valid_frames": track.valid_frames,
-            "kp_frames": track.kp_frames,
-        },
+        "track": track.model_dump(mode="json"),
     }
     canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]

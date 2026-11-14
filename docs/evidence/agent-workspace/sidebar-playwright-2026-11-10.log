@@ -1,0 +1,18 @@
+
+Running 10 tests using 1 worker
+
+(node:26438) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/10] [chromium] › tests/agent-workspace.spec.ts:83:1 › 默认进入对话，侧栏三个工具入口
+[2/10] [chromium] › tests/agent-workspace.spec.ts:100:1 › 引导完成携带问题和范围但不自动提交
+[3/10] [chromium] › tests/agent-workspace.spec.ts:135:1 › 创建任务和刷新重放，交付物安全预览
+[4/10] [chromium] › tests/agent-workspace.spec.ts:162:1 › 提交失败保留输入
+[5/10] [chromium] › tests/agent-workspace.spec.ts:178:1 › 待确认口径通过答复入口提交
+[6/10] [chromium] › tests/agent-workspace.spec.ts:208:1 › 窄屏输入框可见，侧栏可展开
+[7/10] [chromium] › tests/agent-workspace.spec.ts:221:1 › 报告编辑失败保留修改，重试另存新版本
+[8/10] [chromium] › tests/agent-workspace.spec.ts:257:1 › 侧栏品牌菜单、真实任务状态与选中状态
+[9/10] [chromium] › tests/agent-workspace.spec.ts:275:1 › 搜索研究筛选完整任务列表，关闭后恢复最近任务
+[10/10] [chromium] › tests/agent-workspace.spec.ts:306:1 › 折叠侧栏仍可展开搜索，手机选择任务后关闭抽屉
+  10 passed (27.9s)

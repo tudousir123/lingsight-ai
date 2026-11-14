@@ -1,0 +1,11 @@
+
+Running 3 tests using 1 worker
+
+(node:45171) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/3] [chromium] › tests/agent-workspace.spec.ts:217:1 › 窄屏输入框可见，侧栏可展开
+[2/3] [chromium] › tests/agent-workspace.spec.ts:323:1 › 折叠侧栏仍可展开搜索，手机选择任务后关闭抽屉
+[3/3] [chromium] › tests/landing-navigation.spec.ts:41:1 › the public homepage is English on desktop and mobile
+  3 passed (6.0s)

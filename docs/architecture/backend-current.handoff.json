@@ -1,0 +1,29 @@
+{
+  "diagram_type": "architecture",
+  "output": "/home/shuncheng/桌面/lingsight-ai/docs/architecture/backend-current.html",
+  "specification_sha256": "be5478e5b110a0a22b0568a8c73d6d507a1d14296b2ef4052e2b3871b1d50636",
+  "artifact_sha256": "37729c6dbe51cbdefc375948bc724dda45900e265d6b9ac1f1d49dc995b16161",
+  "specification_bytes": 6538,
+  "artifact_bytes": 812179,
+  "validation": "9/9 showcase, 0 errors, 0 warnings",
+  "browser_evidence": "passed",
+  "visual_review": "passed",
+  "correction_rounds": 2,
+  "visual_review_scope": {
+    "artifact_sha256": "37729c6dbe51cbdefc375948bc724dda45900e265d6b9ac1f1d49dc995b16161",
+    "screenshots": [
+      "1440x900 light",
+      "1440x900 dark",
+      "2048x1320 light",
+      "2048x1320 dark"
+    ],
+    "observations": [
+      "节点、关系标签无可见遮挡；主路径清楚。",
+      "大屏主面板与结论卡片占屏均衡。",
+      "浅色及深色主题均可读。"
+    ],
+    "interactive_controls": "未额外手动测试搜索、导出等交互"
+  },
+  "repository_revision": "98b38a27f95ebc21383c35e14734d8aeed918c83",
+  "runtime_verification": "仅静态源码分析；未启动应用、访问科研数据库或运行项目测试。"
+}

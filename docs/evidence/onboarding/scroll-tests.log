@@ -1,0 +1,18 @@
+
+Running 10 tests using 1 worker
+
+(node:3184435) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/10] [chromium] › tests/onboarding.spec.ts:52:3 › 探索轨迹与朝向: simple flow saves the question and hands it to the workspace
+[2/10] [chromium] › tests/onboarding.spec.ts:52:3 › 比较训练日表现: simple flow saves the question and hands it to the workspace
+[3/10] [chromium] › tests/onboarding.spec.ts:52:3 › 整理研究报告: simple flow saves the question and hands it to the workspace
+[4/10] [chromium] › tests/onboarding.spec.ts:83:1 › returning preserves edits; changing direction regenerates the question without sending a task
+[5/10] [chromium] › tests/onboarding.spec.ts:116:1 › empty input and blocked storage do not finish onboarding; download remains available
+[6/10] [chromium] › tests/onboarding.spec.ts:149:1 › mobile keyboard flow supports reduced motion and ignores invalid storage
+[7/10] [chromium] › tests/onboarding.spec.ts:184:1 › skipping marks the guide seen without creating a research brief
+[8/10] [chromium] › tests/onboarding.spec.ts:202:1 › wheel explains the platform before selection and lets users return without submitting
+[9/10] [chromium] › tests/onboarding.spec.ts:244:1 › scrolling a long question stays inside the editor
+[10/10] [chromium] › tests/onboarding.spec.ts:269:3 › short touch viewport › a swipe reveals long content before advancing to the example
+  10 passed (38.0s)

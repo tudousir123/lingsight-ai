@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from app.trials.derive import build_track_bundle, pool_source_label
+from app.trials.media import describe_media
 from app.trials.schemas import (
     REASON_NO_POOL,
     REASON_NO_TRACK,
@@ -23,7 +24,6 @@ from app.trials.schemas import (
     PoolGeometry,
     TrackBundle,
     TrackFrame,
-    media_url,
 )
 
 FIXTURE_FILE = "fixture.json"
@@ -132,24 +132,12 @@ class FileTrialStore:
         media = row.get("media") or {}
         source = self._media_file(media.get("source"))
         overlay = self._media_file(media.get("overlay"))
-        if overlay is not None:
-            return MediaInfo(
-                kind="overlay",
-                status="available",
-                url=media_url(experiment_id, trial_id, "overlay"),
-                fingerprint=f"bytes:{overlay.stat().st_size}",
-            )
-        if source is not None:
-            return MediaInfo(
-                kind="source",
-                status="available",
-                url=media_url(experiment_id, trial_id, "source"),
-                fingerprint=f"bytes:{source.stat().st_size}",
-            )
-        return MediaInfo(
-            kind="source",
-            status="missing",
-            reason="视频文件不可用（合成夹具未提供该试次的媒体文件）",
+        return describe_media(
+            experiment_id,
+            trial_id,
+            source=source,
+            overlay=overlay,
+            missing_reason="视频文件不可用（合成夹具未提供该试次的媒体文件）",
         )
 
     def get_geometry(self, experiment_id: str, trial_id: str) -> GeometryBundle:

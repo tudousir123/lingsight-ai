@@ -1,0 +1,19 @@
+
+Running 3 tests using 3 workers
+
+(node:390128) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:390129) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:390130) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/3] [chromium] › tests/onboarding.spec.ts:250:1 › the mouse wheel advances one scene at a time and can go back
+[2/3] [chromium] › tests/onboarding.spec.ts:250:1 › the mouse wheel advances one scene at a time and can go back
+[3/3] [chromium] › tests/onboarding.spec.ts:250:1 › the mouse wheel advances one scene at a time and can go back
+  3 passed (3.1s)

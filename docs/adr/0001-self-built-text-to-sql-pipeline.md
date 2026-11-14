@@ -1,8 +1,10 @@
 ---
-status: accepted
+status: superseded by ADR-0009
 ---
 
 # Text-to-SQL 采用"借鉴成熟架构、自建轻量管线"，不整体引入 WrenAI/DB-GPT
+
+2026-11-09：目标架构由 [ADR-0009](0009-independent-research-agent-via-dbhub.md) 取代，改为独立科研 Agent 服务并复用现有 DBHub 数据入口。以下保留原始决策背景；现有实现尚未迁移或删除。
 
 产品目标是把 Text-to-SQL 做成科研 Agent 中可解释、可独立讲述的工程模块（工程化面试型），而非交付一个现成问答平台。因此决定：参照 WrenAI 的语义层思想与 LangGraph SQL Agent 的"生成→校验→修复"回路，用 SQLGlot + SQLAlchemy + FastAPI 自建核心链路；完整的 WrenAI/DB-GPT 平台本期不引入。
 

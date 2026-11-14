@@ -1,0 +1,16 @@
+reporter/violations ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Some lint rules or assist actions reported some violations.
+  
+  i The following files have violations:
+  
+  - src/features/marketing/LingSightLanding.tsx (2 infos)
+  
+  i The following lint rules have violations:
+  
+  Rule Name                            Diagnostics
+  
+  lint/style/useTemplate               2 (2 infos)
+
+Checked 32 files in 36ms. No fixes applied.
+Found 2 infos.

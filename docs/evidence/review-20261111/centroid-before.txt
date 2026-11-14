@@ -1,0 +1,249 @@
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> da969c656440, initial schema for mysql
+INFO  [alembic.runtime.migration] Running upgrade da969c656440 -> b19a1e7c90a1, Store per-user experiment access for the trial catalog.
+INFO  [alembic.runtime.migration] Running upgrade b19a1e7c90a1 -> c3f8a1d204b7, Store human preparation reviews per trial (ticket #21).
+INFO  [alembic.runtime.migration] Running upgrade c3f8a1d204b7 -> d4e5f6a7b8c9, Keep preparation reviews for each version of trial materials.
+INFO  [alembic.runtime.migration] Running upgrade d4e5f6a7b8c9 -> a1b2c3d4e5f6, Project entity: user-owned research organization unit (ticket #42).
+INFO  [alembic.runtime.migration] Running upgrade a1b2c3d4e5f6 -> b7d8e9f0a1c2, Published inference results: v3-form summary + per-frame rows (ticket #43).
+F...FFFF........                                                         [100%]
+=================================== FAILURES ===================================
+________________ test_publish_preserves_v9_mask_pixel_centroid _________________
+
+client = <starlette.testclient.TestClient object at 0x71d9b526af90>
+workspace_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3OTUxMDAxOTAsInN1YiI6ImI3MjdkYmI5LTMyOWEtNGFlMS1iYTVmLTFlYjQ2Y2RjNzBiZCJ9.MAIKs4wnShJgU7_574K_UR-T8YAIx8ymzFluFYn8-D0'}
+db = <sqlmodel.orm.session.Session object at 0x71d9b6c99d30>
+
+    def test_publish_preserves_v9_mask_pixel_centroid(
+        client: TestClient, workspace_headers: dict[str, str], db: Session
+    ) -> None:
+        project_id = _create_project(client, workspace_headers)
+        task_id, task = fresh_task()
+        artifacts = default_artifacts()
+        artifacts["tracking.json"]["frames"][0]["center"] = [100.12, 201.34]
+        expected = [101.123456789, 202.987654321]
+        artifacts["keypoints.json"]["frames"][0]["center"] = expected
+        with fake_inference(FakeUpstream(task, artifacts)):
+            response = _publish(client, workspace_headers, project_id, task_id)
+        assert response.status_code == 201, response.text
+        frame = _frame_rows(db, task_id)[0]
+>       assert [frame.centroid_x, frame.centroid_y] == expected
+E       assert [100.12, 201.34] == [101.123456789, 202.987654321]
+E
+E         At index 0 diff: 100.12 != 101.123456789
+E         Use -v to get more diff
+
+tests/api/routes/test_publish.py:452: AssertionError
+_ test_publish_refuses_malformed_scientific_contract[keypoints.json-path3-None] _
+
+client = <starlette.testclient.TestClient object at 0x71d9b526af90>
+workspace_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3OTUxMDAxOTIsInN1YiI6IjM2ODBhYjEwLTg2NGEtNDc1NC04MGNiLTZlYjNiMzgyZDNkYyJ9.B-Blutn3-9XtFJqj34aWBybqXY7ONFAUp5eJKV_iiVk'}
+db = <sqlmodel.orm.session.Session object at 0x71d9b6c99d30>
+artifact = 'keypoints.json', path = ('frames', 0, 'center'), value = None
+
+    @pytest.mark.parametrize(
+        ("artifact", "path", "value"),
+        [
+            ("tracking.json", ("frames",), []),
+            ("tracking.json", ("frames", 5, "frame"), 6),
+            ("keypoints.json", ("frames", 0, "frame"), False),
+            ("keypoints.json", ("frames", 0, "center"), None),
+            ("keypoints.json", ("frames", 0, "center"), [1]),
+            ("keypoints.json", ("frames", 0, "center"), [1, float("nan")]),
+            ("keypoints.json", ("frames", 0, "center"), [True, 2]),
+            ("keypoints.json", ("frames", 5, "heading_status"), "unknown"),
+            ("keypoints.json", ("frames", 0, "heading_angle_deg"), -1),
+            ("keypoints.json", ("frames", 0, "heading_angle_deg"), float("nan")),
+            ("keypoints.json", ("frames", 0, "is_proposal"), True),
+            ("keypoints.json", ("frames", 0, "keypoint_correction"), "invented"),
+            ("keypoints.json", ("heading_parameters", "primary_radius_px"), 4),
+            ("provenance.json", ("first_frame_sha256",), "z" * 64),
+            ("provenance.json", ("confirmed", "seed", "x"), 100),
+        ],
+    )
+    def test_publish_refuses_malformed_scientific_contract(
+        client: TestClient,
+        workspace_headers: dict[str, str],
+        db: Session,
+        artifact: str,
+        path: tuple[str | int, ...],
+        value: Any,
+    ) -> None:
+        project_id = _create_project(client, workspace_headers)
+        task_id, task = fresh_task()
+        artifacts = default_artifacts()
+        parent: Any = artifacts[artifact]
+        for key in path[:-1]:
+            parent = parent[key]
+        parent[path[-1]] = value
+        with fake_inference(FakeUpstream(task, artifacts)):
+            response = _publish(client, workspace_headers, project_id, task_id)
+>       assert response.status_code == 422, response.text
+E       AssertionError: {"task_id":"16be92a6-cf90-47be-b30e-0d9fb050c6e8","project_id":"83d5a048-25af-49b9-a7cc-2164a7c3b0fe","video_id":"day01/maze-clip.mp4","fps":30.0,"total_frames":6,"valid_frames":5,"frames_with_heading":4,"proposal_frames":1,"heading_algorithm":"frozen-ball-chord-7px-v1","keypoint_protocol":"fixed-mask-centroid-crop256-fp32-v9","video_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","content_fingerprint":"88eb9f4102f4e3a199b553d9522bfc8682aac6cb7b4c5ff537f635f9c6a213ad","review_note":"看过叠加视频","published_at":"2026-11-11T14:56:32Z","replayed":false}
+E       assert 201 == 422
+E        +  where 201 = <Response [201 Created]>.status_code
+
+tests/api/routes/test_publish.py:558: AssertionError
+_ test_publish_refuses_malformed_scientific_contract[keypoints.json-path4-value4] _
+
+client = <starlette.testclient.TestClient object at 0x71d9b526af90>
+workspace_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3OTUxMDAxOTIsInN1YiI6ImQxNTUwOGE4LTcxOGItNDQwMi05OGUyLTMwN2NjM2IyNGU5MiJ9.AI6y-QAoSxUyIC2RXFTmTsd0571Ng63YXuuiOgh0Cko'}
+db = <sqlmodel.orm.session.Session object at 0x71d9b6c99d30>
+artifact = 'keypoints.json', path = ('frames', 0, 'center'), value = [1]
+
+    @pytest.mark.parametrize(
+        ("artifact", "path", "value"),
+        [
+            ("tracking.json", ("frames",), []),
+            ("tracking.json", ("frames", 5, "frame"), 6),
+            ("keypoints.json", ("frames", 0, "frame"), False),
+            ("keypoints.json", ("frames", 0, "center"), None),
+            ("keypoints.json", ("frames", 0, "center"), [1]),
+            ("keypoints.json", ("frames", 0, "center"), [1, float("nan")]),
+            ("keypoints.json", ("frames", 0, "center"), [True, 2]),
+            ("keypoints.json", ("frames", 5, "heading_status"), "unknown"),
+            ("keypoints.json", ("frames", 0, "heading_angle_deg"), -1),
+            ("keypoints.json", ("frames", 0, "heading_angle_deg"), float("nan")),
+            ("keypoints.json", ("frames", 0, "is_proposal"), True),
+            ("keypoints.json", ("frames", 0, "keypoint_correction"), "invented"),
+            ("keypoints.json", ("heading_parameters", "primary_radius_px"), 4),
+            ("provenance.json", ("first_frame_sha256",), "z" * 64),
+            ("provenance.json", ("confirmed", "seed", "x"), 100),
+        ],
+    )
+    def test_publish_refuses_malformed_scientific_contract(
+        client: TestClient,
+        workspace_headers: dict[str, str],
+        db: Session,
+        artifact: str,
+        path: tuple[str | int, ...],
+        value: Any,
+    ) -> None:
+        project_id = _create_project(client, workspace_headers)
+        task_id, task = fresh_task()
+        artifacts = default_artifacts()
+        parent: Any = artifacts[artifact]
+        for key in path[:-1]:
+            parent = parent[key]
+        parent[path[-1]] = value
+        with fake_inference(FakeUpstream(task, artifacts)):
+            response = _publish(client, workspace_headers, project_id, task_id)
+>       assert response.status_code == 422, response.text
+E       AssertionError: {"task_id":"85fbe71d-a99b-4cc4-a42e-687d055baf2f","project_id":"c9fcbe78-a9e5-4372-9445-e5a66bca7c55","video_id":"day01/maze-clip.mp4","fps":30.0,"total_frames":6,"valid_frames":5,"frames_with_heading":4,"proposal_frames":1,"heading_algorithm":"frozen-ball-chord-7px-v1","keypoint_protocol":"fixed-mask-centroid-crop256-fp32-v9","video_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","content_fingerprint":"9c12421fedd41d1996e18a4606647b53671b5314c1163e626386d52f2fef68de","review_note":"看过叠加视频","published_at":"2026-11-11T14:56:33Z","replayed":false}
+E       assert 201 == 422
+E        +  where 201 = <Response [201 Created]>.status_code
+
+tests/api/routes/test_publish.py:558: AssertionError
+_ test_publish_refuses_malformed_scientific_contract[keypoints.json-path5-value5] _
+
+client = <starlette.testclient.TestClient object at 0x71d9b526af90>
+workspace_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3OTUxMDAxOTMsInN1YiI6ImJjNGZjNTg3LTZkNjctNGY0MC1iZmFkLTUwZTY2YTY1ODllMiJ9.e_TDHIaqbL6Jh2cdRD1fEZosiqE9tAC3v_K1Mg7UF5g'}
+db = <sqlmodel.orm.session.Session object at 0x71d9b6c99d30>
+artifact = 'keypoints.json', path = ('frames', 0, 'center'), value = [1, nan]
+
+    @pytest.mark.parametrize(
+        ("artifact", "path", "value"),
+        [
+            ("tracking.json", ("frames",), []),
+            ("tracking.json", ("frames", 5, "frame"), 6),
+            ("keypoints.json", ("frames", 0, "frame"), False),
+            ("keypoints.json", ("frames", 0, "center"), None),
+            ("keypoints.json", ("frames", 0, "center"), [1]),
+            ("keypoints.json", ("frames", 0, "center"), [1, float("nan")]),
+            ("keypoints.json", ("frames", 0, "center"), [True, 2]),
+            ("keypoints.json", ("frames", 5, "heading_status"), "unknown"),
+            ("keypoints.json", ("frames", 0, "heading_angle_deg"), -1),
+            ("keypoints.json", ("frames", 0, "heading_angle_deg"), float("nan")),
+            ("keypoints.json", ("frames", 0, "is_proposal"), True),
+            ("keypoints.json", ("frames", 0, "keypoint_correction"), "invented"),
+            ("keypoints.json", ("heading_parameters", "primary_radius_px"), 4),
+            ("provenance.json", ("first_frame_sha256",), "z" * 64),
+            ("provenance.json", ("confirmed", "seed", "x"), 100),
+        ],
+    )
+    def test_publish_refuses_malformed_scientific_contract(
+        client: TestClient,
+        workspace_headers: dict[str, str],
+        db: Session,
+        artifact: str,
+        path: tuple[str | int, ...],
+        value: Any,
+    ) -> None:
+        project_id = _create_project(client, workspace_headers)
+        task_id, task = fresh_task()
+        artifacts = default_artifacts()
+        parent: Any = artifacts[artifact]
+        for key in path[:-1]:
+            parent = parent[key]
+        parent[path[-1]] = value
+        with fake_inference(FakeUpstream(task, artifacts)):
+            response = _publish(client, workspace_headers, project_id, task_id)
+>       assert response.status_code == 422, response.text
+E       AssertionError: {"task_id":"22628f69-0343-4a45-9353-6a3c59dd95bf","project_id":"9e68cd1e-d660-451b-94cd-deb78c3b1f06","video_id":"day01/maze-clip.mp4","fps":30.0,"total_frames":6,"valid_frames":5,"frames_with_heading":4,"proposal_frames":1,"heading_algorithm":"frozen-ball-chord-7px-v1","keypoint_protocol":"fixed-mask-centroid-crop256-fp32-v9","video_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","content_fingerprint":"ea36ca0aed605337aa8b67d20789c60c6a7efd38019866628375a73da7a71997","review_note":"看过叠加视频","published_at":"2026-11-11T14:56:33Z","replayed":false}
+E       assert 201 == 422
+E        +  where 201 = <Response [201 Created]>.status_code
+
+tests/api/routes/test_publish.py:558: AssertionError
+_ test_publish_refuses_malformed_scientific_contract[keypoints.json-path6-value6] _
+
+client = <starlette.testclient.TestClient object at 0x71d9b526af90>
+workspace_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3OTUxMDAxOTMsInN1YiI6IjAxMTE4MTdlLWY3NWItNDkyNy1iYjljLTg5YjUwNDdhZDcyOCJ9.V8WOEdw7Ov2QgUBQwzI0s1EZIqPv6QXxGVueE6ooRgU'}
+db = <sqlmodel.orm.session.Session object at 0x71d9b6c99d30>
+artifact = 'keypoints.json', path = ('frames', 0, 'center'), value = [True, 2]
+
+    @pytest.mark.parametrize(
+        ("artifact", "path", "value"),
+        [
+            ("tracking.json", ("frames",), []),
+            ("tracking.json", ("frames", 5, "frame"), 6),
+            ("keypoints.json", ("frames", 0, "frame"), False),
+            ("keypoints.json", ("frames", 0, "center"), None),
+            ("keypoints.json", ("frames", 0, "center"), [1]),
+            ("keypoints.json", ("frames", 0, "center"), [1, float("nan")]),
+            ("keypoints.json", ("frames", 0, "center"), [True, 2]),
+            ("keypoints.json", ("frames", 5, "heading_status"), "unknown"),
+            ("keypoints.json", ("frames", 0, "heading_angle_deg"), -1),
+            ("keypoints.json", ("frames", 0, "heading_angle_deg"), float("nan")),
+            ("keypoints.json", ("frames", 0, "is_proposal"), True),
+            ("keypoints.json", ("frames", 0, "keypoint_correction"), "invented"),
+            ("keypoints.json", ("heading_parameters", "primary_radius_px"), 4),
+            ("provenance.json", ("first_frame_sha256",), "z" * 64),
+            ("provenance.json", ("confirmed", "seed", "x"), 100),
+        ],
+    )
+    def test_publish_refuses_malformed_scientific_contract(
+        client: TestClient,
+        workspace_headers: dict[str, str],
+        db: Session,
+        artifact: str,
+        path: tuple[str | int, ...],
+        value: Any,
+    ) -> None:
+        project_id = _create_project(client, workspace_headers)
+        task_id, task = fresh_task()
+        artifacts = default_artifacts()
+        parent: Any = artifacts[artifact]
+        for key in path[:-1]:
+            parent = parent[key]
+        parent[path[-1]] = value
+        with fake_inference(FakeUpstream(task, artifacts)):
+            response = _publish(client, workspace_headers, project_id, task_id)
+>       assert response.status_code == 422, response.text
+E       AssertionError: {"task_id":"e796a4db-2d92-46bf-aaec-368a86852df4","project_id":"8dbe3b49-3501-4dc3-b368-760963ff1761","video_id":"day01/maze-clip.mp4","fps":30.0,"total_frames":6,"valid_frames":5,"frames_with_heading":4,"proposal_frames":1,"heading_algorithm":"frozen-ball-chord-7px-v1","keypoint_protocol":"fixed-mask-centroid-crop256-fp32-v9","video_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","content_fingerprint":"022e489f8689568b3de6c4be55ed48e58418547f1c3414fff6cdeebc0ae7478a","review_note":"看过叠加视频","published_at":"2026-11-11T14:56:34Z","replayed":false}
+E       assert 201 == 422
+E        +  where 201 = <Response [201 Created]>.status_code
+
+tests/api/routes/test_publish.py:558: AssertionError
+=============================== warnings summary ===============================
+../.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /home/x/桌面/lingsight-ai/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/api/routes/test_publish.py::test_publish_preserves_v9_mask_pixel_centroid
+FAILED tests/api/routes/test_publish.py::test_publish_refuses_malformed_scientific_contract[keypoints.json-path3-None]
+FAILED tests/api/routes/test_publish.py::test_publish_refuses_malformed_scientific_contract[keypoints.json-path4-value4]
+FAILED tests/api/routes/test_publish.py::test_publish_refuses_malformed_scientific_contract[keypoints.json-path5-value5]
+FAILED tests/api/routes/test_publish.py::test_publish_refuses_malformed_scientific_contract[keypoints.json-path6-value6]
+5 failed, 11 passed, 28 deselected, 1 warning in 9.66s

@@ -1,0 +1,28 @@
+$ tsc -p tsconfig.build.json && vite build
+vite v8.3.1 building client environment for production...
+transforming...
+✓ 3090 modules transformed.
+✗ Build failed in 673ms
+error during build:
+Build failed with 1 error:
+
+[plugin vite:prepare-out-dir]
+Error: EACCES, Permission denied: /home/shuncheng/æ¡é¢/lingsight-ai/backend/app/frontend/assets '/home/shuncheng/桌面/lingsight-ai/backend/app/frontend/assets'
+    at Object.rmSync (node:fs:1567:18)
+    at emptyDir (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/vite/dist/node/chunks/node.js:2395:11)
+    at prepareOutDir (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/vite/dist/node/chunks/node.js:34007:55)
+    at PluginContextImpl.handler (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/vite/dist/node/chunks/node.js:33996:6)
+    at PluginContextImpl.handler (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/vite/dist/node/chunks/node.js:34704:13)
+    at plugin (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/rolldown/dist/shared/bindingify-input-options-DCTviPFW.mjs:1796:17)
+    at file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/rolldown/dist/shared/bindingify-input-options-DCTviPFW.mjs:2118:21
+    at plugin.<computed> (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/rolldown/dist/shared/bindingify-input-options-DCTviPFW.mjs:2316:18)
+    at aggregateBindingErrorsIntoJsError (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/rolldown/dist/shared/error-Bj1xBdEY.mjs:49:18)
+    at unwrapBindingResult (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/rolldown/dist/shared/error-Bj1xBdEY.mjs:19:128)
+    at #build (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/rolldown/dist/shared/rolldown-jmAeXo_f.mjs:133:34)
+    at async buildEnvironment (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/vite/dist/node/chunks/node.js:34445:66)
+    at async Object.build (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/vite/dist/node/chunks/node.js:34866:19)
+    at async Object.buildApp (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/vite/dist/node/chunks/node.js:34863:153)
+    at async CAC.<anonymous> (file:///home/shuncheng/%E6%A1%8C%E9%9D%A2/lingsight-ai/node_modules/vite/dist/node/cli.js:780:3) {
+  errors: [Getter/Setter]
+}
+error: script "build" exited with code 1

@@ -6,13 +6,11 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
-from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import select
 
-from app.api.deps import CurrentUser, SessionDep, user_from_token
-from app.core.config import settings
-from app.models import ExperimentAccess, User
-from app.text_to_sql.settings import get_research_settings
+from app.api.deps import CurrentUser, MediaUserDep, SessionDep
+from app.core.research import get_research_database_settings
+from app.models import ExperimentAccess
 from app.trials.assets import ResearchTrialAssets
 from app.trials.catalog import CatalogUnavailable, TrialCatalog
 from app.trials.fixture_store import FileTrialStore, FixtureUnavailable
@@ -62,14 +60,14 @@ def get_trial_catalog() -> TrialCatalogProtocol:
     """Bounded trial catalog: research DB, or the synthetic fixture dir."""
     if get_trials_settings().TRIALS_FIXTURE_DIR is not None:
         return _fixture_or_503()
-    return TrialCatalog(get_research_settings())
+    return TrialCatalog(get_research_database_settings())
 
 
 def get_trial_assets() -> TrialAssetsProtocol:
     """Material resolver for one trial: research side, or the fixture."""
     if get_trials_settings().TRIALS_FIXTURE_DIR is not None:
         return _fixture_or_503()
-    return ResearchTrialAssets(get_research_settings(), get_trials_settings())
+    return ResearchTrialAssets(get_research_database_settings(), get_trials_settings())
 
 
 CatalogDep = Annotated[TrialCatalogProtocol, Depends(get_trial_catalog)]
@@ -197,19 +195,14 @@ def put_review(
 ) -> ReviewPublic:
     _check_access(experiment_id, session, current_user)
     try:
-        load_trial(catalog, experiment_id, trial_id)
-        video = assets.get_media(experiment_id, trial_id)
-        geometry = assets.get_geometry(experiment_id, trial_id)
-        track = assets.get_track(experiment_id, trial_id)
         return save_review(
             session,
             current_user,
             experiment_id,
             trial_id,
             update,
-            video=video,
-            geometry=geometry,
-            track=track,
+            catalog=catalog,
+            assets=assets,
         )
     except TrialNotFound:
         raise HTTPException(status_code=404, detail="Trial not found in experiment")
@@ -246,28 +239,8 @@ def get_result(
 
 # --- media serving -----------------------------------------------------------
 #
-# <video> elements cannot send an Authorization header, so the media route
-# additionally accepts the session JWT as a `token` query parameter. The URL
-# is assembled server-side per trial; the token is the caller's own
-# short-lived session token.
-
-_media_oauth2 = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/login/access-token", auto_error=False
-)
-
-
-def get_media_user(
-    session: SessionDep,
-    token: Annotated[str | None, Depends(_media_oauth2)] = None,
-    query_token: Annotated[str | None, Query(alias="token")] = None,
-) -> User:
-    raw = token or query_token
-    if not raw:
-        raise HTTPException(status_code=403, detail="Not authenticated")
-    return user_from_token(session, raw)
-
-
-MediaUserDep = Annotated[User, Depends(get_media_user)]
+# Media auth (bearer header or `?token=` session JWT for <video> elements)
+# lives in app.api.deps next to the other platform dependencies.
 
 
 @router.get("/{experiment_id}/trials/{trial_id}/media/{kind}")

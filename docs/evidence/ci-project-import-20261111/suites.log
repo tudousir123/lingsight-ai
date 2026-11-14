@@ -1,0 +1,28 @@
+
+Running 20 tests using 1 worker
+
+(node:599028) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/20] [chromium] › tests/agent-workspace.spec.ts:86:1 › 默认进入对话，侧栏三个工具入口
+[2/20] [chromium] › tests/agent-workspace.spec.ts:108:1 › 引导完成携带问题和范围但不自动提交
+[3/20] [chromium] › tests/agent-workspace.spec.ts:146:1 › 创建任务和刷新重放，交付物安全预览
+[4/20] [chromium] › tests/agent-workspace.spec.ts:173:1 › 提交失败保留输入
+[5/20] [chromium] › tests/agent-workspace.spec.ts:189:1 › 待确认口径通过答复入口提交
+[6/20] [chromium] › tests/agent-workspace.spec.ts:219:1 › 窄屏输入框可见，侧栏可展开
+[7/20] [chromium] › tests/agent-workspace.spec.ts:232:1 › 报告编辑失败保留修改，重试另存新版本
+[8/20] [chromium] › tests/agent-workspace.spec.ts:268:1 › 侧栏品牌菜单、真实任务状态与选中状态
+[9/20] [chromium] › tests/agent-workspace.spec.ts:286:1 › 搜索研究筛选完整任务列表，关闭后恢复最近任务
+[10/20] [chromium] › tests/agent-workspace.spec.ts:317:1 › 折叠侧栏仍可展开搜索，手机选择任务后关闭抽屉
+[11/20] [chromium] › tests/agent-workspace.spec.ts:343:1 › 侧栏与首页使用中文，示例问题只填入草稿
+[12/20] [chromium] › tests/agent-workspace.spec.ts:386:1 › 项目可新建、归组任务、刷新保留并清空，不写 Agent 服务
+[13/20] [chromium] › tests/agent-workspace.spec.ts:434:1 › 项目可改名与删除，删除后任务保留
+[14/20] [chromium] › tests/agent-workspace.spec.ts:465:1 › 新建项目失败保留名称并允许重试
+[15/20] [chromium] › tests/agent-workspace.spec.ts:495:1 › 项目接口失败不阻塞科研任务
+[16/20] [chromium] › tests/agent-workspace.spec.ts:514:1 › localStorage 旧项目一次性迁移导入且重放幂等
+[17/20] [chromium] › tests/agent-workspace.spec.ts:592:1 › 项目页查看已发布推理结果的逐帧行摘要
+[18/20] [chromium] › tests/project-research.spec.ts:31:1 › project entry carries immutable scope and groups the created task
+[19/20] [chromium] › tests/project-research.spec.ts:94:1 › unavailable project retains the question without creating an unscoped task
+[20/20] [chromium] › tests/project-research.spec.ts:114:1 › unexpected upstream scope stops the new run without grouping or resending
+  20 passed (54.2s)

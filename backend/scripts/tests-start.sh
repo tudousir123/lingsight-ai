@@ -1,5 +1,3 @@
 #! /usr/bin/env bash
-set -e
-set -x
-
-bash scripts/test.sh "$@"
+set -euo pipefail
+exec bash "$(dirname "$0")/test-local.sh" "$@"

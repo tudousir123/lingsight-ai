@@ -6,6 +6,31 @@ import { defineConfig } from "vite"
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    // Media URLs are relative, just as in the backend-served production SPA.
+    proxy: {
+      ...(process.env.VITE_AGENT_GATEWAY_URL
+        ? {
+            "/api/v1/agent": {
+              target: process.env.VITE_AGENT_GATEWAY_URL,
+              changeOrigin: true,
+            },
+          }
+        : {}),
+      ...(process.env.VITE_INFERENCE_GATEWAY_URL
+        ? {
+            "/api/v1/inference": {
+              target: process.env.VITE_INFERENCE_GATEWAY_URL,
+              changeOrigin: true,
+            },
+          }
+        : {}),
+      "/api": {
+        target: process.env.VITE_API_URL || "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+    },
+  },
   build: {
     outDir: "../backend/app/frontend",
     emptyOutDir: true,
