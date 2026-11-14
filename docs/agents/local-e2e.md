@@ -50,3 +50,25 @@ bash scripts/test-local.sh
 后端完整测试每次创建独立 MySQL 8.4、随机宿主端口和 `lingsight_test_*` 数据库，迁移后运行测试与 coverage，退出销毁自己的容器，不触碰开发账号。自行管理测试库时须显式传 `TEST_DATABASE_URL`，库名必须符合 `lingsight_test_*`；缺失则拒绝运行。纯计算/网关测试可直接 `uv run pytest <files>`。真实研究库/LLM 测试标记 `env_gated` 并探活，未配置或不可达时 skip。
 
 前端依赖锁定 `bun.lock`，CI 使用 Bun 1.3.12。执行 `bun ci` 后 `cd frontend && bun run build`。本机无 Bun 用 `scripts/fe.sh build` 或 `check <files>`。不要用全仓 unsafe 写入的 `npm run lint` / `bun run lint`；用 `uv run prek run --files <files>` 或定向 Biome 检查，避免版本漂移和无关格式变动。
+
+## 4. 提交后的固定范围预检
+
+在任务 worktree 提交全部目标改动后，从该 worktree 运行：
+
+```bash
+bash scripts/pr-preflight.sh <fixed-base-commit-or-ref>
+```
+
+预检拒绝 main/master、detached HEAD 和任何 tracked/index/untracked 脏树（Git 忽略文件不计入）。base 必须解析为有效提交；命令打印解析后的 exact base/HEAD，并复用 CI 的 `uv run prek run --from-ref BASE --to-ref HEAD --show-diff-on-failure` 双端点范围，不改用 merge-base。为保证可重复审查，优先传固定 SHA，而非会移动的远程分支。
+
+prek 中有自动修复钩子，因此仅在任务 worktree 执行。钩子非零、产生工作树/索引改动、改变 HEAD 或分支，预检都失败；不会暂存、提交、推送、stash 或 reset。修复结果原样保留，人工审查并提交后重跑。该命令只保证 committed-head 范围，不替代真实 Docker、应用或科研服务验收。
+
+标准库 CLI 护栏由既有 prek/CI 入口自动发现 `scripts/tests/test_*.py`；也可单独运行：
+
+```bash
+python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+```
+
+拼写配置仅用根 `pyproject.toml` 的 `[tool.typos]`；根 `_typos.toml`、`.typos.toml`、`typos.toml` 即使未跟踪也会被配置护栏拒绝。现有固定版本 typos hook 环境执行 wrapper，不依赖宿主全局 typos。全局配置变更触发 Git 跟踪文件扫描，NUL-safe 保留特殊文件名并继续使用 `--force-exclude`；不递归读取私密未跟踪 `.env`，也不跟随 symlink。普通变更仅扫描传入的跟踪文件。
+
+SDK hook 同时覆盖后端 Schema/依赖、生成器配置，以及根 `package.json`、`bun.lock`、`frontend/package.json`。CI 的冻结依赖安装和 SDK drift 检查继续保留。
