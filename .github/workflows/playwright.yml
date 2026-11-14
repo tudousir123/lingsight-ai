@@ -41,6 +41,10 @@ jobs:
           changed:
             - backend/**
             - frontend/**
+            # The image's bun ci consumes the root workspace lock/manifests.
+            - bun.lock
+            - package.json
+            - packages/react-email/package.json
             - .env
             - compose*.yml
             - .github/workflows/playwright.yml
