@@ -82,4 +82,4 @@ repos:
         entry: bash ./scripts/generate-client.sh
         pass_filenames: false
         language: unsupported
-        files: ^backend/app/.*\.py$|^backend/pyproject\.toml$|^uv\.lock$|^frontend/openapi-ts\.config\.ts$|^scripts/generate-client\.sh$|^package\.json$|^bun\.lock$|^frontend/package\.json$
+        files: ^backend/app/.*\.py$|^backend/pyproject\.toml$|^uv\.lock$|^frontend/openapi-ts\.config\.ts$|^scripts/generate-client\.sh$|^scripts/generate-user-constraints\.py$|^package\.json$|^bun\.lock$|^frontend/package\.json$

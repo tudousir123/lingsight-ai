@@ -41,3 +41,9 @@ bun run build
 本机 `bun run build`（TypeScript + Vite）通过。涉及真实账号持久化和邮件的原有测试留给 GitHub CI 的隔离栈，本机不对正式后端运行这些测试。未部署此修复。
 
 Markdown 使用 MIT 许可的 [react-markdown](https://github.com/remarkjs/react-markdown)，保留默认安全 URL 转换、原始 HTML 文本显示，并禁止图片节点；未启用 raw HTML 插件。只读预览不触发远程图片请求。
+
+## 自审修正
+
+Standards 轴发现姓名上限手写复制后端约束，已改为从同一 OpenAPI 文档生成 `src/client/userConstraints.gen.ts`，由 SDK 生成脚本一起维护；生成器检查注册与新增用户契约一致。404 判断集中到 `isTaskNotFound`，用于查询刷新、页面状态和事件轮询。
+
+Spec 轴发现非姓名 422 的泛化提示丢失字段/限制，追加失败测试后修复为读取 `loc`、错误类型与 `ctx`，输出例如“密码最多 128 个字符”；服务端原始技术文案不会直接显示。修正后的相关回归 **7 passed (6.0s)**，本机构建、定向 Biome 和 SDK 再生成通过。

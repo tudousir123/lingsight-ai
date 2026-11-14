@@ -1,7 +1,7 @@
 import { isAxiosError } from "axios"
 import { z } from "zod"
 
-export const FULL_NAME_MAX_LENGTH = 255
+import { FULL_NAME_MAX_LENGTH } from "@/client/userConstraints.gen"
 export const fullNameLengthMessage = `姓名最多 ${FULL_NAME_MAX_LENGTH} 个字符`
 export const fullNameSchema = z
   .string()

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { agentRoutes } from "@/lib/upstreamRoutes.gen"
-import { AgentError, agentJson, type TaskEvent } from "./api"
+import { agentJson, isTaskNotFound, type TaskEvent } from "./api"
 
 // Durable cursor polling uses the same event log as SSE. Disconnecting never
 // cancels a task; switching tasks aborts only this browser's pending requests.
@@ -43,7 +43,7 @@ export function useTaskEvents(taskId: string) {
           error:
             e instanceof Error ? e.message : "Progress connection interrupted",
         })
-        if (!(e instanceof AgentError && e.status === 404)) {
+        if (!isTaskNotFound(e)) {
           timer = setTimeout(poll, 4000)
         }
       }

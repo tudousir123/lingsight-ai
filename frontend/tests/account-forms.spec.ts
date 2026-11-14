@@ -217,3 +217,30 @@ test("认证服务错误显示中文说明 (#62)", async ({ page }) => {
   await page.getByRole("button", { name: "登录", exact: true }).click()
   await expect(page.getByText("邮箱或密码错误", { exact: true })).toBeVisible()
 })
+
+test("服务端密码长度校验保留中文字段和上限 (#62)", async ({ page }) => {
+  await page.route("**/api/v1/users/signup", (route) =>
+    route.fulfill({
+      status: 422,
+      json: {
+        detail: [
+          {
+            loc: ["body", "password"],
+            type: "string_too_long",
+            ctx: { max_length: 128 },
+            msg: "String should have at most 128 characters",
+          },
+        ],
+      },
+    }),
+  )
+  await page.goto("/signup")
+  await page.getByTestId("full-name-input").fill("合成姓名")
+  await page.getByTestId("email-input").fill("synthetic@example.com")
+  await page.getByTestId("password-input").fill("p".repeat(129))
+  await page.getByTestId("confirm-password-input").fill("p".repeat(129))
+  await page.getByRole("button", { name: "注册", exact: true }).click()
+  await expect(
+    page.getByText("密码最多 128 个字符", { exact: true }),
+  ).toBeVisible()
+})

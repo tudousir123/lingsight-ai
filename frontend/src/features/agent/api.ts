@@ -65,6 +65,10 @@ export class AgentError extends Error {
     super(message)
   }
 }
+export function isTaskNotFound(error: unknown): boolean {
+  return error instanceof AgentError && error.status === 404
+}
+
 export async function agentFetch(path: string, options: RequestInit = {}) {
   const response = await fetch(`${agentGatewayBase}/${path}`, {
     ...options,

@@ -25,11 +25,11 @@ import { flagshipVisionModel } from "@/features/research/vision-model"
 import { agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { ArtifactCards, ArtifactViewer } from "./Artifacts"
 import {
-  AgentError,
   type Artifact,
   agentJson,
   download,
   isActive,
+  isTaskNotFound,
   type Question,
   type Run,
   statusLabels,
@@ -248,23 +248,12 @@ export function AgentWorkspace({
       ),
     enabled: !!taskId,
     refetchInterval: (query) =>
-      query.state.error instanceof AgentError &&
-      query.state.error.status === 404
-        ? false
-        : 2500,
-    refetchOnWindowFocus: (query) =>
-      !(
-        query.state.error instanceof AgentError &&
-        query.state.error.status === 404
-      ),
-    refetchOnReconnect: (query) =>
-      !(
-        query.state.error instanceof AgentError &&
-        query.state.error.status === 404
-      ),
+      isTaskNotFound(query.state.error) ? false : 2500,
+    refetchOnWindowFocus: (query) => !isTaskNotFound(query.state.error),
+    refetchOnReconnect: (query) => !isTaskNotFound(query.state.error),
     retry: false,
   })
-  const missing = task.error instanceof AgentError && task.error.status === 404
+  const missing = isTaskNotFound(task.error)
   const stream = useTaskEvents(task.data && !missing ? taskId : "")
   const run = task.data?.runs[task.data.runs.length - 1]
   const scopeId = projectId ?? task.data?.project_id

@@ -17,10 +17,50 @@ const accountErrors: Record<string, string> = {
   "The user with this id does not exist in the system": "用户不存在",
 }
 
+const accountFields: Record<string, string> = {
+  full_name: "姓名",
+  email: "邮箱",
+  password: "密码",
+  new_password: "新密码",
+  current_password: "当前密码",
+  confirm_password: "确认密码",
+}
+
+function validationMessage(error: unknown): string {
+  if (typeof error !== "object" || error === null) return "提交信息格式不正确"
+  const field =
+    "loc" in error && Array.isArray(error.loc)
+      ? (accountFields[String(error.loc[error.loc.length - 1])] ?? "提交信息")
+      : "提交信息"
+  if (
+    "type" in error &&
+    "ctx" in error &&
+    typeof error.ctx === "object" &&
+    error.ctx !== null
+  ) {
+    if (
+      error.type === "string_too_long" &&
+      "max_length" in error.ctx &&
+      typeof error.ctx.max_length === "number"
+    ) {
+      return `${field}最多 ${error.ctx.max_length} 个字符`
+    }
+    if (
+      error.type === "string_too_short" &&
+      "min_length" in error.ctx &&
+      typeof error.ctx.min_length === "number"
+    ) {
+      return `${field}至少需要 ${error.ctx.min_length} 个字符`
+    }
+  }
+  return `${field}格式不正确，请检查后重试`
+}
+
 function extractErrorMessage(err: Error): string {
   if (err instanceof AxiosError) {
     const detail: unknown = err.response?.data?.detail
-    if (Array.isArray(detail)) return "提交的信息不符合要求，请检查各字段。"
+    if (Array.isArray(detail) && detail.length)
+      return detail.map(validationMessage).join("；")
     if (typeof detail === "string") return accountErrors[detail] ?? detail
   }
   return "操作未完成，请稍后重试。"

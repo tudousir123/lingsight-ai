@@ -16,5 +16,6 @@ print(json.dumps(app.main.app.openapi()))
 cd ..
 mv openapi.json frontend/
 bun run --filter frontend generate-client
+python3 scripts/generate-user-constraints.py
 # No lint tail: src/client/** is biome-ignored by design (generated code),
 # and a full-repo `bun run lint` is an unsafe mass write (local-e2e §3).
