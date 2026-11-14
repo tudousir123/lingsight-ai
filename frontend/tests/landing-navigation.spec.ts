@@ -42,7 +42,7 @@ test("the public homepage switches languages on desktop and mobile", async ({
   page,
 }) => {
   await page.goto("/welcome")
-  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN")
+  await expect(page.locator("html")).toHaveAttribute("lang", "en")
   await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
     "Decode animal behavior, frame by frame.",
   )
@@ -56,13 +56,16 @@ test("the public homepage switches languages on desktop and mobile", async ({
       exact: true,
     })
     .click()
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN")
   await expect(page.locator(".landing")).toHaveAttribute("lang", "zh")
   await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
     "逐帧解码动物行为。",
   )
   await page.reload()
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN")
   await expect(page.locator(".landing")).toHaveAttribute("lang", "zh")
   await page.locator(".lang-toggle").click()
+  await expect(page.locator("html")).toHaveAttribute("lang", "en")
   await expect(page.locator(".landing")).toHaveAttribute("lang", "en")
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(
@@ -89,6 +92,7 @@ test("the public homepage remains usable when browser storage is blocked", async
     }
   })
   await page.goto("/welcome")
+  await expect(page.locator("html")).toHaveAttribute("lang", "en")
   await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
     "Decode animal behavior, frame by frame.",
   )
@@ -96,6 +100,7 @@ test("the public homepage remains usable when browser storage is blocked", async
     "Illustrative examples · synthetic data",
   )
   await page.locator(".lang-toggle").click()
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN")
   await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
     "逐帧解码动物行为。",
   )

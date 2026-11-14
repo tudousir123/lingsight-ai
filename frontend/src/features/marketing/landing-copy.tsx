@@ -4,6 +4,7 @@ import {
   type ReactNode,
   type SetStateAction,
   useContext,
+  useEffect,
   useState,
 } from "react"
 
@@ -341,6 +342,9 @@ export function LandingLangProvider({ children }: { children: ReactNode }) {
       return next
     })
   }
+  useEffect(() => {
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en"
+  }, [lang])
   return (
     <LangContext.Provider
       value={{ lang, setLang: changeLang, c: dictionaries[lang] }}
