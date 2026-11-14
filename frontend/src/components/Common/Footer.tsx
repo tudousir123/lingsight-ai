@@ -5,7 +5,7 @@ export function Footer() {
     <footer className="flex flex-wrap items-center justify-between gap-3 border-t py-4 text-xs text-muted-foreground">
       <span>© {new Date().getFullYear()} LingSight Science</span>
       <Link to="/welcome" className="hover:text-foreground">
-        Product home
+        产品首页
       </Link>
     </footer>
   )

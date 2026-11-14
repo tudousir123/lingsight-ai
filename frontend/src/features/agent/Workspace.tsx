@@ -25,6 +25,7 @@ import { flagshipVisionModel } from "@/features/research/vision-model"
 import { agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { ArtifactCards, ArtifactViewer } from "./Artifacts"
 import {
+  AgentError,
   type Artifact,
   agentJson,
   download,
@@ -246,10 +247,25 @@ export function AgentWorkspace({
         signal,
       ),
     enabled: !!taskId,
-    refetchInterval: 2500,
+    refetchInterval: (query) =>
+      query.state.error instanceof AgentError &&
+      query.state.error.status === 404
+        ? false
+        : 2500,
+    refetchOnWindowFocus: (query) =>
+      !(
+        query.state.error instanceof AgentError &&
+        query.state.error.status === 404
+      ),
+    refetchOnReconnect: (query) =>
+      !(
+        query.state.error instanceof AgentError &&
+        query.state.error.status === 404
+      ),
     retry: false,
   })
-  const stream = useTaskEvents(taskId)
+  const missing = task.error instanceof AgentError && task.error.status === 404
+  const stream = useTaskEvents(task.data && !missing ? taskId : "")
   const run = task.data?.runs[task.data.runs.length - 1]
   const scopeId = projectId ?? task.data?.project_id
   const isProjectHome = !!projectId && !taskId
@@ -393,6 +409,16 @@ export function AgentWorkspace({
       setAttachmentOpen(true)
     }
   }
+  if (missing) {
+    return (
+      <div className="agent-empty" role="alert">
+        <h1>任务不存在或已被删除</h1>
+        <Link to="/analysis" className="underline">
+          返回任务列表
+        </Link>
+      </div>
+    )
+  }
   const serviceError = tasks.error?.message
   const composer = (
     <div className="agent-composer-wrap">
@@ -406,7 +432,7 @@ export function AgentWorkspace({
         <div className="agent-composer-context">
           <Database size={13} />
           <span>{scopeId ? "项目已发布数据" : "实验数据"}</span>
-          {taskId && (
+          {(run?.status === "queued" || run?.status === "running") && (
             <span className="agent-background-note">
               离开页面后任务仍会继续运行
             </span>

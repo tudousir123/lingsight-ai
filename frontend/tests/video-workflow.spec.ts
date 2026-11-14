@@ -91,7 +91,7 @@ test("本地视频可单独发送，并可在发送前移除", async ({ page }) 
   await expect(
     page.getByRole("button", { name: "网盘", exact: true }),
   ).toHaveAttribute("aria-pressed", "true")
-  await page.getByRole("button", { name: "Close", exact: true }).click()
+  await page.getByRole("button", { name: "关闭", exact: true }).click()
   await page.getByRole("button", { name: /本地视频.*选择本次实验录像/ }).click()
   await expect(
     page.getByRole("button", { name: "本地文件", exact: true }),

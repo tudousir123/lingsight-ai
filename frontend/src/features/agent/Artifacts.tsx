@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Download, FileCode2, FileText, Image, X } from "lucide-react"
 import { useEffect, useState } from "react"
+import ReactMarkdown from "react-markdown"
 import {
   Dialog,
   DialogContent,
@@ -11,17 +12,10 @@ import { agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { type Artifact, agentFetch, agentJson, download, taskKey } from "./api"
 
 function Markdown({ text }: { text: string }) {
-  // Text nodes only; model-authored HTML and remote images are never executed.
+  // Raw HTML stays text; remote images never load. Keep the default safe URL transform.
   return (
     <div className="agent-markdown">
-      {text.split(/\n\s*\n/).map((block, i) => {
-        const heading = block.match(/^#{1,6}\s+(.+)$/)
-        return heading ? (
-          <h3 key={`${i}-${block.slice(0, 12)}`}>{heading[1]}</h3>
-        ) : (
-          <p key={`${i}-${block.slice(0, 12)}`}>{block}</p>
-        )
-      })}
+      <ReactMarkdown disallowedElements={["img"]}>{text}</ReactMarkdown>
     </div>
   )
 }

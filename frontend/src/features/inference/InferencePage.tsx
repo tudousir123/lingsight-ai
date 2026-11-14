@@ -53,12 +53,13 @@ async function request<T>(path: string, data?: unknown): Promise<T> {
 }
 export function InferencePage({
   sourceId,
-  initialDirectory = "",
+  directory,
+  onDirectoryChange,
 }: {
   sourceId?: string
-  initialDirectory?: string
+  directory: string
+  onDirectoryChange: (directory: string) => void
 }) {
-  const [directory, setDirectory] = useState(initialDirectory)
   const [entries, setEntries] = useState<Entry[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [current, setCurrent] = useState<Task | null>(null)
@@ -87,11 +88,19 @@ export function InferencePage({
     )
   }, [])
   useEffect(() => {
+    let active = true
     request<{ items: Entry[] }>(
       `${inferenceRoutes.videos()}?${new URLSearchParams({ path: directory, ...(sourceId ? { source_id: sourceId } : {}) })}`,
     )
-      .then((v) => setEntries(v.items))
-      .catch((e: Error) => setError(e.message))
+      .then((v) => {
+        if (active) setEntries(v.items)
+      })
+      .catch((e: Error) => {
+        if (active) setError(e.message)
+      })
+    return () => {
+      active = false
+    }
   }, [directory, sourceId])
   useEffect(() => {
     const refresh = () => {
@@ -161,7 +170,7 @@ export function InferencePage({
               type="button"
               className="mb-3 underline"
               onClick={() =>
-                setDirectory(directory.split("/").slice(0, -1).join("/"))
+                onDirectoryChange(directory.split("/").slice(0, -1).join("/"))
               }
             >
               返回上一级
@@ -181,7 +190,7 @@ export function InferencePage({
                   <button
                     type="button"
                     className="underline"
-                    onClick={() => setDirectory(entry.path ?? "")}
+                    onClick={() => onDirectoryChange(entry.path ?? "")}
                   >
                     打开
                   </button>

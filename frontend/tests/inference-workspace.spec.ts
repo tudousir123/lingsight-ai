@@ -237,3 +237,85 @@ test("发布失败呈现服务端拒绝原因", async ({ page }) => {
     page.getByRole("dialog").getByText(/只有通过人工复核/),
   ).toBeVisible()
 })
+
+test("目录 URL 保留来源并支持刷新和前进后退 (#59)", async ({ page }) => {
+  await mockWorkspace(page)
+  const requests: string[] = []
+  await page.route("**/api/v1/inference/**", (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname.endsWith("/videos")) {
+      requests.push(url.search)
+      const path = url.searchParams.get("path") || ""
+      return route.fulfill({
+        json: {
+          items: path
+            ? [{ type: "video", name: "sample.mp4", id: "sample" }]
+            : [{ type: "directory", name: "批次 A", path: "批次 A" }],
+        },
+      })
+    }
+    return route.fulfill({ json: { items: [] } })
+  })
+  await page.goto("/inference?source_id=source-a")
+  await page.getByRole("button", { name: "打开", exact: true }).click()
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("path"))
+    .toBe("批次 A")
+  expect(new URL(page.url()).searchParams.get("source_id")).toBe("source-a")
+  await expect(page.getByText(/sample\.mp4/)).toBeVisible()
+  await page.reload()
+  await expect(page.getByText(/sample\.mp4/)).toBeVisible()
+  await page.goBack()
+  await expect(page.getByText("实验视频目录", { exact: true })).toBeVisible()
+  await page.goForward()
+  await expect(page.getByText(/sample\.mp4/)).toBeVisible()
+  await page.getByRole("button", { name: "返回上一级", exact: true }).click()
+  await expect(page.getByText("实验视频目录", { exact: true })).toBeVisible()
+  expect(new URL(page.url()).searchParams.get("path")).toBeNull()
+  expect(
+    requests.every(
+      (query) => new URLSearchParams(query).get("source_id") === "source-a",
+    ),
+  ).toBe(true)
+})
+
+test("后退后迟到的目录响应不能覆盖当前位置 (#59)", async ({ page }) => {
+  await mockWorkspace(page)
+  let release = () => {}
+  await page.route("**/api/v1/inference/**", async (route) => {
+    const url = new URL(route.request().url())
+    if (!url.pathname.endsWith("/videos"))
+      return route.fulfill({ json: { items: [] } })
+    if (url.searchParams.get("path")) {
+      await new Promise<void>((resolve) => {
+        release = resolve
+      })
+      return route.fulfill({
+        json: { items: [{ type: "video", name: "stale.mp4", id: "stale" }] },
+      })
+    }
+    return route.fulfill({
+      json: { items: [{ type: "directory", name: "目录", path: "folder" }] },
+    })
+  })
+  await page.goto("/inference")
+  const pending = page.waitForRequest(
+    (request) => new URL(request.url()).searchParams.get("path") === "folder",
+  )
+  await page.getByRole("button", { name: "打开", exact: true }).click()
+  await pending
+  await page.goBack()
+  await expect(page.getByText("实验视频目录", { exact: true })).toBeVisible()
+  const completed = page
+    .waitForResponse(
+      (response) =>
+        new URL(response.url()).searchParams.get("path") === "folder",
+    )
+    .catch(() => null)
+  release()
+  await completed
+  await expect(
+    page.getByRole("button", { name: "打开", exact: true }),
+  ).toBeVisible()
+  await expect(page.getByText(/stale\.mp4/)).toHaveCount(0)
+})

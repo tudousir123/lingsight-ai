@@ -243,11 +243,9 @@ for (const submission of ["button", "Enter"] as const) {
     ).toBe(1)
     await page.getByRole("button", { name: /report.md/ }).click()
     await expect(page.getByRole("dialog")).toBeVisible()
-    await expect(
-      page
-        .getByRole("dialog")
-        .getByText("<script>window.bad=true</script>", { exact: true }),
-    ).toBeVisible()
+    await expect(page.getByRole("dialog")).toContainText(
+      "<script>window.bad=true</script>",
+    )
     expect(await page.evaluate(() => Object.hasOwn(window, "bad"))).toBe(false)
   })
 }
@@ -890,4 +888,123 @@ test("项目资料中的分析产物可打开原对话报告", async ({ page }) 
   await expect(
     page.getByRole("dialog").getByText("研究报告", { exact: true }),
   ).toBeVisible()
+})
+
+for (const status of [
+  "queued",
+  "running",
+  "waiting_for_input",
+  "succeeded",
+  "cancelled",
+  "failed",
+  "interrupted",
+]) {
+  test(`后台运行提示遵循任务状态 ${status} (#61)`, async ({ page }) => {
+    await page.route(`**/api/v1/agent/tasks/${id}`, (route) =>
+      route.fulfill({ json: { ...task, runs: [{ ...task.runs[0], status }] } }),
+    )
+    await page.goto(`/tasks/${id}`)
+    await expect(page.getByRole("heading", { name: task.title })).toBeVisible()
+    const note = page.getByText("离开页面后任务仍会继续运行", { exact: true })
+    if (["queued", "running"].includes(status)) await expect(note).toBeVisible()
+    else await expect(note).toHaveCount(0)
+  })
+}
+
+test("不存在任务停止请求并可返回列表打开合法任务 (#60)", async ({ page }) => {
+  const missing = "00000000-0000-4000-8000-000000000000"
+  let reads = 0
+  await page.route(`**/api/v1/agent/tasks/${missing}**`, (route) => {
+    reads++
+    return route.fulfill({ status: 404, json: { detail: "Task not found" } })
+  })
+  await page.clock.install()
+  await page.goto(`/tasks/${missing}`)
+  await expect(
+    page.getByText("任务不存在或已被删除", { exact: true }),
+  ).toBeVisible()
+  await expect(page.getByRole("textbox", { name: "研究问题" })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "重试连接" })).toHaveCount(0)
+  const initialReads = reads
+  await page.clock.runFor(15000)
+  expect(reads).toBe(initialReads)
+  await page.getByRole("link", { name: "返回任务列表" }).click()
+  await expect(page).toHaveURL("/analysis")
+  await page
+    .getByRole("link", { name: new RegExp(task.title) })
+    .last()
+    .click()
+  await expect(page.getByRole("heading", { name: task.title })).toBeVisible()
+  await expect(page.getByRole("textbox", { name: "研究问题" })).toBeVisible()
+})
+
+test("报告预览渲染 Markdown 语义并保留源码编辑 (#58)", async ({ page }) => {
+  const markdown =
+    "# 研究报告\n> **版本说明**\n\n## 目标\n正文 *强调* 与 `代码`。\n\n- 第一项\n- 第二项\n\n1. 步骤一\n2. 步骤二\n\n```python\nprint('example')\n```"
+  await page.route(`**/api/v1/agent/artifacts/${artifactId}`, (route) =>
+    route.fulfill({ contentType: "text/markdown", body: markdown }),
+  )
+  await page.goto(`/tasks/${id}`)
+  await page.getByRole("button", { name: /report.md/ }).click()
+  const dialog = page.getByRole("dialog")
+  await expect(
+    dialog.getByRole("heading", { name: "研究报告", level: 1 }),
+  ).toBeVisible()
+  await expect(
+    dialog.getByRole("heading", { name: "目标", level: 2 }),
+  ).toBeVisible()
+  await expect(dialog.locator("blockquote strong")).toHaveText("版本说明")
+  await expect(dialog.locator("em")).toHaveText("强调")
+  await expect(dialog.locator("ul > li")).toHaveText(["第一项", "第二项"])
+  await expect(dialog.locator("ol > li")).toHaveText(["步骤一", "步骤二"])
+  await expect(dialog.locator("pre code")).toContainText("print('example')")
+  await expect(dialog.locator("p code")).toHaveText("代码")
+  await dialog.getByRole("button", { name: "编辑报告" }).click()
+  await expect(
+    dialog.getByRole("textbox", { name: "报告 Markdown" }),
+  ).toHaveValue(markdown)
+})
+
+test("临时 503 恢复后继续加载任务和进度 (#60)", async ({ page }) => {
+  let unavailable = true
+  await page.route(`**/api/v1/agent/tasks/${id}`, (route) =>
+    unavailable
+      ? route.fulfill({ status: 503, json: { detail: "服务暂不可用" } })
+      : route.fulfill({ json: task }),
+  )
+  await page.clock.install()
+  await page.goto(`/tasks/${id}`)
+  await expect(page.getByText("服务暂不可用", { exact: true })).toBeVisible()
+  unavailable = false
+  await page.clock.runFor(3000)
+  await expect(page.getByRole("heading", { name: task.title })).toBeVisible()
+  await expect(
+    page.getByText("已核对视频数据。", { exact: true }),
+  ).toBeVisible()
+})
+
+test("报告不执行 HTML、危险链接或加载远程图片 (#58)", async ({ page }) => {
+  const requests: string[] = []
+  page.on("request", (request) => {
+    if (request.url().includes("external.example")) requests.push(request.url())
+  })
+  await page.route(`**/api/v1/agent/artifacts/${artifactId}`, (route) =>
+    route.fulfill({
+      contentType: "text/markdown",
+      body: '<script>window.bad=true</script>\n\n<img src="https://external.example/raw.png">\n\n![远程图片](https://external.example/track.png)\n\n[危险链接](javascript:alert%281%29)\n\n[参考文献](https://example.com/paper)',
+    }),
+  )
+  await page.goto(`/tasks/${id}`)
+  await page.getByRole("button", { name: /report.md/ }).click()
+  const dialog = page.getByRole("dialog")
+  await expect(dialog.getByRole("link", { name: "参考文献" })).toHaveAttribute(
+    "href",
+    "https://example.com/paper",
+  )
+  await expect(dialog.locator("img, script, iframe")).toHaveCount(0)
+  await expect(
+    dialog.getByText("危险链接", { exact: true }),
+  ).not.toHaveAttribute("href", /javascript:/)
+  expect(await page.evaluate(() => Object.hasOwn(window, "bad"))).toBe(false)
+  expect(requests).toEqual([])
 })
