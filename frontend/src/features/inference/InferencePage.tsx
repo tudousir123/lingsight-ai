@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -32,9 +33,50 @@ const stageLabels: Record<string, string> = {
   overlay: "生成叠加视频",
 }
 
-async function request<T>(path: string, data?: unknown): Promise<T> {
+const tasksKey = ["inference", "tasks"] as const
+const videosKey = (directory: string, sourceId?: string) =>
+  ["inference", "videos", directory, sourceId ?? null] as const
+
+type NumericDraft = Record<string, string>
+const toDraft = (values: Record<string, number>): NumericDraft =>
+  Object.fromEntries(Object.entries(values).map(([k, v]) => [k, String(v)]))
+
+// 清空输入框时不能变成 0：状态保存原始字符串，渲染与提交前再校验。
+function numberError(raw: string, integer = false): string | null {
+  if (raw.trim() === "") return "请填写数值"
+  const value = Number(raw)
+  if (!Number.isFinite(value)) return "请输入有效数字"
+  if (value < 0) return "不能小于 0"
+  if (integer && !Number.isInteger(value)) return "需为整数"
+  return null
+}
+const numberOrZero = (raw: string) => (numberError(raw) ? 0 : Number(raw))
+
+function parseMarks(
+  text: string,
+): { value: Mark[]; error: null } | { value: null; error: string } {
+  try {
+    const parsed: unknown = JSON.parse(text)
+    if (!Array.isArray(parsed)) {
+      return { value: null, error: "轮廓需为 JSON 数组" }
+    }
+    return { value: parsed as Mark[], error: null }
+  } catch (e) {
+    return {
+      value: null,
+      error: `JSON 格式有误：${e instanceof Error ? e.message : "无法解析"}`,
+    }
+  }
+}
+
+async function request<T>(
+  path: string,
+  data?: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
   const response = await fetch(`${inferenceGatewayBase}/${path}`, {
     method: data === undefined ? "GET" : "POST",
+    signal,
     headers: {
       "Content-Type": "application/json",
       ...authHeaders(),
@@ -59,11 +101,13 @@ export function InferencePage({
   initialDirectory?: string
 }) {
   const [directory, setDirectory] = useState(initialDirectory)
-  const [entries, setEntries] = useState<Entry[]>([])
-  const [tasks, setTasks] = useState<Task[]>([])
   const [current, setCurrent] = useState<Task | null>(null)
-  const [seed, setSeed] = useState({ frame: 0, x: 0, y: 0 })
-  const [pool, setPool] = useState({ cx: 0, cy: 0, radius: 0 })
+  const [seed, setSeed] = useState<NumericDraft>(
+    toDraft({ frame: 0, x: 0, y: 0 }),
+  )
+  const [pool, setPool] = useState<NumericDraft>(
+    toDraft({ cx: 0, cy: 0, radius: 0 }),
+  )
   const [marks, setMarks] = useState("[]")
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
@@ -79,35 +123,59 @@ export function InferencePage({
   const [publishError, setPublishError] = useState("")
 
   const initializedTask = useRef<string | null>(null)
-  const loadTasks = useCallback(async () => {
-    const value = await request<{ items: Task[] }>(inferenceRoutes.tasks())
-    setTasks(value.items)
+  const queryClient = useQueryClient()
+  const videosQuery = useQuery({
+    queryKey: videosKey(directory, sourceId),
+    queryFn: ({ signal }) =>
+      request<{ items: Entry[] }>(
+        `${inferenceRoutes.videos()}?${new URLSearchParams({ path: directory, ...(sourceId ? { source_id: sourceId } : {}) })}`,
+        undefined,
+        signal,
+      ),
+    retry: false,
+  })
+  const tasksQuery = useQuery({
+    queryKey: tasksKey,
+    queryFn: ({ signal }) =>
+      request<{ items: Task[] }>(inferenceRoutes.tasks(), undefined, signal),
+    refetchInterval: 3000,
+    // 页面隐藏时不轮询；回到前台由 refetchOnWindowFocus 立即补一次。
+    refetchIntervalInBackground: false,
+    retry: false,
+  })
+  const entries = videosQuery.data?.items ?? []
+  const tasks = tasksQuery.data?.items ?? []
+  const loadError = (videosQuery.error ?? tasksQuery.error)?.message ?? ""
+  const shownError = error || loadError
+  const tasksData = tasksQuery.data
+  useEffect(() => {
+    if (!tasksData) return
     setCurrent((old) =>
-      old ? (value.items.find((t) => t.id === old.id) ?? old) : null,
+      old ? (tasksData.items.find((t) => t.id === old.id) ?? old) : null,
     )
-  }, [])
-  useEffect(() => {
-    request<{ items: Entry[] }>(
-      `${inferenceRoutes.videos()}?${new URLSearchParams({ path: directory, ...(sourceId ? { source_id: sourceId } : {}) })}`,
-    )
-      .then((v) => setEntries(v.items))
-      .catch((e: Error) => setError(e.message))
-  }, [directory, sourceId])
-  useEffect(() => {
-    const refresh = () => {
-      void loadTasks().catch((e: Error) => setError(e.message))
-    }
-    refresh()
-    const timer = setInterval(refresh, 3000)
-    return () => clearInterval(timer)
-  }, [loadTasks])
+  }, [tasksData])
+  const loadTasks = () => queryClient.invalidateQueries({ queryKey: tasksKey })
+  const marksResult = useMemo(() => parseMarks(marks), [marks])
+  const seedErrors = {
+    frame: numberError(seed.frame ?? "", true),
+    x: numberError(seed.x ?? ""),
+    y: numberError(seed.y ?? ""),
+  }
+  const poolErrors = {
+    cx: numberError(pool.cx ?? ""),
+    cy: numberError(pool.cy ?? ""),
+    radius: numberError(pool.radius ?? ""),
+  }
+  const formValid =
+    marksResult.error === null &&
+    ![...Object.values(seedErrors), ...Object.values(poolErrors)].some(Boolean)
   useEffect(() => {
     if (current?.status !== "waiting_for_review" || !current.candidate) return
     if (initializedTask.current === current.id) return
     initializedTask.current = current.id
     const c = current.candidate
-    setSeed(c.seed ?? { frame: 0, x: 0, y: 0 })
-    setPool(c.pool ?? { cx: 0, cy: 0, radius: 0 })
+    setSeed(toDraft(c.seed ?? { frame: 0, x: 0, y: 0 }))
+    setPool(toDraft(c.pool ?? { cx: 0, cy: 0, radius: 0 }))
     setMarks(
       JSON.stringify(
         c.marks.map((m) => ({ label: m.label, polygon: m.polygon ?? [] })),
@@ -142,12 +210,12 @@ export function InferencePage({
         <h1>视频推理</h1>
         <p>选择实验视频，确认场景后生成小鼠轨迹和 v9 头尾结果。</p>
       </div>
-      {error && (
+      {shownError && (
         <p
           role="alert"
           className="rounded border border-red-300 p-3 text-red-700"
         >
-          {error}
+          {shownError}
         </p>
       )}
       <div className="grid gap-5 lg:grid-cols-2">
@@ -320,32 +388,30 @@ export function InferencePage({
                   viewBox={`0 0 ${current.candidate.width} ${current.candidate.height}`}
                 >
                   <circle
-                    cx={pool.cx}
-                    cy={pool.cy}
-                    r={pool.radius}
+                    cx={numberOrZero(pool.cx ?? "")}
+                    cy={numberOrZero(pool.cy ?? "")}
+                    r={numberOrZero(pool.radius ?? "")}
                     fill="none"
                     stroke="#00d8ff"
                     strokeWidth="4"
                   />
-                  <circle cx={seed.x} cy={seed.y} r="10" fill="#ff3c6a" />
-                  {(() => {
-                    try {
-                      const ms = JSON.parse(marks) as Mark[]
-                      return ms.map((m, i) =>
-                        m.polygon && m.polygon.length >= 3 ? (
-                          <polygon
-                            key={`${m.label}-${i}`}
-                            points={m.polygon.map((p) => p.join(",")).join(" ")}
-                            fill="#ffda3040"
-                            stroke="#ffda30"
-                            strokeWidth="4"
-                          />
-                        ) : null,
-                      )
-                    } catch {
-                      return null
-                    }
-                  })()}
+                  <circle
+                    cx={numberOrZero(seed.x ?? "")}
+                    cy={numberOrZero(seed.y ?? "")}
+                    r="10"
+                    fill="#ff3c6a"
+                  />
+                  {marksResult.value?.map((m, i) =>
+                    m.polygon && m.polygon.length >= 3 ? (
+                      <polygon
+                        key={`${m.label}-${i}`}
+                        points={m.polygon.map((p) => p.join(",")).join(" ")}
+                        fill="#ffda3040"
+                        stroke="#ffda30"
+                        strokeWidth="4"
+                      />
+                    ) : null,
+                  )}
                 </svg>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
@@ -356,19 +422,26 @@ export function InferencePage({
                     ["小鼠 Y", "y"],
                   ] as const
                 ).map(([label, key]) => (
-                  <label key={key}>
-                    {label}
-                    <input
-                      aria-label={label}
-                      type="number"
-                      min="0"
-                      className={inputClass}
-                      value={seed[key]}
-                      onChange={(e) =>
-                        setSeed({ ...seed, [key]: Number(e.target.value) })
-                      }
-                    />
-                  </label>
+                  <div key={key}>
+                    <label>
+                      {label}
+                      <input
+                        type="number"
+                        min="0"
+                        className={inputClass}
+                        value={seed[key]}
+                        aria-invalid={seedErrors[key] !== null}
+                        onChange={(e) =>
+                          setSeed({ ...seed, [key]: e.target.value })
+                        }
+                      />
+                    </label>
+                    {seedErrors[key] && (
+                      <p role="alert" className="text-sm text-red-700">
+                        {label}：{seedErrors[key]}
+                      </p>
+                    )}
+                  </div>
                 ))}
                 {(
                   [
@@ -377,47 +450,67 @@ export function InferencePage({
                     ["水池半径", "radius"],
                   ] as const
                 ).map(([label, key]) => (
-                  <label key={key}>
-                    {label}
-                    <input
-                      aria-label={label}
-                      type="number"
-                      min="0"
-                      className={inputClass}
-                      value={pool[key]}
-                      onChange={(e) =>
-                        setPool({ ...pool, [key]: Number(e.target.value) })
-                      }
-                    />
-                  </label>
+                  <div key={key}>
+                    <label>
+                      {label}
+                      <input
+                        type="number"
+                        min="0"
+                        className={inputClass}
+                        value={pool[key]}
+                        aria-invalid={poolErrors[key] !== null}
+                        onChange={(e) =>
+                          setPool({ ...pool, [key]: e.target.value })
+                        }
+                      />
+                    </label>
+                    {poolErrors[key] && (
+                      <p role="alert" className="text-sm text-red-700">
+                        {label}：{poolErrors[key]}
+                      </p>
+                    )}
+                  </div>
                 ))}
               </div>
               <label className="block">
                 四个标志物的轮廓坐标（图像像素）
                 <textarea
-                  aria-label="标志物轮廓"
                   className={`${inputClass} mt-2 font-mono text-sm`}
                   rows={10}
                   value={marks}
+                  aria-invalid={marksResult.error !== null}
                   onChange={(e) => setMarks(e.target.value)}
                 />
               </label>
+              {marksResult.error && (
+                <p role="alert" className="text-sm text-red-700">
+                  {marksResult.error}
+                </p>
+              )}
               <p className="text-sm text-muted-foreground">
                 每项填写 label 和 polygon，polygon 是至少三个 [x, y] 点。
               </p>
               <button
                 type="button"
                 className="rounded bg-primary px-4 py-2 text-primary-foreground"
-                disabled={busy}
+                disabled={busy || !formValid}
                 onClick={() =>
                   void act(async () => {
-                    const parsed: unknown = JSON.parse(marks)
+                    if (!formValid || marksResult.value === null) return
                     await submit(
                       inferenceRoutes.tasksByTaskIdConfirm(current.id),
                       {
-                        seed,
-                        pool,
-                        marks: parsed,
+                        seed: {
+                          frame: Number(seed.frame),
+                          x: Number(seed.x),
+                          y: Number(seed.y),
+                        },
+                        pool: {
+                          cx: Number(pool.cx),
+                          cy: Number(pool.cy),
+                          radius: Number(pool.radius),
+                        },
+                        marks: marksResult.value,
                       },
                     )
                   })
