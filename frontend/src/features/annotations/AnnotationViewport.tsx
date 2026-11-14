@@ -12,6 +12,19 @@ import type { Point } from "./shapeGeometry"
 
 const fit = { scale: 1, x: 0, y: 0 }
 
+function clampView(
+  scale: number,
+  position: Point,
+  width: number,
+  height: number,
+) {
+  return {
+    scale,
+    x: Math.min(0, Math.max(-width * (scale - 1), position.x)),
+    y: Math.min(0, Math.max(-height * (scale - 1), position.y)),
+  }
+}
+
 export function AnnotationViewport({
   width,
   height,
@@ -36,41 +49,42 @@ export function AnnotationViewport({
   const bounded = useCallback((scale: number, position: Point) => {
     const bounds = frame.current
     if (!bounds) return fit
-    return {
-      scale,
-      x: Math.min(0, Math.max(-bounds.offsetWidth * (scale - 1), position.x)),
-      y: Math.min(0, Math.max(-bounds.offsetHeight * (scale - 1), position.y)),
-    }
+    return clampView(scale, position, bounds.offsetWidth, bounds.offsetHeight)
   }, [])
 
-  const zoom = useCallback(
-    (factor: number, pointer?: Point) => {
-      // Read DOM geometry here so the updater below stays a pure function.
-      const box = frame.current?.getBoundingClientRect()
-      if (!box) return
-      const stageBox = stage.current?.getBoundingClientRect()
-      const anchor =
-        pointer ??
-        (stage.current && stageBox
-          ? {
-              x: stageBox.left + stage.current.clientWidth / 2,
-              y: stageBox.top + stage.current.clientHeight / 2,
-            }
-          : { x: box.left, y: box.top })
-      setView((previous) => {
-        const scale = Math.min(
-          5,
-          Math.max(1, Math.round(previous.scale * factor * 100) / 100),
-        )
-        const change = 1 - scale / previous.scale
-        return bounded(scale, {
+  const zoom = useCallback((factor: number, pointer?: Point) => {
+    // Read DOM geometry here so the updater below stays a pure function.
+    const bounds = frame.current
+    const box = bounds?.getBoundingClientRect()
+    if (!bounds || !box) return
+    const boundsWidth = bounds.offsetWidth
+    const boundsHeight = bounds.offsetHeight
+    const stageBox = stage.current?.getBoundingClientRect()
+    const anchor =
+      pointer ??
+      (stage.current && stageBox
+        ? {
+            x: stageBox.left + stage.current.clientWidth / 2,
+            y: stageBox.top + stage.current.clientHeight / 2,
+          }
+        : { x: box.left, y: box.top })
+    setView((previous) => {
+      const scale = Math.min(
+        5,
+        Math.max(1, Math.round(previous.scale * factor * 100) / 100),
+      )
+      const change = 1 - scale / previous.scale
+      return clampView(
+        scale,
+        {
           x: previous.x + (anchor.x - box.left) * change,
           y: previous.y + (anchor.y - box.top) * change,
-        })
-      })
-    },
-    [bounded],
-  )
+        },
+        boundsWidth,
+        boundsHeight,
+      )
+    })
+  }, [])
 
   useEffect(() => {
     const area = stage.current
