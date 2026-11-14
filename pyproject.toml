@@ -24,6 +24,12 @@ extend-ignore-re = [
     "@[a-zA-Z0-9](?:-?[a-zA-Z0-9])*",
     # Name of the package in the PR title
     "Bump certifi ",
+    # CSS Unicode range notation; bare letter sequences remain checked.
+    'U\+[0-9A-Fa-f]{4,6}(?:-[0-9A-Fa-f]{4,6})?',
+    # Preserve the literal truncated traceback in historical test evidence.
+    'Failed: Databas\.\.\.',
+    # Existing evidence quotes this exact dataset directory, not an English word.
+    '/volume1/DATAS/003_HealthAD/',
 ]
 
 [tool.typos.default.extend-identifiers]

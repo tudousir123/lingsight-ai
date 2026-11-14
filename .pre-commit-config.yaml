@@ -21,9 +21,27 @@ repos:
     rev: 00f422f3b19c57bc6338715ebfe3316d38768461 # frozen: v1.50.3
     hooks:
       - id: typos
-        args: [--force-exclude]
+        # Reuse this pinned hook's PATH, not an assumed host typos binary.
+        entry: python3 scripts/check-typos-config.py --scan --
+        args: []
+        require_serial: true
   - repo: local
     hooks:
+      - id: typos-config-guard
+        name: canonical typos config
+        entry: uv run python scripts/check-typos-config.py
+        language: unsupported
+        pass_filenames: false
+        always_run: true
+
+      - id: guardrail-tests
+        name: standard-library CLI guard tests
+        entry: uv run python -m unittest discover -s scripts/tests -p 'test_*.py' -v
+        language: unsupported
+        pass_filenames: false
+        # Fast, offline tests also protect navigated docs and toolchain-only changes.
+        always_run: true
+
       - id: local-biome-check
         name: biome check
         entry: scripts/prek-frontend-lint.sh
@@ -64,4 +82,4 @@ repos:
         entry: bash ./scripts/generate-client.sh
         pass_filenames: false
         language: unsupported
-        files: ^backend/app/.*\.py$|^backend/pyproject\.toml$|^uv\.lock$|^frontend/openapi-ts\.config\.ts$|^scripts/generate-client\.sh$
+        files: ^backend/app/.*\.py$|^backend/pyproject\.toml$|^uv\.lock$|^frontend/openapi-ts\.config\.ts$|^scripts/generate-client\.sh$|^package\.json$|^bun\.lock$|^frontend/package\.json$
