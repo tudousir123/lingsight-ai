@@ -45,25 +45,23 @@ export function AnnotationViewport({
 
   const zoom = useCallback(
     (factor: number, pointer?: Point) => {
+      // Read DOM geometry here so the updater below stays a pure function.
+      const box = frame.current?.getBoundingClientRect()
+      if (!box) return
+      const stageBox = stage.current?.getBoundingClientRect()
+      const anchor =
+        pointer ??
+        (stage.current && stageBox
+          ? {
+              x: stageBox.left + stage.current.clientWidth / 2,
+              y: stageBox.top + stage.current.clientHeight / 2,
+            }
+          : { x: box.left, y: box.top })
       setView((previous) => {
-        const box = frame.current?.getBoundingClientRect()
-        if (!box) return previous
         const scale = Math.min(
           5,
           Math.max(1, Math.round(previous.scale * factor * 100) / 100),
         )
-        const anchor =
-          pointer ??
-          (stage.current
-            ? {
-                x:
-                  stage.current.getBoundingClientRect().left +
-                  stage.current.clientWidth / 2,
-                y:
-                  stage.current.getBoundingClientRect().top +
-                  stage.current.clientHeight / 2,
-              }
-            : { x: box.left, y: box.top })
         const change = 1 - scale / previous.scale
         return bounded(scale, {
           x: previous.x + (anchor.x - box.left) * change,

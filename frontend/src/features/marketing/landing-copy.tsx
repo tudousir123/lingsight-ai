@@ -331,15 +331,13 @@ export function LandingLangProvider({ children }: { children: ReactNode }) {
     }
   })
   const changeLang: Dispatch<SetStateAction<LandingLang>> = (value) => {
-    setLang((previous) => {
-      const next = typeof value === "function" ? value(previous) : value
-      try {
-        localStorage.setItem(STORE_KEY, next)
-      } catch {
-        // Keep the language usable for this visit when storage is unavailable.
-      }
-      return next
-    })
+    const next = typeof value === "function" ? value(lang) : value
+    setLang(next)
+    try {
+      localStorage.setItem(STORE_KEY, next)
+    } catch {
+      // Keep the language usable for this visit when storage is unavailable.
+    }
   }
   return (
     <LangContext.Provider
