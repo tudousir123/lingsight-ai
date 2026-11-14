@@ -108,3 +108,14 @@ test("the public homepage remains usable when browser storage is blocked", async
     "功能演示 · 合成示例数据",
   )
 })
+
+test("auth routes loaded directly inherit the document language zh-CN", async ({
+  page,
+}) => {
+  for (const path of ["/login", "/signup", "/recover-password"]) {
+    await page.goto(path)
+    await expect(page.getByRole("heading").first()).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(`${path}$`))
+    await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN")
+  }
+})
