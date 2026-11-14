@@ -1,0 +1,71 @@
+{
+  "checks": [
+    {
+      "check": "real UI login and conversation-first workspace",
+      "pass": true
+    },
+    {
+      "check": "authenticated refresh",
+      "pass": true
+    },
+    {
+      "check": "/api/v1/users/me",
+      "status": 200,
+      "pass": true
+    },
+    {
+      "check": "/api/v1/projects/",
+      "status": 200,
+      "pass": true
+    },
+    {
+      "check": "/api/v1/agent/tasks",
+      "status": 200,
+      "pass": true
+    },
+    {
+      "check": "/api/v1/inference/sources",
+      "status": 200,
+      "pass": true
+    },
+    {
+      "check": "existing project conversation and materials navigation",
+      "pass": true
+    },
+    {
+      "check": "project details deep-link refresh",
+      "pass": true
+    },
+    {
+      "check": "manual annotation route renders",
+      "pass": true
+    },
+    {
+      "check": "experiments visible trial list",
+      "pass": true
+    },
+    {
+      "check": "experiments authenticated deep-link refresh",
+      "pass": true
+    },
+    {
+      "check": "annotations visible trial list",
+      "pass": true
+    },
+    {
+      "check": "annotations authenticated deep-link refresh",
+      "pass": true
+    },
+    {
+      "check": "no runtime page errors",
+      "pass": true
+    },
+    {
+      "check": "no unexpected production writes",
+      "pass": true
+    }
+  ],
+  "pageErrors": [],
+  "blockedWrites": [],
+  "scope": "Real production Chromium UI and authenticated read-only APIs; no research execution or synthetic production records."
+}
