@@ -10,20 +10,19 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
         <Logo />
         <div className="relative z-10 max-w-lg py-20">
           <p className="mb-6 text-xs tracking-[.2em] text-muted-foreground">
-            ANIMAL BEHAVIOR RESEARCH
+            动物行为研究
           </p>
           <h2 className="text-4xl leading-snug font-normal tracking-tight xl:text-5xl">
-            From behavior,
+            观察行为，
             <br />
-            to evidence.
+            形成证据。
           </h2>
           <p className="mt-6 max-w-sm text-sm leading-7 text-muted-foreground">
-            Connect videos, trajectories, and analysis. Review trials, inspect
-            materials, and trace every research question to its source.
+            连接视频、轨迹与分析，核对试次和研究材料，让每个研究问题都有据可循。
           </p>
           <div className="mt-10 inline-flex items-center gap-3 border-t pt-5 text-xs text-muted-foreground">
             <span className="size-1.5 rounded-full bg-brand" />
-            Water maze · Behavior research workspace
+            水迷宫 · 动物行为科研工作区
             <ArrowUpRight className="size-4" />
           </div>
         </div>
@@ -36,7 +35,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <p className="text-xs tracking-[.15em] text-muted-foreground">
-          OBSERVE / REVIEW / UNDERSTAND
+          观察 / 核对 / 理解
         </p>
       </aside>
       <div className="flex min-w-0 flex-col gap-8 p-6 md:p-10">

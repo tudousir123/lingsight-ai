@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.build.json && vite build",
     "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true ./",
     "preview": "vite preview",
-    "generate-client": "openapi-ts",
+    "generate-client": "openapi-ts && python3 ../scripts/generate-user-constraints.py",
     "test": "bunx playwright test",
     "test:ui": "bunx playwright test --ui"
   },
@@ -42,6 +42,7 @@
     "react-error-boundary": "^6.1.6",
     "react-hook-form": "^7.91.0",
     "react-icons": "^5.7.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.10.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",

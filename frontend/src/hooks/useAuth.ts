@@ -16,7 +16,7 @@ const isLoggedIn = () => {
   return getToken() !== null
 }
 
-const useAuth = () => {
+const useAuth = (options?: { onSignUpError?: (error: Error) => boolean }) => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { showErrorToast } = useCustomToast()
@@ -33,7 +33,10 @@ const useAuth = () => {
     onSuccess: () => {
       navigate({ to: "/login" })
     },
-    onError: handleError.bind(showErrorToast),
+    onError: (error: Error) => {
+      if (!options?.onSignUpError?.(error))
+        handleError.call(showErrorToast, error)
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] })
     },

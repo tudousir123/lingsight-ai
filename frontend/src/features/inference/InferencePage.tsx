@@ -117,12 +117,13 @@ async function request<T>(
 }
 export function InferencePage({
   sourceId,
-  initialDirectory = "",
+  directory,
+  onDirectoryChange,
 }: {
   sourceId?: string
-  initialDirectory?: string
+  directory: string
+  onDirectoryChange: (directory: string) => void
 }) {
-  const [directory, setDirectory] = useState(initialDirectory)
   const [current, setCurrent] = useState<Task | null>(null)
   const [seed, setSeed] = useState<NumericDraft>(
     toDraft({ frame: 0, x: 0, y: 0 }),
@@ -251,7 +252,7 @@ export function InferencePage({
               type="button"
               className="mb-3 underline"
               onClick={() =>
-                setDirectory(directory.split("/").slice(0, -1).join("/"))
+                onDirectoryChange(directory.split("/").slice(0, -1).join("/"))
               }
             >
               返回上一级
@@ -271,7 +272,7 @@ export function InferencePage({
                   <button
                     type="button"
                     className="underline"
-                    onClick={() => setDirectory(entry.path ?? "")}
+                    onClick={() => onDirectoryChange(entry.path ?? "")}
                   >
                     打开
                   </button>

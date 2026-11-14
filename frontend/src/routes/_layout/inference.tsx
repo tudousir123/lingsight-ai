@@ -15,11 +15,14 @@ export const Route = createFileRoute("/_layout/inference")({
 
 function InferenceRoute() {
   const { source_id, path } = Route.useSearch()
+  const navigate = Route.useNavigate()
   return (
     <InferencePage
-      key={`${source_id ?? ""}:${path ?? ""}`}
       sourceId={source_id}
-      initialDirectory={path}
+      directory={path ?? ""}
+      onDirectoryChange={(directory) =>
+        void navigate({ search: { source_id, path: directory || undefined } })
+      }
     />
   )
 }

@@ -13,7 +13,7 @@ export type UserTableData = UserPublic & {
 export const columns: ColumnDef<DataTableFeatures, UserTableData>[] = [
   {
     accessorKey: "full_name",
-    header: "Full Name",
+    header: "姓名",
     cell: ({ row }) => {
       const fullName = row.original.full_name
       return (
@@ -21,11 +21,11 @@ export const columns: ColumnDef<DataTableFeatures, UserTableData>[] = [
           <span
             className={cn("font-medium", !fullName && "text-muted-foreground")}
           >
-            {fullName || "N/A"}
+            {fullName || "未填写"}
           </span>
           {row.original.isCurrentUser && (
             <Badge variant="outline" className="text-xs">
-              You
+              当前用户
             </Badge>
           )}
         </div>
@@ -34,23 +34,23 @@ export const columns: ColumnDef<DataTableFeatures, UserTableData>[] = [
   },
   {
     accessorKey: "email",
-    header: "Email",
+    header: "邮箱",
     cell: ({ row }) => (
       <span className="text-muted-foreground">{row.original.email}</span>
     ),
   },
   {
     accessorKey: "is_superuser",
-    header: "Role",
+    header: "角色",
     cell: ({ row }) => (
       <Badge variant={row.original.is_superuser ? "default" : "secondary"}>
-        {row.original.is_superuser ? "Superuser" : "User"}
+        {row.original.is_superuser ? "管理员" : "用户"}
       </Badge>
     ),
   },
   {
     accessorKey: "is_active",
-    header: "Status",
+    header: "状态",
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
         <span
@@ -60,14 +60,14 @@ export const columns: ColumnDef<DataTableFeatures, UserTableData>[] = [
           )}
         />
         <span className={row.original.is_active ? "" : "text-muted-foreground"}>
-          {row.original.is_active ? "Active" : "Inactive"}
+          {row.original.is_active ? "已启用" : "已停用"}
         </span>
       </div>
     ),
   },
   {
     id: "actions",
-    header: () => <span className="sr-only">Actions</span>,
+    header: () => <span className="sr-only">操作</span>,
     cell: ({ row }) => (
       <div className="flex justify-end">
         <UserActionsMenu user={row.original} />

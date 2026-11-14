@@ -486,9 +486,40 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.agent-markdown h3 {
+.agent-markdown :is(h1, h2, h3, h4, h5, h6) {
   font-size: 20px;
   margin: 20px 0 12px;
+}
+.agent-markdown h1 {
+  font-size: 26px;
+}
+.agent-markdown h2 {
+  font-size: 22px;
+}
+.agent-markdown blockquote {
+  border-inline-start: 3px solid var(--border);
+  padding-inline-start: 16px;
+  color: var(--muted-foreground);
+}
+.agent-markdown ul {
+  list-style: disc;
+  padding-inline-start: 24px;
+}
+.agent-markdown ol {
+  list-style: decimal;
+  padding-inline-start: 24px;
+}
+.agent-markdown pre {
+  overflow-x: auto;
+  padding: 12px;
+  background: var(--muted);
+}
+.agent-markdown code {
+  font-family: monospace;
+}
+.agent-markdown a {
+  text-decoration: underline;
+  overflow-wrap: anywhere;
 }
 .agent-results-page {
   max-width: 1000px;

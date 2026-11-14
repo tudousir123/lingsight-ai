@@ -91,7 +91,7 @@ export function DataTable<TData extends RowData>({
                 colSpan={columns.length}
                 className="h-32 text-center text-muted-foreground"
               >
-                No results found.
+                暂无结果
               </TableCell>
             </TableRow>
           )}
@@ -102,7 +102,7 @@ export function DataTable<TData extends RowData>({
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-t bg-muted/20">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="text-sm text-muted-foreground">
-              Showing{" "}
+              显示{" "}
               {table.state.pagination.pageIndex *
                 table.state.pagination.pageSize +
                 1}{" "}
@@ -112,12 +112,12 @@ export function DataTable<TData extends RowData>({
                   table.state.pagination.pageSize,
                 data.length,
               )}{" "}
-              of{" "}
+              /{" "}
               <span className="font-medium text-foreground">{data.length}</span>{" "}
-              entries
+              条记录
             </div>
             <div className="flex items-center gap-x-2">
-              <p className="text-sm text-muted-foreground">Rows per page</p>
+              <p className="text-sm text-muted-foreground">每页条数</p>
               <Select
                 value={`${table.state.pagination.pageSize}`}
                 onValueChange={(value) => {
@@ -140,11 +140,11 @@ export function DataTable<TData extends RowData>({
 
           <div className="flex items-center gap-x-6">
             <div className="flex items-center gap-x-1 text-sm text-muted-foreground">
-              <span>Page</span>
+              <span>页码</span>
               <span className="font-medium text-foreground">
                 {table.state.pagination.pageIndex + 1}
               </span>
-              <span>of</span>
+              <span>/</span>
               <span className="font-medium text-foreground">
                 {table.getPageCount()}
               </span>
@@ -158,7 +158,7 @@ export function DataTable<TData extends RowData>({
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to first page</span>
+                <span className="sr-only">首页</span>
                 <ChevronsLeft className="h-4 w-4" />
               </Button>
               <Button
@@ -168,7 +168,7 @@ export function DataTable<TData extends RowData>({
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to previous page</span>
+                <span className="sr-only">上一页</span>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button
@@ -178,7 +178,7 @@ export function DataTable<TData extends RowData>({
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to next page</span>
+                <span className="sr-only">下一页</span>
                 <ChevronRight className="h-4 w-4" />
               </Button>
               <Button
@@ -188,7 +188,7 @@ export function DataTable<TData extends RowData>({
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to last page</span>
+                <span className="sr-only">末页</span>
                 <ChevronsRight className="h-4 w-4" />
               </Button>
             </div>

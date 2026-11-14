@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { agentRoutes } from "@/lib/upstreamRoutes.gen"
-import { agentJson, type TaskEvent } from "./api"
+import { agentJson, isTaskNotFound, type TaskEvent } from "./api"
 
 // Resolves after `ms`, or immediately when `signal` aborts; the timer is
 // always cleared so nothing outlives the effect that owns the signal.
@@ -61,6 +61,7 @@ export function useTaskEvents(taskId: string) {
                 ? e.message
                 : "Progress connection interrupted",
           })
+          if (isTaskNotFound(e)) return
           delay = 4000
         }
         await sleep(delay, signal)
