@@ -86,6 +86,8 @@ jobs:
     - name: Set up environment
       run: cp .env.example .env
     - run: bash scripts/generate-client.sh
+    - name: Check generated SDK is up to date
+      run: git diff --exit-code -- frontend/src/client
     - run: docker compose build
     - run: docker compose down -v --remove-orphans
     - run: docker compose run --rm backend bash scripts/prestart.sh

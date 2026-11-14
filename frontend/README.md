@@ -79,6 +79,13 @@ Done, you now have an API-only app. 🤓
 
 ## Generate Client
 
+The root workspace pins `@hey-api/openapi-ts` together with TypeScript 6 for its
+JavaScript compiler API. The frontend independently uses TypeScript 7 for builds;
+TypeScript 7 does not expose the legacy `createPrinter` / `NewLineKind` API needed
+by this generator. Keep the generator and its compiler API dependency at the root,
+and run frontend builds from the frontend workspace, not with the root `tsc`.
+Both versions are installed reproducibly by the root `bun ci`.
+
 ### Automatically
 
 * From the project root, run the script:
