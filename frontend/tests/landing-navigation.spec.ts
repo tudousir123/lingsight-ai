@@ -42,12 +42,14 @@ test("the public homepage switches languages on desktop and mobile", async ({
   page,
 }) => {
   await page.goto("/welcome")
-  await expect(page.locator("html")).toHaveAttribute("lang", "en")
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN")
   await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
     "Decode animal behavior, frame by frame.",
   )
   await expect(page.locator(".landing")).toHaveAttribute("lang", "en")
-  expect(await page.locator("main").innerText()).not.toMatch(/\p{Script=Han}/u)
+  expect(await page.locator("main").textContent()).not.toMatch(
+    /\p{Script=Han}/u,
+  )
   await page
     .getByRole("button", {
       name: "切换到中文 / Switch to Chinese",
