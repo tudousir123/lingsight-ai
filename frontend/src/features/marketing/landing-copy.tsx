@@ -4,6 +4,7 @@ import {
   type ReactNode,
   type SetStateAction,
   useContext,
+  useEffect,
   useState,
 } from "react"
 
@@ -330,21 +331,18 @@ export function LandingLangProvider({ children }: { children: ReactNode }) {
       return "en"
     }
   })
-  const changeLang: Dispatch<SetStateAction<LandingLang>> = (value) => {
-    setLang((previous) => {
-      const next = typeof value === "function" ? value(previous) : value
-      try {
-        localStorage.setItem(STORE_KEY, next)
-      } catch {
-        // Keep the language usable for this visit when storage is unavailable.
-      }
-      return next
-    })
-  }
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORE_KEY, lang)
+    } catch {
+      // Keep the language usable for this visit when storage is unavailable.
+    }
+  }, [lang])
+  useEffect(() => {
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en"
+  }, [lang])
   return (
-    <LangContext.Provider
-      value={{ lang, setLang: changeLang, c: dictionaries[lang] }}
-    >
+    <LangContext.Provider value={{ lang, setLang, c: dictionaries[lang] }}>
       {children}
     </LangContext.Provider>
   )
