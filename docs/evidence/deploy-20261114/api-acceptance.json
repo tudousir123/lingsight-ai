@@ -1,0 +1,42 @@
+[
+  {
+    "check": "experiments nonempty",
+    "status": 200,
+    "pass_": true
+  },
+  {
+    "check": "trials page",
+    "status": 200,
+    "pass_": true
+  },
+  {
+    "check": "trial detail",
+    "status": 200,
+    "pass_": true
+  },
+  {
+    "check": "trials pagination",
+    "status": 200,
+    "pass_": true
+  },
+  {
+    "check": "/api/v1/users/me",
+    "status": 200,
+    "pass_": true
+  },
+  {
+    "check": "/api/v1/projects/",
+    "status": 200,
+    "pass_": true
+  },
+  {
+    "check": "/api/v1/agent/tasks",
+    "status": 200,
+    "pass_": true
+  },
+  {
+    "check": "/api/v1/inference/sources",
+    "status": 200,
+    "pass_": true
+  }
+]
