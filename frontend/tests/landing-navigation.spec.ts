@@ -47,20 +47,25 @@ test("the public homepage switches languages on desktop and mobile", async ({
     "Decode animal behavior, frame by frame.",
   )
   await expect(page.locator(".landing")).toHaveAttribute("lang", "en")
-  expect(await page.locator("main").innerText()).not.toMatch(/\p{Script=Han}/u)
+  expect(await page.locator("main").textContent()).not.toMatch(
+    /\p{Script=Han}/u,
+  )
   await page
     .getByRole("button", {
       name: "切换到中文 / Switch to Chinese",
       exact: true,
     })
     .click()
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN")
   await expect(page.locator(".landing")).toHaveAttribute("lang", "zh")
   await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
     "逐帧解码动物行为。",
   )
   await page.reload()
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN")
   await expect(page.locator(".landing")).toHaveAttribute("lang", "zh")
   await page.locator(".lang-toggle").click()
+  await expect(page.locator("html")).toHaveAttribute("lang", "en")
   await expect(page.locator(".landing")).toHaveAttribute("lang", "en")
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(
@@ -87,6 +92,7 @@ test("the public homepage remains usable when browser storage is blocked", async
     }
   })
   await page.goto("/welcome")
+  await expect(page.locator("html")).toHaveAttribute("lang", "en")
   await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
     "Decode animal behavior, frame by frame.",
   )
@@ -94,10 +100,22 @@ test("the public homepage remains usable when browser storage is blocked", async
     "Illustrative examples · synthetic data",
   )
   await page.locator(".lang-toggle").click()
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN")
   await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
     "逐帧解码动物行为。",
   )
   await expect(page.locator("#assistant .example-caption")).toHaveText(
     "功能演示 · 合成示例数据",
   )
+})
+
+test("auth routes loaded directly inherit the document language zh-CN", async ({
+  page,
+}) => {
+  for (const path of ["/login", "/signup", "/recover-password"]) {
+    await page.goto(path)
+    await expect(page.getByRole("heading").first()).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(`${path}$`))
+    await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN")
+  }
 })
