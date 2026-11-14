@@ -1,0 +1,104 @@
+[
+  {
+    "check": "/lingsight-formal-backend-1",
+    "same_container": false,
+    "same_image": true,
+    "same_started_at": false,
+    "pass": true
+  },
+  {
+    "check": "/lingsight-application-dbhub",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "/lingsight-formal-db-1",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "/openscientist-water-maze-dbhub",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "/openscientist-water-maze-mysql",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "/openscientist-launcher-1",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "/openscientist-openscientist-1",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "/openscientist-postgres-1",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "/hermes-proxy-cli-proxy-api-1",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "/animal-platform-frontend-1",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "/animal-platform-backend-1",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "/animal-platform-water-maze-worker-1",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "/animal-platform-overlay-worker-1",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "/animal-platform-redis-1",
+    "same_container": true,
+    "same_image": true,
+    "same_started_at": true,
+    "pass": true
+  },
+  {
+    "check": "private configuration mode",
+    "pass": true
+  }
+]

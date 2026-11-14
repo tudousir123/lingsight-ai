@@ -1,5 +1,34 @@
 # T5 local production platform
 
+## Current research catalog configuration — 2026-11-14
+
+The formal image remains `lingsight-platform:860ebb4bc0b584d6ad43c3a5a19765ca71adc634`. The authenticated research catalog now returns 200 with data; workspace, existing project navigation, experiments and annotations were accepted in real Chromium. See [the repair and authenticated acceptance record](../deploy-20261114/README.md), including the current two-file Compose command and configuration-only rollback. Historical acceptance below is not a substitute for this release's checks.
+
+The host-network backend must explicitly receive all five variables from the private `/home/x/.config/lingsight/platform.env` (0600):
+
+```dotenv
+RESEARCH_DB_HOST=127.0.0.1
+RESEARCH_DB_PORT=13306
+RESEARCH_DB_USER=lingsight_ro
+RESEARCH_DB_NAME=water_maze
+LINGSIGHT_RO_PASSWORD=<private-generated-password>
+```
+
+Port 13306 belongs to the existing research MySQL, distinct from application DB port 13308. The research account must have only SELECT on `water_maze.*`, no roles or grant option. Never substitute DBHub credentials with broader access. The current older Compose source needs the private `compose.research.yml` overlay; this branch's Compose declares these variables directly. Do not enable `TRIALS_FIXTURE_DIR` in production.
+
+
+Before replacing the backend, run the deployment gate from the candidate checkout (not `pr-preflight.sh`, which checks committed code only):
+
+```bash
+bash scripts/deploy-preflight.sh /home/x/.config/lingsight/platform.env
+# Expected: Research preflight passed: authenticated read succeeded
+docker compose --env-file /home/x/.config/lingsight/platform.env -f compose.local-production.yml up -d --no-build --no-deps --pull never --wait --wait-timeout 180 backend
+```
+
+Stop if preflight returns nonzero. It validates the explicit formal Compose file, then starts an ephemeral container from the configured candidate image with that service's environment and host networking. It streams the checkout's probe into the image, so even an older image can be checked without rebuilding. It does not start dependencies, migrate data, replace the running backend, or publish ports. Missing/invalid configuration and an unavailable authenticated `SELECT 1` produce redacted errors. Application health alone does not establish research readiness. Re-run authenticated experiments/trials and browser acceptance after replacement; this cheap connection probe does not verify catalog schema, data, permissions scope, media or scientific correctness.
+
+## Initial T5 deployment — historical record
+
 Standalone runtime: `compose.local-production.yml`, project `lingsight-formal`.
 The production image bundles the SPA and uses `fastapi run` on host loopback port 8000 with four workers. It has no Vite server, watch configuration, synthetic fixture mount, or development override. The dedicated MySQL 8.4 image is digest pinned; volume `lingsight-formal_app-db-data` persists the app database. The database publishes only `127.0.0.1:13308`; the dedicated `lingsight-formal` network also provides `lingsight-formal-db:3306` for the Agent's column-restricted DBHub connection. Other applications are outside this project.
 
@@ -24,7 +53,7 @@ curl --fail http://localhost:8000/api/v1/utils/health-check/
 
 Build source is `c11077fcf9a925e20b2b3a0debfea863b5b7d3af`. The runtime image tag names that commit; the actual image ID is recorded in `platform-verification.json`. Local build used the existing host HTTP proxy through build arguments and host build networking after an unproxied dependency download stalled; no dependency lockfile was changed.
 
-`platform-verification.json` records HTTP/API checks, actual migration head, image identities and preserved-user integrity. `platform-browser-readiness.json` records real Chromium login, valid route navigation and refresh. Browser navigation sends `Accept: text/html`, which activates FastAPI's `app.frontend(..., fallback="auto")`; a generic `*/*` probe of a frontend-only path may correctly return JSON 404. `/projects` is not a frontend index route: projects live in the sidebar and their detail route is `/projects/{id}`. No synthetic project was created for deployment checks. The old research-catalog endpoint honestly returns 503 until its legacy data source is configured; no synthetic fixture was enabled in the formal stack.
+`platform-verification.json` records HTTP/API checks, actual migration head, image identities and preserved-user integrity. `platform-browser-readiness.json` records real Chromium login, valid route navigation and refresh. Browser navigation sends `Accept: text/html`, which activates FastAPI's `app.frontend(..., fallback="auto")`; a generic `*/*` probe of a frontend-only path may correctly return JSON 404. `/projects` is not a frontend index route: projects live in the sidebar and their detail route is `/projects/{id}`. No synthetic project was created for deployment checks. At the initial T5 acceptance, the research-catalog endpoint returned 503 because its legacy data source was not configured (resolved in the 2026-11-14 follow-up above); no synthetic fixture was enabled in the formal stack.
 
 ## Rollback
 
