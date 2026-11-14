@@ -55,8 +55,11 @@ test.describe("Edit user profile", () => {
     page,
   }) => {
     await page.getByRole("button", { name: "Edit" }).click()
-    await page.getByLabel("Email").fill("")
-    await page.locator("body").click()
+    const emailInput = page.getByLabel("Email")
+    await emailInput.fill("")
+    await expect(emailInput).toBeFocused()
+    await emailInput.press("Tab")
+    await expect(emailInput).not.toBeFocused()
 
     await expect(page.getByText("Invalid email address")).toBeVisible()
   })
