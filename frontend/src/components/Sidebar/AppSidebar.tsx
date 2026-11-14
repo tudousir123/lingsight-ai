@@ -3,7 +3,6 @@ import {
   ArrowUpRight,
   ChartNoAxesCombined,
   ChevronDown,
-  CircleDot,
   Database,
   FolderOpen,
   MessageSquare,
@@ -294,10 +293,6 @@ export function AppSidebar() {
         </div>
       </SidebarContent>
       <SidebarFooter className="research-sidebar-footer">
-        <div className="research-sidebar-caption group-data-[collapsible=icon]:hidden">
-          <CircleDot size={12} />
-          让研究与发现相连
-        </div>
         <SidebarMenu>
           <SidebarAppearance />
         </SidebarMenu>
