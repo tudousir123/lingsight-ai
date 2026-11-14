@@ -92,6 +92,12 @@ test("同一工作台能绘制、编辑、恢复和导出本帧与整段标注",
   await expect(
     page.getByRole("button", { name: "第 1 帧 1 个点" }),
   ).toBeVisible()
+  const headItem = list.getByRole("button", { name: "头点", exact: true })
+  await expect(headItem).toHaveAttribute("aria-current", "true")
+  await page.keyboard.press("Delete")
+  await expect(headItem).toHaveCount(0)
+  await page.getByRole("button", { name: "撤销" }).click()
+  await expect(headItem).toBeVisible()
   await target.selectOption("tail")
   await page.getByRole("button", { name: "画面标注：尾点" }).press("Enter")
   await expect(
@@ -175,8 +181,15 @@ test("同一工作台能绘制、编辑、恢复和导出本帧与整段标注",
   })
   await drawPlatform.click({ position: { x: 179, y: 127 } })
   await drawPlatform.click({ position: { x: 199, y: 127 } })
-  await expect(page.getByRole("button", { name: "删除标注" })).toBeEnabled()
-  await page.getByRole("button", { name: "删除标注" }).click()
+  const platform = page.locator(".scene-overlay [data-kind=platform]")
+  await page
+    .getByRole("button", { name: "标注编辑画布" })
+    .click({ position: { x: 40, y: 140 } })
+  await platform.locator(".scene-select-shape circle").click()
+  await expect(
+    list.getByRole("button", { name: "平台", exact: true }),
+  ).toHaveAttribute("aria-current", "true")
+  await page.keyboard.press("Delete")
   await expect(page.locator(".scene-overlay [data-kind=platform]")).toHaveCount(
     0,
   )
@@ -231,7 +244,12 @@ test("同一工作台能绘制、编辑、恢复和导出本帧与整段标注",
   expect(await centerPoint.getAttribute("cx")).not.toBe(oldX)
   await page.getByRole("button", { name: "撤销" }).click()
   await expect(centerPoint).toHaveAttribute("cx", oldX!)
-  await page.getByRole("button", { name: "删除标注" }).click()
+  await centerItem.click()
+  await target.focus()
+  await page.keyboard.press("Delete")
+  await expect(centerItem).toBeVisible()
+  await page.getByRole("button", { name: "撤销" }).focus()
+  await page.keyboard.press("Delete")
   await expect(centerItem).toHaveCount(0)
   await page.getByRole("button", { name: "撤销" }).click()
   await expect(centerItem).toBeVisible()

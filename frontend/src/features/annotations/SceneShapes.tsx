@@ -427,6 +427,8 @@ export function AnnotationList({
           size="sm"
           variant="ghost"
           disabled={!canEdit}
+          aria-keyshortcuts="Delete"
+          title="Delete"
           onClick={onDelete}
         >
           <Trash2 /> 删除标注

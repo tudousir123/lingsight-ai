@@ -11,7 +11,7 @@ import {
   Play,
   RotateCcw,
 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useEffectEvent, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import useAuth from "@/hooks/useAuth"
 import { AnnotationViewport } from "./AnnotationViewport"
@@ -271,6 +271,36 @@ function AnnotationEditor({
         : tool.kind
   const drawLabel = shapeLabels[tool.kind]
 
+  const handleDeleteKey = useEffectEvent((event: KeyboardEvent) => {
+    if (
+      event.key !== "Delete" ||
+      event.defaultPrevented ||
+      event.isComposing ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey
+    )
+      return
+    const target = event.target
+    if (
+      (target instanceof HTMLElement && target.isContentEditable) ||
+      (target instanceof Element &&
+        target.closest(
+          "input, textarea, select, [role='textbox'], [role='combobox'], dialog, [role='dialog'], [role='alertdialog']",
+        ))
+    )
+      return
+    if (!selectedAnnotation || !canMark || media.current?.seeking) return
+    event.preventDefault()
+    deleteShape()
+  })
+
+  useEffect(() => {
+    if (!active) return
+    window.addEventListener("keydown", handleDeleteKey)
+    return () => window.removeEventListener("keydown", handleDeleteKey)
+  }, [active])
+
   function persist(next: Draft) {
     setDraft(next)
     try {
@@ -291,6 +321,7 @@ function AnnotationEditor({
 
   function setPoint(point: Point, label = landmark) {
     if (!canMark || !meta || media.current?.seeking) return
+    setSelected(pointKey(label, timeMs))
     const next = {
       x: clamp(Math.round(point.x), meta.width - 1),
       y: clamp(Math.round(point.y), meta.height - 1),
@@ -736,7 +767,7 @@ function AnnotationEditor({
                       return
                     }
                     if (mode === "edit") {
-                      if (event.key === "Delete" || event.key === "Backspace") {
+                      if (event.key === "Backspace") {
                         event.preventDefault()
                         deleteShape()
                       }
@@ -773,7 +804,7 @@ function AnnotationEditor({
                       !hiddenShapes.includes(shapeKey(shape)) &&
                       (shape.kind !== "point" || (paused && !seeking)),
                   )}
-                  selected={mode === "edit" ? selected : null}
+                  selected={selected}
                   editable={mode === "edit"}
                   canEdit={canMark && !panning}
                   cursor={mode === "draw" && !panning ? cursor : null}
@@ -898,7 +929,7 @@ function AnnotationEditor({
         )}
         <AnnotationList
           shapes={[...framePoints, ...draft.shapes]}
-          selected={mode === "edit" && selectedAnnotation ? selected : null}
+          selected={selectedAnnotation ? selected : null}
           hidden={hiddenShapes}
           canEdit={canMark}
           onSelect={selectShape}
