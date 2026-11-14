@@ -560,7 +560,7 @@ test("侧栏与首页使用中文，示例问题只填入草稿", async ({ page 
   await expect(
     page.getByRole("link", { name: "动物行为研究笔记", exact: true }),
   ).toBeVisible()
-  expect(await page.locator("body").innerText()).not.toMatch(
+  expect(await page.locator("body").textContent()).not.toMatch(
     /Start with experimental data|New research task|Your research companion/,
   )
   await page.getByRole("button", { name: /分析已有数据/ }).click()
