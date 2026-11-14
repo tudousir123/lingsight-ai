@@ -338,6 +338,9 @@ export function LandingLangProvider({ children }: { children: ReactNode }) {
       // Keep the language usable for this visit when storage is unavailable.
     }
   }, [lang])
+  useEffect(() => {
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en"
+  }, [lang])
   return (
     <LangContext.Provider value={{ lang, setLang, c: dictionaries[lang] }}>
       {children}

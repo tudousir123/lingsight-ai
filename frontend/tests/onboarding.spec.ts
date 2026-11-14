@@ -263,7 +263,7 @@ test("every introduction scene is Chinese and fits a narrow viewport", async ({
     await expect(scene.locator(".research-scene-content")).toHaveClass(
       /is-ready/,
     )
-    expect(await scene.innerText()).toMatch(/\p{Script=Han}/u)
+    expect(await scene.textContent()).toMatch(/\p{Script=Han}/u)
     expect(
       await scene.evaluate(
         (element) => element.scrollWidth <= element.clientWidth,
