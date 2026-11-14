@@ -282,6 +282,10 @@ test("目录 URL 保留来源并支持刷新和前进后退 (#59)", async ({ pag
 test("后退后迟到的目录响应不能覆盖当前位置 (#59)", async ({ page }) => {
   await mockWorkspace(page)
   let release = () => {}
+  let settled = () => {}
+  const handled = new Promise<void>((resolve) => {
+    settled = resolve
+  })
   await page.route("**/api/v1/inference/**", async (route) => {
     const url = new URL(route.request().url())
     if (!url.pathname.endsWith("/videos"))
@@ -290,9 +294,13 @@ test("后退后迟到的目录响应不能覆盖当前位置 (#59)", async ({ pa
       await new Promise<void>((resolve) => {
         release = resolve
       })
-      return route.fulfill({
-        json: { items: [{ type: "video", name: "stale.mp4", id: "stale" }] },
-      })
+      // 后退使查询键变化，在途请求已被中止，fulfill 会抛错，忽略。
+      return route
+        .fulfill({
+          json: { items: [{ type: "video", name: "stale.mp4", id: "stale" }] },
+        })
+        .catch(() => {})
+        .finally(settled)
     }
     return route.fulfill({
       json: { items: [{ type: "directory", name: "目录", path: "folder" }] },
@@ -306,14 +314,12 @@ test("后退后迟到的目录响应不能覆盖当前位置 (#59)", async ({ pa
   await pending
   await page.goBack()
   await expect(page.getByText("实验视频目录", { exact: true })).toBeVisible()
-  const completed = page
-    .waitForResponse(
-      (response) =>
-        new URL(response.url()).searchParams.get("path") === "folder",
-    )
-    .catch(() => null)
+  await expect(
+    page.getByRole("button", { name: "打开", exact: true }),
+  ).toBeVisible()
   release()
-  await completed
+  await handled
+  await expect(page.getByText("实验视频目录", { exact: true })).toBeVisible()
   await expect(
     page.getByRole("button", { name: "打开", exact: true }),
   ).toBeVisible()
