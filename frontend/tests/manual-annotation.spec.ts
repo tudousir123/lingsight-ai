@@ -114,11 +114,18 @@ test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) 
   await drawMark.press("Escape")
   await expect(page.getByRole("button", { name: "取消绘制" })).toHaveCount(0)
   await drawMark.click({ position: { x: 45, y: 48 } })
+  await drawMark.hover({ position: { x: 95, y: 48 } })
+  await expect(page.locator(".scene-preview polyline")).toHaveAttribute(
+    "points",
+    /^\d+,\d+ \d+,\d+$/,
+  )
   await drawMark.click({ position: { x: 95, y: 48 } })
   await drawMark.click({ position: { x: 70, y: 100 } })
-  await drawMark.press("Enter")
+  await drawMark.hover({ position: { x: 49, y: 50 } })
+  await expect(page.locator(".scene-vertex[data-snap]")).toBeVisible()
+  await drawMark.click({ position: { x: 49, y: 50 } })
   await expect(
-    page.getByRole("button", { name: "Mark · 五角星" }),
+    page.getByRole("button", { name: "Mark · 五角星", exact: true }),
   ).toBeVisible()
   const vertex = page.locator(".scene-handle").first()
   const box = await vertex.boundingBox()
@@ -133,6 +140,32 @@ test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) 
   )
   await page.mouse.up()
   expect(await vertex.getAttribute("cx")).not.toBe(originalX)
+  await page.getByRole("button", { name: "隐藏Mark · 五角星" }).click()
+  await expect(page.locator(".scene-overlay [data-kind=mark]")).toHaveCount(0)
+  await page.getByRole("button", { name: "显示Mark · 五角星" }).click()
+  await expect(page.locator(".scene-overlay [data-kind=mark]")).toHaveCount(1)
+  await page.getByRole("button", { name: "放大画布" }).click()
+  await expect(page.getByLabel("画布缩放")).toHaveText("135%")
+  await page.getByRole("button", { name: "平移画布" }).click()
+  const stage = page.locator(".annotation-stage")
+  const stageBox = await stage.boundingBox()
+  if (!stageBox) throw new Error("Missing canvas viewport")
+  const frame = page.locator(".annotation-frame")
+  const oldView = await frame.getAttribute("style")
+  await page.mouse.move(
+    stageBox.x + stageBox.width / 2,
+    stageBox.y + stageBox.height / 2,
+  )
+  await page.mouse.down()
+  await page.mouse.move(
+    stageBox.x + stageBox.width / 2 + 65,
+    stageBox.y + stageBox.height / 2 + 25,
+    { steps: 4 },
+  )
+  await page.mouse.up()
+  expect(await frame.getAttribute("style")).not.toBe(oldView)
+  await page.getByRole("button", { name: "适应画面" }).click()
+  await expect(page.getByLabel("画布缩放")).toHaveText("100%")
   await page.getByRole("button", { name: "平台", exact: true }).click()
   const drawPlatform = page.getByRole("button", {
     name: "绘制平台",
@@ -154,8 +187,18 @@ test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) 
     name: "绘制水池边缘",
     exact: true,
   })
+  await expect(page.getByLabel("定圆方式")).toHaveValue("rim")
   await drawPool.click({ position: { x: 220, y: 178 } })
   await drawPool.click({ position: { x: 300, y: 178 } })
+  await drawPool.click({ position: { x: 380, y: 178 } })
+  await expect(
+    page.getByRole("alert").filter({ hasText: "不能在一条直线上" }),
+  ).toBeVisible()
+  await drawPool.hover({ position: { x: 300, y: 249 } })
+  await expect(
+    page.locator(".scene-preview circle:not(.scene-vertex)"),
+  ).toBeVisible()
+  await drawPool.click({ position: { x: 300, y: 249 } })
   await expect(page.locator(".scene-list li")).toHaveCount(3)
   await page.getByRole("button", { name: "上一帧" }).click()
   await expect(page.locator(".annotation-time")).toContainText("第 1 帧")
@@ -191,6 +234,12 @@ test("手动标注能逐帧放点、撤销、恢复和导出", async ({ page }) 
     { frameIndex: 1, timeMs: 100, points: { center: { x: 40, y: 24 } } },
   ])
   expect(exported.frames[0].points.tail).toBeUndefined()
+  const [center, edge] = exported.sceneShapes.find(
+    (shape: { kind: string }) => shape.kind === "pool",
+  ).points
+  expect(center[0]).toBeGreaterThan(10)
+  expect(center[0]).toBeLessThan(50)
+  expect(edge[1]).toBeGreaterThan(center[1])
   expect(
     exported.sceneShapes.map(
       ({ kind, label, shape_type, frameIndex, points }) => [

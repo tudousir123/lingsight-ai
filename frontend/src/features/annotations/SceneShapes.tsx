@@ -1,8 +1,22 @@
-import { Circle, MousePointer2, Pentagon, Trash2 } from "lucide-react"
+import {
+  Circle,
+  Eye,
+  EyeOff,
+  MousePointer2,
+  Pentagon,
+  Trash2,
+} from "lucide-react"
 import { type PointerEvent, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 
-export type Point = { x: number; y: number }
+import {
+  circleFromRim,
+  imagePoint,
+  type Point,
+  translateOutline,
+} from "./shapeGeometry"
+
+export type { Point } from "./shapeGeometry"
 export type ShapeKind = "mark" | "platform" | "pool"
 type ShapeType = "polygon" | "circle"
 
@@ -36,6 +50,7 @@ export type ShapeTool = {
   kind: ShapeKind
   mark: MarkLabel
   type: ShapeType
+  circleMode?: "center" | "rim"
 }
 export const defaultShapeTool: ShapeTool = {
   kind: "mark",
@@ -88,22 +103,28 @@ function outline(points: Point[], type: ShapeType, closed: boolean) {
 export function SceneOverlay({
   width,
   height,
+  scale,
   shapes,
   selected,
   editable,
   canEdit,
   preview,
+  cursor,
+  snap,
   tool,
   onSelect,
   onEdit,
 }: {
   width: number
   height: number
+  scale: number
   shapes: SceneShape[]
   selected: string | null
   editable: boolean
   canEdit: boolean
   preview: Point[]
+  cursor: Point | null
+  snap: boolean
   tool: ShapeTool
   onSelect: (id: string) => void
   onEdit: (shape: SceneShape) => void
@@ -111,30 +132,70 @@ export function SceneOverlay({
   const svg = useRef<SVGSVGElement>(null)
   const moving = useRef<{
     shape: SceneShape
-    index: number
-    point: Point
+    index: number | null
+    start: Point
+    points: Point[]
   } | null>(null)
   const [transient, setTransient] = useState<SceneShape | null>(null)
   const interactive = editable && canEdit
-  const handleRadius = Math.max(width, height) * 0.007
-  function move(event: PointerEvent<SVGCircleElement>) {
-    const drag = moving.current
+  const handleRadius = (Math.max(width, height) * 0.007) / scale
+  const drawPoints = cursor ? [...preview, cursor] : preview
+  const rimPreview = tool.type === "circle" && tool.circleMode === "rim"
+  const candidateCircle =
+    rimPreview && drawPoints.length === 3 ? circleFromRim(drawPoints) : null
+
+  function position(event: PointerEvent<SVGElement>) {
     const box = svg.current?.getBoundingClientRect()
-    if (!drag || !box) return
-    const x = Math.round(((width - 1) * (event.clientX - box.left)) / box.width)
-    const y = Math.round(
-      ((height - 1) * (event.clientY - box.top)) / box.height,
+    return (
+      box &&
+      imagePoint({ x: event.clientX, y: event.clientY }, box, width, height)
     )
-    drag.point = {
-      x: Math.max(0, Math.min(width - 1, x)),
-      y: Math.max(0, Math.min(height - 1, y)),
+  }
+
+  function begin(
+    event: PointerEvent<SVGElement>,
+    shape: SceneShape,
+    index: number | null,
+  ) {
+    if (event.button !== 0) return
+    const start = position(event)
+    if (!start) return
+    event.stopPropagation()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    moving.current = { shape, index, start, points: shape.points }
+    onSelect(shapeKey(shape))
+  }
+
+  function move(event: PointerEvent<SVGElement>) {
+    const drag = moving.current
+    const point = position(event)
+    if (!drag || !point) return
+    const delta = { x: point.x - drag.start.x, y: point.y - drag.start.y }
+    drag.points =
+      drag.index === null ||
+      (drag.shape.shape_type === "circle" && drag.index === 0)
+        ? translateOutline(drag.shape.points, delta, width, height)
+        : drag.shape.points.map((previous, index) =>
+            index === drag.index ? point : previous,
+          )
+    setTransient({ ...drag.shape, points: drag.points })
+  }
+
+  function end(commit: boolean) {
+    const drag = moving.current
+    moving.current = null
+    setTransient(null)
+    if (
+      commit &&
+      drag?.points.some(
+        (point, index) =>
+          point.x !== drag.shape.points[index].x ||
+          point.y !== drag.shape.points[index].y,
+      ) &&
+      validOutline(drag.points, drag.shape.shape_type)
+    ) {
+      onEdit({ ...drag.shape, points: drag.points })
     }
-    setTransient({
-      ...drag.shape,
-      points: drag.shape.points.map((point, index) =>
-        index === drag.index ? drag.point : point,
-      ),
-    })
   }
 
   return (
@@ -142,7 +203,7 @@ export function SceneOverlay({
       ref={svg}
       className="scene-overlay"
       aria-hidden="true"
-      viewBox={`0 0 ${width - 1} ${height - 1}`}
+      viewBox={`0 0 ${Math.max(1, width - 1)} ${Math.max(1, height - 1)}`}
       preserveAspectRatio="none"
     >
       {shapes.map((saved) => {
@@ -157,12 +218,13 @@ export function SceneOverlay({
             data-selected={isSelected || undefined}
           >
             {interactive ? (
-              // The shape list provides the keyboard-accessible equivalent.
               <g
                 className="scene-select-shape"
-                onPointerDown={(event) => {
-                  if (event.button === 0) onSelect(id)
-                }}
+                data-fill-hit={shape.kind !== "pool" || undefined}
+                onPointerDown={(event) => begin(event, saved, null)}
+                onPointerMove={move}
+                onPointerUp={() => end(true)}
+                onPointerCancel={() => end(false)}
               >
                 {outline(shape.points, shape.shape_type, true)}
               </g>
@@ -179,34 +241,10 @@ export function SceneOverlay({
                   cy={point.y}
                   r={handleRadius}
                   vectorEffect="non-scaling-stroke"
-                  onPointerDown={(event) => {
-                    if (event.button !== 0) return
-                    event.currentTarget.setPointerCapture(event.pointerId)
-                    moving.current = {
-                      shape: saved,
-                      index,
-                      point: saved.points[index],
-                    }
-                  }}
+                  onPointerDown={(event) => begin(event, saved, index)}
                   onPointerMove={move}
-                  onPointerUp={() => {
-                    const drag = moving.current
-                    moving.current = null
-                    setTransient(null)
-                    if (!drag) return
-                    const before = drag.shape.points[drag.index]
-                    if (before.x === drag.point.x && before.y === drag.point.y)
-                      return
-                    const points = drag.shape.points.map((point, index) =>
-                      index === drag.index ? drag.point : point,
-                    )
-                    if (validOutline(points, drag.shape.shape_type))
-                      onEdit({ ...drag.shape, points })
-                  }}
-                  onPointerCancel={() => {
-                    moving.current = null
-                    setTransient(null)
-                  }}
+                  onPointerUp={() => end(true)}
+                  onPointerCancel={() => end(false)}
                 />
               ))}
           </g>
@@ -214,22 +252,67 @@ export function SceneOverlay({
       })}
       {!!preview.length && (
         <g className="scene-preview" data-kind={tool.kind}>
-          {outline(preview, tool.type, false)}
-          {preview
-            .slice(0, tool.type === "circle" ? 1 : undefined)
-            .map((point, index) => (
-              <circle
-                key={index}
-                className="scene-vertex"
-                cx={point.x}
-                cy={point.y}
-                r={handleRadius / 2}
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
+          {candidateCircle
+            ? outline(candidateCircle, "circle", true)
+            : outline(drawPoints, rimPreview ? "polygon" : tool.type, false)}
+          {preview.map((point, index) => (
+            <circle
+              key={index}
+              className="scene-vertex"
+              data-snap={(index === 0 && snap) || undefined}
+              cx={point.x}
+              cy={point.y}
+              r={index === 0 && snap ? handleRadius : handleRadius / 2}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
         </g>
       )}
     </svg>
+  )
+}
+
+export function SceneToolbar({
+  tool,
+  editing,
+  onTool,
+  onEditMode,
+}: {
+  tool: ShapeTool
+  editing: boolean
+  onTool: (tool: ShapeTool) => void
+  onEditMode: () => void
+}) {
+  return (
+    <fieldset className="scene-tools" aria-label="绘图工具">
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        aria-pressed={editing}
+        onClick={onEditMode}
+      >
+        <MousePointer2 /> 编辑轮廓
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        aria-pressed={!editing && tool.type === "polygon"}
+        onClick={() => onTool({ ...tool, type: "polygon" })}
+      >
+        <Pentagon /> 多边形
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        aria-pressed={!editing && tool.type === "circle"}
+        onClick={() => onTool({ ...tool, type: "circle" })}
+      >
+        <Circle /> 圆形
+      </Button>
+    </fieldset>
   )
 }
 
@@ -240,12 +323,13 @@ export function SceneControls({
   pending,
   shapes,
   selected,
+  hidden,
   onTool,
-  onEditMode,
   onSelect,
   onFinish,
   onCancel,
   onDelete,
+  onToggle,
 }: {
   tool: ShapeTool
   editing: boolean
@@ -253,12 +337,13 @@ export function SceneControls({
   pending: number
   shapes: SceneShape[]
   selected: string | null
+  hidden: string[]
   onTool: (tool: ShapeTool) => void
-  onEditMode: () => void
   onSelect: (id: string) => void
   onFinish: () => void
   onCancel: () => void
   onDelete: () => void
+  onToggle: (id: string) => void
 }) {
   return (
     <div className="scene-controls">
@@ -269,12 +354,13 @@ export function SceneControls({
             type="button"
             size="sm"
             variant="outline"
-            aria-pressed={!editing && tool.kind === kind}
+            aria-pressed={tool.kind === kind}
             onClick={() =>
               onTool({
                 ...tool,
                 kind,
                 type: kind === "mark" ? "polygon" : "circle",
+                circleMode: kind === "pool" ? "rim" : "center",
               })
             }
           >
@@ -282,7 +368,6 @@ export function SceneControls({
           </Button>
         ))}
       </fieldset>
-      <p>同一视频的场景轮廓在各帧共用。</p>
       {!editing && (
         <div className="scene-options">
           {tool.kind === "mark" && (
@@ -302,30 +387,29 @@ export function SceneControls({
               </select>
             </label>
           )}
-          <fieldset className="scene-tools" aria-label="绘图工具">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-pressed={tool.type === "polygon"}
-              onClick={() => onTool({ ...tool, type: "polygon" })}
-            >
-              <Pentagon /> 多边形
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-pressed={tool.type === "circle"}
-              onClick={() => onTool({ ...tool, type: "circle" })}
-            >
-              <Circle /> 圆形
-            </Button>
-          </fieldset>
+          {tool.type === "circle" && (
+            <label>
+              定圆方式
+              <select
+                value={tool.circleMode ?? "center"}
+                onChange={(event) =>
+                  onTool({
+                    ...tool,
+                    circleMode: event.target.value === "rim" ? "rim" : "center",
+                  })
+                }
+              >
+                <option value="center">圆心 + 边缘</option>
+                <option value="rim">三点定圆</option>
+              </select>
+            </label>
+          )}
           <p>
-            {tool.type === "circle"
-              ? "依次点击圆心和边缘。"
-              : "沿边缘点击，按 Enter 或「闭合轮廓」完成。"}
+            {tool.type === "polygon"
+              ? "沿轮廓落点，回到起点或按 Enter 闭合。"
+              : tool.circleMode === "rim"
+                ? "沿边缘点三个分散的位置。"
+                : "依次点击圆心和边缘。"}
           </p>
           {!!pending && (
             <div className="annotation-actions">
@@ -354,39 +438,46 @@ export function SceneControls({
       <div className="annotation-frames scene-list">
         <div className="annotation-section-title">
           <h3>场景轮廓</h3>
-          <Button
-            size="sm"
-            type="button"
-            variant="ghost"
-            aria-pressed={editing}
-            onClick={onEditMode}
-          >
-            <MousePointer2 /> 编辑轮廓
-          </Button>
+          <span>{shapes.length} 个</span>
         </div>
         <ul>
-          {shapes.map((shape) => (
-            <li key={shapeKey(shape)}>
-              <button
-                type="button"
-                data-kind={shape.kind}
-                aria-current={selected === shapeKey(shape) ? "true" : undefined}
-                onClick={() => onSelect(shapeKey(shape))}
-              >
-                <i className="scene-swatch" aria-hidden="true" />
-                <span>{shapeName(shape)}</span>
-              </button>
-            </li>
-          ))}
+          {shapes.map((shape) => {
+            const id = shapeKey(shape)
+            const name = shapeName(shape)
+            const invisible = hidden.includes(id)
+            return (
+              <li key={id}>
+                <button
+                  className="scene-row-select"
+                  type="button"
+                  data-kind={shape.kind}
+                  aria-current={selected === id ? "true" : undefined}
+                  onClick={() => onSelect(id)}
+                >
+                  <i className="scene-swatch" aria-hidden="true" />
+                  <span>{name}</span>
+                </button>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  size="icon-sm"
+                  aria-label={`${invisible ? "显示" : "隐藏"}${name}`}
+                  onClick={() => onToggle(id)}
+                >
+                  {invisible ? <EyeOff /> : <Eye />}
+                </Button>
+              </li>
+            )
+          })}
         </ul>
-        {editing && (
+        {editing && selected && (
           <>
-            <p>选中轮廓后拖动控制点，可按 Delete 删除。</p>
+            <p>拖动形状移动，拖动控制点调整边界。</p>
             <Button
               type="button"
               size="sm"
               variant="ghost"
-              disabled={!canEdit || !selected}
+              disabled={!canEdit}
               onClick={onDelete}
             >
               <Trash2 /> 删除轮廓
@@ -394,6 +485,7 @@ export function SceneControls({
           </>
         )}
       </div>
+      <p>场景轮廓在当前视频各帧共用。</p>
     </div>
   )
 }

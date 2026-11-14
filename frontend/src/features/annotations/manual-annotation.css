@@ -275,7 +275,8 @@
 }
 .scene-overlay .scene-select-shape :is(polygon, circle) {
   pointer-events: stroke;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
 }
 .scene-overlay .scene-handle,
 .scene-overlay .scene-vertex {
@@ -316,10 +317,6 @@
   border-color: #777;
   background: #393939;
 }
-.annotation-mode {
-  padding-bottom: 9px;
-  border-bottom: 1px solid #3a3a3a;
-}
 .scene-options label {
   display: flex;
   align-items: center;
@@ -342,4 +339,82 @@
 }
 .scene-list p {
   margin-top: 7px;
+}
+
+.annotation-drawing-bar,
+.annotation-view-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 7px 10px;
+}
+.annotation-drawing-bar {
+  border-bottom: 1px solid #353535;
+}
+.annotation-drawing-bar .annotation-mode {
+  padding-right: 8px;
+  border-right: 1px solid #424242;
+}
+.annotation-view-tools {
+  gap: 4px;
+  padding-block: 3px;
+  border-bottom: 1px solid #353535;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #c7c7c7;
+}
+.annotation-view-tools > output {
+  min-width: 40px;
+  text-align: center;
+}
+.annotation-view-separator {
+  width: 1px;
+  height: 16px;
+  background: #424242;
+}
+.annotation-view-tools button[aria-pressed="true"] {
+  background: #444;
+}
+.annotation-stage {
+  overflow: hidden;
+}
+.annotation-frame {
+  transform-origin: top left;
+}
+.annotation-stage[data-pan] :is(.annotation-hit, video) {
+  cursor: grab;
+  touch-action: none;
+}
+.annotation-stage[data-pan="dragging"] :is(.annotation-hit, video) {
+  cursor: grabbing;
+}
+.scene-overlay .scene-select-shape[data-fill-hit] :is(polygon, circle) {
+  fill: transparent;
+  pointer-events: all;
+}
+.scene-overlay
+  [data-selected]
+  .scene-select-shape[data-fill-hit]
+  :is(polygon, circle) {
+  fill: color-mix(in srgb, var(--shape-color) 11%, transparent);
+}
+.scene-overlay .scene-vertex[data-snap] {
+  stroke: white;
+  stroke-width: 2;
+}
+.scene-list li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.scene-list li > .scene-row-select {
+  min-width: 0;
+  flex: 1;
+}
+.scene-list li > button:last-child {
+  width: 32px;
+  flex: none;
+  justify-content: center;
+  border: 0;
 }

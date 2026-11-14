@@ -10,17 +10,20 @@ import {
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import useAuth from "@/hooks/useAuth"
+import { AnnotationViewport } from "./AnnotationViewport"
 import {
   defaultShapeTool,
   type Point,
   SceneControls,
   SceneOverlay,
   type SceneShape,
+  SceneToolbar,
   type ShapeTool,
   shapeKey,
   shapeLabels,
   validOutline,
 } from "./SceneShapes"
+import { circleFromRim, imagePoint } from "./shapeGeometry"
 import "./manual-annotation.css"
 
 const labels = { head: "头点", tail: "尾点", center: "质心" }
@@ -212,6 +215,9 @@ function AnnotationEditor({
   const [tool, setTool] = useState<ShapeTool>(defaultShapeTool)
   const [outline, setOutline] = useState<Point[]>([])
   const [selected, setSelected] = useState<string | null>(null)
+  const [cursor, setCursor] = useState<Point | null>(null)
+  const [snap, setSnap] = useState(false)
+  const [hiddenShapes, setHiddenShapes] = useState<string[]>([])
   const [shapeError, setShapeError] = useState("")
   const canvas = useRef<HTMLButtonElement>(null)
   const [landmark, setLandmark] = useState<Landmark>("head")
@@ -275,6 +281,8 @@ function AnnotationEditor({
 
   function cancelOutline() {
     setOutline([])
+    setCursor(null)
+    setSnap(false)
     setShapeError("")
   }
 
@@ -282,13 +290,15 @@ function AnnotationEditor({
     cancelOutline()
     setTool(next)
     setMode("draw")
-    canvas.current?.focus()
+    canvas.current?.focus({ preventScroll: true })
   }
 
   function selectShape(key: string) {
     cancelOutline()
     setMode("edit")
     setSelected(key)
+    setHiddenShapes((hidden) => hidden.filter((id) => id !== key))
+    canvas.current?.focus({ preventScroll: true })
   }
 
   function saveShapes(shapes: SceneShape[]) {
@@ -304,6 +314,14 @@ function AnnotationEditor({
         ? draft.shapes.map((item) => (shapeKey(item) === id ? shape : item))
         : [...draft.shapes, shape],
     )
+  }
+
+  function shouldSnap(clientX: number, clientY: number, box: DOMRect) {
+    if (!meta || tool.type !== "polygon" || outline.length < 3) return false
+    const first = outline[0]
+    const x = box.left + (first.x * box.width) / Math.max(1, meta.width - 1)
+    const y = box.top + (first.y * box.height) / Math.max(1, meta.height - 1)
+    return Math.hypot(clientX - x, clientY - y) <= 10
   }
 
   function finishOutline(points = outline) {
@@ -323,6 +341,22 @@ function AnnotationEditor({
     }
     updateShape(shape)
     selectShape(shapeKey(shape))
+  }
+
+  function editMode() {
+    cancelOutline()
+    setMode("edit")
+    canvas.current?.focus({ preventScroll: true })
+  }
+
+  function toggleShape(id: string) {
+    const isHidden = hiddenShapes.includes(id)
+    setHiddenShapes(
+      isHidden
+        ? hiddenShapes.filter((key) => key !== id)
+        : [...hiddenShapes, id],
+    )
+    if (!isHidden && selected === id) setSelected(null)
   }
 
   function deleteShape() {
@@ -398,221 +432,280 @@ function AnnotationEditor({
   return (
     <div className="annotation-grid">
       <div className="annotation-player">
-        <div className="annotation-stage">
-          <div
-            className="annotation-frame"
-            style={
-              meta
-                ? {
-                    aspectRatio: meta.width / meta.height,
-                    width: `min(100%, ${(58 * meta.width) / meta.height}dvh)`,
-                  }
-                : undefined
-            }
+        <div className="annotation-drawing-bar">
+          <fieldset
+            className="scene-tools annotation-mode"
+            aria-label="标注范围"
           >
-            <video
-              ref={media}
-              src={source.url}
-              preload="auto"
-              playsInline
-              aria-label="标注视频"
-              onLoadedMetadata={(event) => {
-                const video = event.currentTarget
-                if (
-                  video.videoWidth &&
-                  Number.isFinite(video.duration) &&
-                  video.duration > 0
-                ) {
-                  setMeta({
-                    width: video.videoWidth,
-                    height: video.videoHeight,
-                    duration: video.duration,
-                  })
-                }
-              }}
-              onError={() =>
-                setError(
-                  "无法播放该视频，请尝试浏览器支持的 MP4 或 WebM 文件。",
-                )
-              }
-              onLoadedData={() => setReady(true)}
-              onPlay={() => {
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              aria-pressed={mode === "points"}
+              onClick={() => {
                 cancelOutline()
-                setPaused(false)
+                setMode("points")
               }}
-              onPause={() => setPaused(true)}
-              onEnded={() => setPaused(true)}
-              onSeeking={() => setSeeking(true)}
-              onSeeked={(event) => {
-                setTime(event.currentTarget.currentTime)
-                setSeeking(false)
-              }}
-              onTimeUpdate={(event) => setTime(event.currentTarget.currentTime)}
             >
-              <track kind="captions" />
-            </video>
-            {meta && (
-              <button
-                ref={canvas}
-                type="button"
-                className="annotation-hit"
-                data-mode={mode}
-                aria-label={
-                  mode === "points"
-                    ? `画面标注：${labels[landmark]}`
-                    : mode === "draw"
-                      ? `绘制${drawLabel}`
-                      : "轮廓编辑画布"
-                }
-                disabled={!canMark}
-                onClick={(event) => {
-                  if (event.detail === 0 || media.current?.seeking) return
-                  const box = event.currentTarget.getBoundingClientRect()
-                  const point = {
-                    x: clamp(
-                      Math.round(
-                        ((event.clientX - box.left) / box.width) *
-                          (meta.width - 1),
-                      ),
-                      meta.width - 1,
-                    ),
-                    y: clamp(
-                      Math.round(
-                        ((event.clientY - box.top) / box.height) *
-                          (meta.height - 1),
-                      ),
-                      meta.height - 1,
-                    ),
-                  }
-                  if (mode === "points") {
-                    setPoint(point)
-                    return
-                  }
-                  if (mode === "edit") {
-                    setSelected(null)
-                    return
-                  }
-                  const first = outline[0]
-                  const closesPolygon =
-                    tool.type === "polygon" &&
-                    outline.length >= 3 &&
-                    (event.detail === 2 ||
-                      Math.hypot(
-                        ((point.x - first.x) * box.width) / meta.width,
-                        ((point.y - first.y) * box.height) / meta.height,
-                      ) <= 10)
-                  if (closesPolygon) {
-                    finishOutline()
-                    return
-                  }
-                  const previous = outline[outline.length - 1]
-                  if (
-                    tool.type === "polygon" &&
-                    previous?.x === point.x &&
-                    previous.y === point.y
-                  )
-                    return
-                  const points = [...outline, point]
-                  if (tool.type === "circle" && points.length === 2) {
-                    if (validOutline(points, tool.type)) finishOutline(points)
-                    else setShapeError("请点击离圆心更远的边缘。")
-                  } else {
-                    setShapeError("")
-                    setOutline(points)
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if (
-                    (event.ctrlKey || event.metaKey) &&
-                    event.key.toLowerCase() === "z"
-                  ) {
-                    event.preventDefault()
-                    if (outline.length) setOutline(outline.slice(0, -1))
-                    else undoChange()
-                    return
-                  }
-                  if (mode === "draw") {
-                    if (event.key === "Escape") cancelOutline()
-                    if (
-                      (event.key === "Enter" || event.key === " ") &&
-                      tool.type === "polygon" &&
-                      outline.length >= 3
-                    ) {
-                      event.preventDefault()
-                      finishOutline()
-                    }
-                    return
-                  }
-                  if (mode === "edit") {
-                    if (event.key === "Delete" || event.key === "Backspace") {
-                      event.preventDefault()
-                      deleteShape()
-                    }
-                    return
-                  }
-                  const point = current?.points[landmark] ?? {
-                    x: (meta.width - 1) / 2,
-                    y: (meta.height - 1) / 2,
-                  }
-                  const delta = {
-                    ArrowUp: [0, -1],
-                    ArrowDown: [0, 1],
-                    ArrowLeft: [-1, 0],
-                    ArrowRight: [1, 0],
-                    Enter: [0, 0],
-                  }[event.key]
-                  if (!delta) return
-                  event.preventDefault()
-                  const stride = event.shiftKey ? 10 : 1
-                  setPoint({
-                    x: point.x + delta[0] * stride,
-                    y: point.y + delta[1] * stride,
-                  })
-                }}
-              >
-                {paused &&
-                  !seeking &&
-                  landmarks.map((key) => {
-                    const point = current?.points[key]
-                    if (!point) return null
-                    return (
-                      <span
-                        className="annotation-marker"
-                        data-landmark={key}
-                        key={key}
-                        aria-hidden="true"
-                        style={{
-                          left: `${(100 * point.x) / Math.max(1, meta.width - 1)}%`,
-                          top: `${(100 * point.y) / Math.max(1, meta.height - 1)}%`,
-                        }}
-                      >
-                        <i /> <b>{labels[key]}</b>
-                      </span>
-                    )
-                  })}
-              </button>
-            )}
-            {meta && (
-              <SceneOverlay
-                width={meta.width}
-                height={meta.height}
-                shapes={draft.shapes}
-                selected={mode === "edit" ? selected : null}
-                editable={mode === "edit"}
-                canEdit={canMark}
-                preview={mode === "draw" ? outline : []}
-                tool={tool}
-                onSelect={selectShape}
-                onEdit={updateShape}
-              />
-            )}
-          </div>
-          {error && (
-            <p role="alert" className="annotation-error">
-              {error}
-            </p>
+              关键点
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              aria-pressed={mode !== "points"}
+              onClick={() => changeTool(tool)}
+            >
+              场景标注
+            </Button>
+          </fieldset>
+          {mode !== "points" && (
+            <SceneToolbar
+              tool={tool}
+              editing={mode === "edit"}
+              onTool={changeTool}
+              onEditMode={editMode}
+            />
           )}
         </div>
+        <AnnotationViewport width={meta?.width} height={meta?.height}>
+          {(panning, scale) => (
+            <>
+              <video
+                ref={media}
+                src={source.url}
+                preload="auto"
+                playsInline
+                aria-label="标注视频"
+                onLoadedMetadata={(event) => {
+                  const video = event.currentTarget
+                  if (
+                    video.videoWidth &&
+                    Number.isFinite(video.duration) &&
+                    video.duration > 0
+                  ) {
+                    setMeta({
+                      width: video.videoWidth,
+                      height: video.videoHeight,
+                      duration: video.duration,
+                    })
+                  }
+                }}
+                onError={() =>
+                  setError(
+                    "无法播放该视频，请尝试浏览器支持的 MP4 或 WebM 文件。",
+                  )
+                }
+                onLoadedData={() => setReady(true)}
+                onPlay={() => {
+                  cancelOutline()
+                  setPaused(false)
+                }}
+                onPause={() => setPaused(true)}
+                onEnded={() => setPaused(true)}
+                onSeeking={() => setSeeking(true)}
+                onSeeked={(event) => {
+                  setTime(event.currentTarget.currentTime)
+                  setSeeking(false)
+                }}
+                onTimeUpdate={(event) =>
+                  setTime(event.currentTarget.currentTime)
+                }
+              >
+                <track kind="captions" />
+              </video>
+              {meta && (
+                <button
+                  ref={canvas}
+                  type="button"
+                  className="annotation-hit"
+                  data-mode={mode}
+                  aria-label={
+                    mode === "points"
+                      ? `画面标注：${labels[landmark]}`
+                      : mode === "draw"
+                        ? `绘制${drawLabel}`
+                        : "轮廓编辑画布"
+                  }
+                  disabled={!canMark}
+                  onPointerMove={(event) => {
+                    if (
+                      mode !== "draw" ||
+                      panning ||
+                      !canMark ||
+                      !outline.length
+                    )
+                      return
+                    const box = event.currentTarget.getBoundingClientRect()
+                    const point = imagePoint(
+                      { x: event.clientX, y: event.clientY },
+                      box,
+                      meta.width,
+                      meta.height,
+                    )
+                    const closes = shouldSnap(event.clientX, event.clientY, box)
+                    setSnap(closes)
+                    setCursor(closes ? outline[0] : point)
+                  }}
+                  onPointerLeave={() => {
+                    setCursor(null)
+                    setSnap(false)
+                  }}
+                  onClick={(event) => {
+                    if (event.detail === 0 || panning || media.current?.seeking)
+                      return
+                    const box = event.currentTarget.getBoundingClientRect()
+                    const point = imagePoint(
+                      { x: event.clientX, y: event.clientY },
+                      box,
+                      meta.width,
+                      meta.height,
+                    )
+                    if (mode === "points") {
+                      setPoint(point)
+                      return
+                    }
+                    if (mode === "edit") {
+                      setSelected(null)
+                      return
+                    }
+                    if (
+                      shouldSnap(event.clientX, event.clientY, box) ||
+                      (tool.type === "polygon" &&
+                        outline.length >= 3 &&
+                        event.detail === 2)
+                    ) {
+                      finishOutline()
+                      return
+                    }
+                    const previous = outline[outline.length - 1]
+                    if (previous?.x === point.x && previous.y === point.y)
+                      return
+                    const points = [...outline, point]
+                    setCursor(null)
+                    setSnap(false)
+                    if (tool.type === "circle") {
+                      const fromRim = tool.circleMode === "rim"
+                      if (
+                        (!fromRim && points.length === 2) ||
+                        (fromRim && points.length === 3)
+                      ) {
+                        const circle = fromRim ? circleFromRim(points) : points
+                        if (circle && validOutline(circle, "circle"))
+                          finishOutline(circle)
+                        else
+                          setShapeError(
+                            fromRim
+                              ? "三个点不能在一条直线上，请换一个边缘点。"
+                              : "请点击离圆心更远的边缘。",
+                          )
+                        return
+                      }
+                    }
+                    setShapeError("")
+                    setOutline(points)
+                  }}
+                  onKeyDown={(event) => {
+                    if (
+                      (event.ctrlKey || event.metaKey) &&
+                      event.key.toLowerCase() === "z"
+                    ) {
+                      event.preventDefault()
+                      if (outline.length) {
+                        setOutline(outline.slice(0, -1))
+                        setCursor(null)
+                        setSnap(false)
+                      } else undoChange()
+                      return
+                    }
+                    if (mode === "draw") {
+                      if (event.key === "Escape") cancelOutline()
+                      if (
+                        (event.key === "Enter" || event.key === " ") &&
+                        tool.type === "polygon" &&
+                        outline.length >= 3
+                      ) {
+                        event.preventDefault()
+                        finishOutline()
+                      }
+                      return
+                    }
+                    if (mode === "edit") {
+                      if (event.key === "Delete" || event.key === "Backspace") {
+                        event.preventDefault()
+                        deleteShape()
+                      }
+                      return
+                    }
+                    const point = current?.points[landmark] ?? {
+                      x: (meta.width - 1) / 2,
+                      y: (meta.height - 1) / 2,
+                    }
+                    const delta = {
+                      ArrowUp: [0, -1],
+                      ArrowDown: [0, 1],
+                      ArrowLeft: [-1, 0],
+                      ArrowRight: [1, 0],
+                      Enter: [0, 0],
+                    }[event.key]
+                    if (!delta) return
+                    event.preventDefault()
+                    const stride = event.shiftKey ? 10 : 1
+                    setPoint({
+                      x: point.x + delta[0] * stride,
+                      y: point.y + delta[1] * stride,
+                    })
+                  }}
+                >
+                  {paused &&
+                    !seeking &&
+                    landmarks.map((key) => {
+                      const point = current?.points[key]
+                      if (!point) return null
+                      return (
+                        <span
+                          className="annotation-marker"
+                          data-landmark={key}
+                          key={key}
+                          aria-hidden="true"
+                          style={{
+                            left: `${(100 * point.x) / Math.max(1, meta.width - 1)}%`,
+                            top: `${(100 * point.y) / Math.max(1, meta.height - 1)}%`,
+                          }}
+                        >
+                          <i /> <b>{labels[key]}</b>
+                        </span>
+                      )
+                    })}
+                </button>
+              )}
+              {meta && (
+                <SceneOverlay
+                  width={meta.width}
+                  height={meta.height}
+                  scale={scale}
+                  shapes={draft.shapes.filter(
+                    (shape) => !hiddenShapes.includes(shapeKey(shape)),
+                  )}
+                  selected={mode === "edit" ? selected : null}
+                  editable={mode === "edit"}
+                  canEdit={canMark && !panning}
+                  cursor={mode === "draw" && !panning ? cursor : null}
+                  snap={snap}
+                  preview={mode === "draw" ? outline : []}
+                  tool={tool}
+                  onSelect={selectShape}
+                  onEdit={updateShape}
+                />
+              )}
+            </>
+          )}
+        </AnnotationViewport>
+        {error && (
+          <p role="alert" className="annotation-error">
+            {error}
+          </p>
+        )}
         <div className="annotation-transport">
           <div className="annotation-actions">
             <Button
@@ -672,30 +765,7 @@ function AnnotationEditor({
           </span>
         </div>
       </div>
-      <aside className="annotation-inspector" aria-label="当前帧标注">
-        <fieldset className="scene-tools annotation-mode" aria-label="标注范围">
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            aria-pressed={mode === "points"}
-            onClick={() => {
-              cancelOutline()
-              setMode("points")
-            }}
-          >
-            关键点
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            aria-pressed={mode !== "points"}
-            onClick={() => changeTool(tool)}
-          >
-            场景标注
-          </Button>
-        </fieldset>
+      <aside className="annotation-inspector" aria-label="标注面板">
         {mode === "points" ? (
           <>
             <div className="annotation-inspector-header">
@@ -736,11 +806,8 @@ function AnnotationEditor({
               shapes={draft.shapes}
               selected={selectedShape ? selected : null}
               onTool={changeTool}
-              onEditMode={() => {
-                cancelOutline()
-                setMode("edit")
-                canvas.current?.focus()
-              }}
+              hidden={hiddenShapes}
+              onToggle={toggleShape}
               onSelect={selectShape}
               onFinish={() => finishOutline()}
               onCancel={cancelOutline}
