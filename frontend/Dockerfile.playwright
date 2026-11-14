@@ -1,4 +1,7 @@
-FROM mcr.microsoft.com/playwright:v1.63.0-noble
+ARG PLAYWRIGHT_IMAGE=mcr.microsoft.com/playwright:v1.65.0-noble
+FROM ${PLAYWRIGHT_IMAGE}
+ARG PLAYWRIGHT_IMAGE
+ENV PLAYWRIGHT_DOCKER_IMAGE=${PLAYWRIGHT_IMAGE}
 
 WORKDIR /app
 
@@ -16,6 +19,9 @@ WORKDIR /app/frontend
 RUN bun ci
 
 COPY ./frontend /app/frontend
+
+# Fail at build time if the locked runner and preinstalled browser drift apart.
+RUN node scripts/playwright-smoke.mjs
 
 # The disposable local runner uses the host UID so bind-mounted reports stay writable.
 RUN chmod a+rwx /app/frontend && mkdir -p playwright/.auth && chmod -R a+rwX playwright
