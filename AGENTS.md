@@ -10,7 +10,7 @@
 - **已退役模块**：Text-to-SQL 管线与试次准备/核对/结果闭环已于 2026-11-10 删除（ADR-0014）；`water_maze_v3` 语义由独立 Agent 的版本化科研 Skills 与确定性函数承担，参见 ADR-0009 至 ADR-0013。trials 目录浏览与 metrics 管线暂留（annotations 页仍消费）。
 - **真实科研库与新数据入口**：现行 LingSight 仍直连本机容器 `healthad-mysql` 的旧 `water_maze`（`lingsight_ro`）。新目标经现有 DBHub 连接 `water_maze_v3`；DBHub 的 `wm_ro` 现对旧库和 v3 都有 SELECT。v3 的表、动物映射及指标条件与旧库不同，不可只改数据库名或直接复用旧 schema。核查事实见 `docs/research/ai-native-platform-local-discovery.md`。凭据仅通过本机环境/运行配置取得，不回显、不入库。
 - **科研管线权威实现在哪**：找冻结球弦朝向、v9 推理等各阶段的生产实现时先查 [docs/agents/research-code-map.md](docs/agents/research-code-map.md)——冻结球弦唯一生产实现在**本机** `~/wm_heading_v9_20261105/`（不是 A100；A100 上只有试点与 v9 推理）。
-- **检查命令**：静态检查 = `cd backend && uv run bash scripts/lint.sh`（mypy strict + ty + ruff，覆盖 `app/` 与 `scripts/`）；完整测试 = `cd backend && bash scripts/test-local.sh`（每次独立临时 MySQL，退出销毁，不触碰 dev 库）。纯计算/转发测试可直接 `uv run pytest <files>`；需要持久化的测试必须显式使用 `TEST_DATABASE_URL` 且库名为 `lingsight_test_*`，缺配置即拒绝，不回退开发库。`env_gated` 执行层测试依赖真实研究库/LLM，门控探活失败自动 skip（CI 只跑结构层）。详见 local-e2e §4。独立脚本/探针要 `import app.*` 时先 `from tests.runtime import configure_application; configure_application()`（合成 settings，不读开发 .env；范例 `scripts/export_frontend_routes.py`）。评审判断型规则见 [CODING_STANDARDS.md](CODING_STANDARDS.md)。前端本机无 bun 时用 `scripts/fe.sh`（build / regen-routes / check|fix <files>，docker 跑仓库锁定的 bun 工具链，文件路径相对 frontend/；别用 `npm run lint`，见 local-e2e §3）。
+- **检查命令**：后端静态检查 `cd backend && uv run bash scripts/lint.sh`；完整测试 `cd backend && bash scripts/test-local.sh`（独立临时 MySQL，不触碰 dev 库）。持久化测试只接受显式 `TEST_DATABASE_URL` 和 `lingsight_test_*` 库，缺配置即拒绝。前端 `scripts/fe.sh build`／`check|fix <files>`（文件相对 frontend/，禁全仓 unsafe lint）；任务分支提交后用 `bash scripts/pr-preflight.sh <base>`。夹具与门控见 [local-e2e](docs/agents/local-e2e.md)，独立探针初始化读记忆索引中的“Agent 协作按需参考”；评审用 [CODING_STANDARDS.md](CODING_STANDARDS.md)。
 - **进度事实**：[docs/progress.md](docs/progress.md)；决策依据在 [docs/adr/](docs/adr/)。
 
 ## 1. 当前目标与边界
@@ -56,3 +56,11 @@
 - 不删除未经确认的既有业务代码或历史 Git 记录；结构迁移先核对差异和可恢复路径。
 - README 是项目入口；规格、路线和进度各维护一份，不新增相互冲突的 V2/V3 文档。
 - 不声称模型运行、性能指标、测试通过或部署完成，除非存在实际证据。
+
+<!-- proma:memory:start -->
+## 记忆维护
+
+- **个人层（常驻）**：[user_profile.md](</home/x/.proma/memory/user_profile.md>)，跨项目共享，仅记录换个项目也成立的个人背景与稳定偏好。
+- **项目护栏层（常驻）**：本文件（AGENTS.md，预算 ≤4000 非空白字符），仅保留不看就会在本项目犯错的子项目结构、常用命令与全局红线；具体模块细节、排障经过和某日状态快照一律下沉到项目 memory/。
+- **专题手册层（按需）**：[MEMORY.md](</home/x/.proma/agent-workspaces/lingsight-ai/memory/MEMORY.md>) 仅维护一行一条的场景路由索引（预算 ≤3500 字符，不写长篇结论摘要），详细主题按索引按需读取；过期或已合并的存量文件（含历史 project-preferences.md）通过可恢复归档移出有效入口。读取不等于核验，不编造用户事实。
+<!-- proma:memory:end -->
