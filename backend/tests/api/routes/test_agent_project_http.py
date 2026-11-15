@@ -10,7 +10,9 @@ import time
 import uuid
 import zipfile
 from collections.abc import Iterator
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Thread
 
 import httpx
 import pytest
@@ -24,18 +26,58 @@ from tests.utils.user import create_random_user
 
 
 @pytest.fixture
-def agent_http(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
+def agent_http(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> Iterator[str]:
     repository = os.environ.get("AGENT_CONTRACT_REPOSITORY")
     if not repository or not shutil.which("node"):
         pytest.skip("Set AGENT_CONTRACT_REPOSITORY to the separate Agent checkout")
     script = Path(repository) / "scripts" / "contract-fixture.ts"
     if not script.is_file():
         pytest.fail("Agent checkout is missing its synthetic contract fixture")
+    callback_token = "synthetic-platform-callback-token"
+    monkeypatch.setattr(settings, "AGENT_AUTHORIZATION_TOKEN", callback_token)
+
+    class AuthorizationCallback(BaseHTTPRequestHandler):
+        """Expose the real platform callback over loopback HTTP to the Node fixture."""
+
+        def do_POST(self) -> None:
+            length = int(self.headers.get("Content-Length", "0"))
+            if (
+                self.path != f"{settings.API_V1_STR}/internal/agent/authorize"
+                or not 0 < length <= 128_000
+            ):
+                self.send_error(400)
+                return
+            response = client.post(
+                self.path,
+                content=self.rfile.read(length),
+                headers={
+                    "Authorization": self.headers.get("Authorization", ""),
+                    "Content-Type": "application/json",
+                },
+            )
+            self.send_response(response.status_code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(response.content)))
+            self.end_headers()
+            self.wfile.write(response.content)
+
+        def log_message(self, _format: str, *args: object) -> None:
+            pass
+
+    callback = ThreadingHTTPServer(("127.0.0.1", 0), AuthorizationCallback)
+    callback_thread = Thread(target=callback.serve_forever, daemon=True)
+    callback_thread.start()
+    callback_url = f"http://127.0.0.1:{callback.server_port}{settings.API_V1_STR}/internal/agent/authorize"
     process = subprocess.Popen(
         ["node", str(script)],
         cwd=repository,
         stdout=subprocess.PIPE,
         text=True,
+        env={
+            **os.environ,
+            "AGENT_CONTRACT_AUTHORIZATION_URL": callback_url,
+            "AGENT_CONTRACT_AUTHORIZATION_TOKEN": callback_token,
+        },
     )
     try:
         assert process.stdout
@@ -46,7 +88,7 @@ def agent_http(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
         token = "synthetic-contract-token-000000000"
         with httpx.Client(trust_env=False) as probe:
             response = probe.get(
-                f"{url}/v1/tasks", headers={"Authorization": f"Bearer {token}"}
+                f"{url}/v1/capabilities", headers={"Authorization": f"Bearer {token}"}
             )
             assert response.status_code == 200, response.text
         monkeypatch.setattr(settings, "AGENT_BASE_URL", url)
@@ -61,6 +103,9 @@ def agent_http(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
             process.wait(timeout=5)
         if process.stdout:
             process.stdout.close()
+        callback.shutdown()
+        callback.server_close()
+        callback_thread.join(timeout=5)
 
 
 @pytest.mark.usefixtures("agent_http")
@@ -68,6 +113,7 @@ def test_real_project_task_scope_and_bundle(
     client: TestClient,
     db: Session,
     superuser_token_headers: dict[str, str],
+    agent_http: str,
 ) -> None:
     headers = superuser_token_headers
     api = settings.API_V1_STR
@@ -91,6 +137,17 @@ def test_real_project_task_scope_and_bundle(
             headers=headers,
             json={"goal": "complete", "project_id": project_id},
         )
+        with httpx.Client(trust_env=False) as probe:
+            capabilities = probe.get(
+                f"{agent_http}/v1/capabilities",
+                headers={"Authorization": f"Bearer {settings.AGENT_API_TOKEN}"},
+            ).json()
+        if capabilities.get("user_scope") != "platform-user-v1":
+            # Old read-only checkout remains a meaningful compatibility test:
+            # no task or shared output may pass the multi-user platform gate.
+            assert response.status_code == 503, response.text
+            assert client.get(f"{api}/agent/tasks", headers=headers).status_code == 503
+            return
         assert response.status_code == 202, response.text
         task = response.json()["task"]
         assert task["project_id"] == project_id
@@ -114,10 +171,142 @@ def test_real_project_task_scope_and_bundle(
             headers=headers,
             json={"text": "follow-up", "project_id": str(foreign.id)},
         )
-        assert follow.status_code == 202, follow.text
+        assert follow.status_code == 422, follow.text
         assert client.get(task_url, headers=headers).json()["project_id"] == project_id
     finally:
         own = db.get(Project, uuid.UUID(project_id))
         if own:
             crud.delete_project(session=db, project=own)
         crud.delete_project(session=db, project=foreign)
+
+
+def test_real_user_isolation_qa_and_live_scope_revocation(
+    client: TestClient,
+    agent_http: str,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    from tests.api.routes.test_platform_user_flow import signup
+
+    with httpx.Client(trust_env=False) as probe:
+        capabilities = probe.get(
+            f"{agent_http}/v1/capabilities",
+            headers={"Authorization": f"Bearer {settings.AGENT_API_TOKEN}"},
+        ).json()
+    if capabilities.get("user_scope") != "platform-user-v1":
+        pytest.skip("Read-only Agent checkout lacks the new user-scope contract")
+    owner, owner_id = signup(client)
+    other, _ = signup(client)
+    api = settings.API_V1_STR
+    created = client.post(
+        f"{api}/agent/tasks",
+        headers=owner,
+        json={"goal": "Explain a scientific concept", "completion_mode": "qa"},
+    )
+    assert created.status_code == 202, created.text
+    task, run = created.json()["task"], created.json()["run"]
+    assert task["owner_user_id"] == owner_id
+    assert task["data_scope"] == "none"
+    deadline = time.monotonic() + 10
+    while True:
+        snapshot = client.get(f"{api}/agent/tasks/{task['id']}", headers=owner)
+        assert snapshot.status_code == 200, snapshot.text
+        completed = snapshot.json()["runs"][-1]
+        if completed["status"] == "succeeded":
+            break
+        assert completed["status"] not in {"failed", "cancelled"}, completed
+        assert time.monotonic() < deadline, completed
+        time.sleep(0.05)
+    assert completed["completion_mode"] == "qa"
+    assert completed["answer"]["text"]
+    assert completed["answer"]["source_refs"] == []
+    assert completed["completion_contract"]["required_deliverables"] == []
+    assert snapshot.json()["artifacts"] == []
+    assert client.get(f"{api}/agent/tasks", headers=other).json() == []
+    forged = {**other, "X-LingSight-User-Id": owner_id}
+    for path in (
+        f"tasks/{task['id']}",
+        f"tasks/{task['id']}/events",
+        f"tasks/{task['id']}/bundle",
+        f"runs/{run['id']}",
+    ):
+        assert client.get(f"{api}/agent/{path}", headers=forged).status_code == 404
+    assert (
+        client.get(
+            f"{api}/agent/tasks/{task['id']}/events",
+            headers={**forged, "Accept": "text/event-stream"},
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            f"{api}/agent/tasks/{task['id']}/messages",
+            headers=other,
+            json={"text": "take over"},
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            f"{api}/agent/runs/{run['id']}/cancel",
+            headers=other,
+        ).status_code
+        == 404
+    )
+    grant_url = f"{api}/users/{owner_id}/whole-library-access"
+    grant = client.put(
+        grant_url,
+        headers=superuser_token_headers,
+        json={"granted": True, "reason": "Synthetic contract"},
+    )
+    assert grant.status_code == 200
+    live = client.post(
+        f"{api}/agent/tasks",
+        headers=owner,
+        json={
+            "goal": "clarify",
+            "data_scope": "whole_library",
+            "completion_mode": "qa",
+        },
+    )
+    assert live.status_code == 202, live.text
+    live_task, live_run = live.json()["task"], live.json()["run"]
+    deadline = time.monotonic() + 10
+    while True:
+        waiting = client.get(f"{api}/agent/tasks/{live_task['id']}", headers=owner)
+        assert waiting.status_code == 200, waiting.text
+        waiting_run = waiting.json()["runs"][-1]
+        if waiting_run["status"] == "waiting_for_input":
+            break
+        assert waiting_run["status"] not in {"failed", "succeeded", "cancelled"}
+        assert time.monotonic() < deadline, waiting_run
+        time.sleep(0.05)
+    revoked = client.put(
+        grant_url,
+        headers=superuser_token_headers,
+        json={"granted": False, "reason": "Synthetic revoke"},
+    )
+    assert revoked.status_code == 200
+    for path in (
+        f"tasks/{live_task['id']}",
+        f"tasks/{live_task['id']}/events",
+        f"tasks/{live_task['id']}/bundle",
+        f"runs/{live_run['id']}",
+    ):
+        denied = client.get(f"{api}/agent/{path}", headers=owner)
+        assert denied.status_code == 403, denied.text
+    assert (
+        client.post(
+            f"{api}/agent/runs/{live_run['id']}/resume",
+            headers=owner,
+        ).status_code
+        == 403
+    )
+    cancelled = client.post(
+        f"{api}/agent/runs/{live_run['id']}/cancel",
+        headers=owner,
+    )
+    assert cancelled.status_code == 200, cancelled.text
+    assert all(
+        row["id"] != live_task["id"]
+        for row in client.get(f"{api}/agent/tasks", headers=owner).json()
+    )

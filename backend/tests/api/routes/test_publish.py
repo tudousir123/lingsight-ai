@@ -7,8 +7,10 @@ L3 — but the real database, the real route stack and the real writer.
 Each test gets its own task id so published rows never leak across tests.
 """
 
+import base64
 import hashlib
 import json
+import os
 import re
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -22,11 +24,14 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import update
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from app import publishing
 from app.core.config import settings
-from app.models import Project, PublishedFrame, PublishedResult
+from app.core.db import engine
+from app.inference_models import InferenceBinding, PreannotationConfirmation
+from app.models import ExperimentAccess, Project, PublishedFrame, PublishedResult
+from app.preannotations import fingerprint
 from app.publishing import HEADING_ALGORITHM, KEYPOINT_PROTOCOL, PRIMARY_RADIUS_PX
 from tests.utils.user import (
     authentication_token_from_email,
@@ -168,10 +173,13 @@ def default_task(review: dict[str, Any] | None | object = _UNSET) -> dict[str, A
         review = {"tracking_ok": True, "note": "看过叠加视频"}
     return {
         "id": "unused",
-        "video_id": "day01/maze-clip.mp4",
+        "video_id": base64.urlsafe_b64encode(b"day01/maze-clip.mp4")
+        .decode()
+        .rstrip("="),
         "status": "succeeded",
         "stage": "overlay",
         "candidate": {
+            "candidate_frame": 0,
             "width": 640,
             "height": 480,
             "frame_count": 6,
@@ -213,7 +221,69 @@ class FakeUpstream:
 
 
 @contextmanager
-def fake_inference(upstream: FakeUpstream):
+def fake_inference(upstream: FakeUpstream, *, project_id: str | None = None):
+    # Seed trusted historical binding/confirmation as fixture state. The HTTP
+    # publish call must never infer this authority from a client project reference.
+    if project_id is not None:
+        with Session(engine) as setup:
+            project = setup.get(Project, uuid.UUID(project_id))
+            assert project is not None
+            project.video_source_id = "legacy"
+            project.video_directory = "day01"
+            setup.add(project)
+            grant = setup.exec(
+                select(ExperimentAccess).where(
+                    ExperimentAccess.user_id == project.user_id,
+                    ExperimentAccess.experiment_id == "publish-fixture",
+                )
+            ).first()
+            if grant is None:
+                setup.add(
+                    ExperimentAccess(
+                        user_id=project.user_id, experiment_id="publish-fixture"
+                    )
+                )
+            binding = setup.exec(
+                select(InferenceBinding).where(
+                    InferenceBinding.task_id == upstream.task_id
+                )
+            ).first()
+            if binding is None:
+                candidate = upstream.task["candidate"]
+                binding = InferenceBinding(
+                    owner_user_id=project.user_id,
+                    project_id=project.id,
+                    video_id=upstream.task["video_id"],
+                    source_kind="filesystem",
+                    source_id="legacy",
+                    upstream_video_id=upstream.task["video_id"],
+                    video_sha256=candidate["video_sha256"],
+                    idempotency_key=uuid.uuid4(),
+                    task_id=upstream.task_id,
+                )
+                setup.add(binding)
+                setup.flush()
+                confirmation = PreannotationConfirmation(
+                    binding_id=binding.id,
+                    owner_user_id=project.user_id,
+                    idempotency_key=uuid.uuid4(),
+                    request_sha256="0" * 64,
+                    candidate_version=fingerprint(
+                        {"task_id": upstream.task_id, "candidate": candidate}
+                    ),
+                    video_sha256=candidate["video_sha256"],
+                    width=candidate["width"],
+                    height=candidate["height"],
+                    frame_count=candidate["frame_count"],
+                    geometry=upstream.task["confirmed"],
+                    dispatch_status="accepted",
+                    dispatch_attempted=True,
+                )
+                binding.confirmation_id = confirmation.id
+                setup.add(confirmation)
+                setup.add(binding)
+            setup.commit()
+
     def handler(request: httpx.Request) -> httpx.Response:
         upstream.requests.append(request)
         if upstream.transport_error is not None:
@@ -238,6 +308,14 @@ def fake_inference(upstream: FakeUpstream):
 
     original = httpx.Client
     with (
+        patch.dict(
+            os.environ,
+            {
+                "INFERENCE_EXPERIMENT_DIRECTORIES": json.dumps(
+                    {"legacy": {"publish-fixture": "day01"}}
+                )
+            },
+        ),
         patch.object(settings, "INFERENCE_API_TOKEN", "private"),
         patch.object(settings, "INFERENCE_BASE_URL", "http://inference.test"),
         patch(
@@ -253,7 +331,17 @@ def fake_inference(upstream: FakeUpstream):
 @pytest.fixture
 def workspace_headers(client: TestClient, db: Session) -> dict[str, str]:
     user = create_random_user(db)
-    with patch.object(settings, "AGENT_WORKSPACE_EMAIL", user.email):
+    with (
+        patch.object(settings, "AGENT_WORKSPACE_EMAIL", user.email),
+        patch.dict(
+            os.environ,
+            {
+                "INFERENCE_EXPERIMENT_DIRECTORIES": json.dumps(
+                    {"legacy": {"publish-fixture": "day01"}}
+                )
+            },
+        ),
+    ):
         yield authentication_token_from_email(client=client, email=user.email, db=db)
 
 
@@ -301,7 +389,9 @@ def test_publish_requires_auth(client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_publish_requires_workspace_user(client: TestClient, db: Session) -> None:
+def test_publish_unknown_project_remains_hidden_for_new_workspace_user(
+    client: TestClient, db: Session
+) -> None:
     outsider = create_random_user(db)
     headers = authentication_token_from_email(
         client=client, email=outsider.email, db=db
@@ -309,8 +399,7 @@ def test_publish_requires_workspace_user(client: TestClient, db: Session) -> Non
     task_id, task = fresh_task()
     with fake_inference(FakeUpstream(task, default_artifacts())):
         response = _publish(client, headers, uuid.uuid4().hex, task_id)
-    assert response.status_code == 403
-    assert "个人科研工作区" in response.json()["detail"]
+    assert response.status_code == 404
 
 
 def test_publish_unknown_project_404(
@@ -342,7 +431,7 @@ def test_publish_gate_rejects_without_passed_review(
     task_id = str(uuid.uuid4())
     task["id"] = task_id
     upstream = FakeUpstream(task, default_artifacts())
-    with fake_inference(upstream):
+    with fake_inference(upstream, project_id=project_id):
         response = _publish(client, workspace_headers, project_id, task_id)
     assert response.status_code == 409
     assert response.json()["detail"] == publishing.GATE_DETAIL
@@ -361,7 +450,7 @@ def test_publish_task_not_found(
     task_id, task = fresh_task()
     upstream = FakeUpstream(task, default_artifacts())
     upstream.task_status = 404
-    with fake_inference(upstream):
+    with fake_inference(upstream, project_id=project_id):
         response = _publish(client, workspace_headers, project_id, task_id)
     assert response.status_code == 404
     assert _result_rows(db, task_id) == []
@@ -374,7 +463,7 @@ def test_publish_unreachable_upstream(
     task_id, task = fresh_task()
     upstream = FakeUpstream(task, default_artifacts())
     upstream.transport_error = httpx.ConnectError("refused")
-    with fake_inference(upstream):
+    with fake_inference(upstream, project_id=project_id):
         response = _publish(client, workspace_headers, project_id, task_id)
     assert response.status_code == 503
     assert response.json()["detail"] == "暂时无法连接视频推理服务"
@@ -386,13 +475,13 @@ def test_publish_writes_v3_shaped_summary_and_frame_rows(
 ) -> None:
     project_id = _create_project(client, workspace_headers)
     task_id, task = fresh_task()
-    with fake_inference(FakeUpstream(task, default_artifacts())):
+    with fake_inference(FakeUpstream(task, default_artifacts()), project_id=project_id):
         response = _publish(client, workspace_headers, project_id, task_id)
     assert response.status_code == 201, response.text
     body = response.json()
     assert body["replayed"] is False
     assert body["task_id"] == task_id
-    assert body["video_id"] == "day01/maze-clip.mp4"
+    assert body["video_id"] == task["video_id"]
     assert body["fps"] == 30.0
     assert body["total_frames"] == 6
     assert body["valid_frames"] == 5
@@ -445,7 +534,7 @@ def test_publish_preserves_v9_mask_pixel_centroid(
     artifacts["tracking.json"]["frames"][0]["center"] = [100.12, 201.34]
     expected = [101.123456789, 202.987654321]
     artifacts["keypoints.json"]["frames"][0]["center"] = expected
-    with fake_inference(FakeUpstream(task, artifacts)):
+    with fake_inference(FakeUpstream(task, artifacts), project_id=project_id):
         response = _publish(client, workspace_headers, project_id, task_id)
     assert response.status_code == 201, response.text
     frame = _frame_rows(db, task_id)[0]
@@ -458,7 +547,7 @@ def test_publish_replays_identical_version_without_rewriting(
     project_id = _create_project(client, workspace_headers)
     task_id, task = fresh_task()
     upstream = FakeUpstream(task, default_artifacts())
-    with fake_inference(upstream):
+    with fake_inference(upstream, project_id=project_id):
         first = _publish(client, workspace_headers, project_id, task_id)
         assert first.status_code == 201
         published_at = _result_rows(db, task_id)[0].published_at
@@ -487,11 +576,12 @@ def test_concurrent_publication_replays_or_refuses_the_winning_version(
     writer = publishing._write_whole_version
 
     def simultaneous_write(*args: Any, **kwargs: Any) -> PublishedResult:
-        ready.wait()
+        if same_project:
+            ready.wait()
         return writer(*args, **kwargs)
 
     with (
-        fake_inference(FakeUpstream(task, default_artifacts())),
+        fake_inference(FakeUpstream(task, default_artifacts()), project_id=project_id),
         patch.object(publishing, "_write_whole_version", simultaneous_write),
         ThreadPoolExecutor(max_workers=2) as workers,
     ):
@@ -513,7 +603,7 @@ def test_concurrent_publication_replays_or_refuses_the_winning_version(
         conflict = next(
             response for response in responses if response.status_code == 409
         )
-        assert conflict.json()["detail"] == publishing.CROSS_PROJECT_DETAIL
+        assert conflict.json()["detail"]["message"] == publishing.CROSS_PROJECT_DETAIL
     assert len(_result_rows(db, task_id)) == 1
     assert len(_frame_rows(db, task_id)) == 4
 
@@ -553,7 +643,7 @@ def test_publish_refuses_malformed_scientific_contract(
     for key in path[:-1]:
         parent = parent[key]
     parent[path[-1]] = value
-    with fake_inference(FakeUpstream(task, artifacts)):
+    with fake_inference(FakeUpstream(task, artifacts), project_id=project_id):
         response = _publish(client, workspace_headers, project_id, task_id)
     assert response.status_code == 422, response.text
     assert _result_rows(db, task_id) == []
@@ -566,7 +656,7 @@ def test_publish_refuses_path_shaped_task_id_before_upstream_access(
     project_id = _create_project(client, workspace_headers)
     _, task = fresh_task()
     upstream = FakeUpstream(task, default_artifacts())
-    with fake_inference(upstream):
+    with fake_inference(upstream, project_id=project_id):
         response = _publish(client, workspace_headers, project_id, "../" * 12)
     assert response.status_code == 422
     assert upstream.requests == []
@@ -579,7 +669,7 @@ def test_publish_handles_malformed_upstream_task(
     project_id = _create_project(client, workspace_headers)
     task_id, task = fresh_task()
     upstream = FakeUpstream(task, default_artifacts(), task_body=body)
-    with fake_inference(upstream):
+    with fake_inference(upstream, project_id=project_id):
         response = _publish(client, workspace_headers, project_id, task_id)
     assert response.status_code == 502
     assert response.json()["detail"] == "视频推理服务暂时不可用"
@@ -598,7 +688,7 @@ def test_publish_preserves_preseed_missing_masks_and_optional_review_note(
         0, heading_status="missing_mask", heading=None, proposal=None
     )
     artifacts["provenance.json"]["heading_summary"].update(ok=2, missing_mask=2)
-    with fake_inference(FakeUpstream(task, artifacts)):
+    with fake_inference(FakeUpstream(task, artifacts), project_id=project_id):
         response = _publish(client, workspace_headers, project_id, task_id)
     assert response.status_code == 201, response.text
     assert response.json()["valid_frames"] == 4
@@ -613,7 +703,7 @@ def test_publish_refuses_changed_content_after_publication(
     project_id = _create_project(client, workspace_headers)
     task_id, task = fresh_task()
     upstream = FakeUpstream(task, default_artifacts())
-    with fake_inference(upstream):
+    with fake_inference(upstream, project_id=project_id):
         assert (
             _publish(client, workspace_headers, project_id, task_id).status_code == 201
         )
@@ -634,13 +724,13 @@ def test_publish_refuses_cross_project_republish(
     project_a = _create_project(client, workspace_headers)
     project_b = _create_project(client, workspace_headers)
     task_id, task = fresh_task()
-    with fake_inference(FakeUpstream(task, default_artifacts())):
+    with fake_inference(FakeUpstream(task, default_artifacts()), project_id=project_a):
         assert (
             _publish(client, workspace_headers, project_a, task_id).status_code == 201
         )
         response = _publish(client, workspace_headers, project_b, task_id)
     assert response.status_code == 409
-    assert response.json()["detail"] == publishing.CROSS_PROJECT_DETAIL
+    assert response.json()["detail"]["message"] == publishing.CROSS_PROJECT_DETAIL
     # Project A keeps its published version; project B adopts nothing.
     rows = _result_rows(db, task_id)
     assert len(rows) == 1
@@ -687,7 +777,7 @@ def test_publish_refuses_inconsistent_artifacts(
         "no_heading_fields",
     ):
         task_id, upstream = artifacts_with(mutate)
-        with fake_inference(upstream):
+        with fake_inference(upstream, project_id=project_id):
             response = _publish(client, workspace_headers, project_id, task_id)
         assert response.status_code == 422, (mutate, response.text)
         assert "推理产物与来源记录不一致" in response.json()["detail"]
@@ -702,7 +792,7 @@ def test_publish_missing_artifact_404(
     task_id, task = fresh_task()
     upstream = FakeUpstream(task, default_artifacts())
     upstream.artifact_status["provenance.json"] = 404
-    with fake_inference(upstream):
+    with fake_inference(upstream, project_id=project_id):
         response = _publish(client, workspace_headers, project_id, task_id)
     assert response.status_code == 404
     assert _result_rows(db, task_id) == []
@@ -723,7 +813,7 @@ def test_publish_rolls_back_whole_version_on_readback_failure(
         )
 
     monkeypatch.setattr(publishing, "_verify_readback", boom)
-    with fake_inference(FakeUpstream(task, default_artifacts())):
+    with fake_inference(FakeUpstream(task, default_artifacts()), project_id=project_id):
         response = _publish(client, workspace_headers, project_id, task_id)
     assert response.status_code == 500
     assert response.json()["detail"] == publishing.READBACK_DETAIL
@@ -751,7 +841,7 @@ def test_publish_readback_detects_database_payload_changes(
         verify(session, prepared)
 
     with (
-        fake_inference(FakeUpstream(task, default_artifacts())),
+        fake_inference(FakeUpstream(task, default_artifacts()), project_id=project_id),
         patch.object(publishing, "_verify_readback", changed_database),
     ):
         response = _publish(client, workspace_headers, project_id, task_id)
@@ -780,7 +870,7 @@ def test_publish_round_trips_multiple_readback_segments(
     artifacts["provenance.json"]["heading_summary"].update(
         ok=count, ok_proposal=0, missing_mask=0, no_heading=0
     )
-    with fake_inference(FakeUpstream(task, artifacts)):
+    with fake_inference(FakeUpstream(task, artifacts), project_id=project_id):
         response = _publish(client, workspace_headers, project_id, task_id)
     assert response.status_code == 201, response.text
     assert response.json()["frames_with_heading"] == count
@@ -810,7 +900,7 @@ def test_project_results_listing_and_frame_rows(
     project_id = _create_project(client, workspace_headers)
     other_project_id = _create_project(client, workspace_headers)
     task_id, task = fresh_task()
-    with fake_inference(FakeUpstream(task, default_artifacts())):
+    with fake_inference(FakeUpstream(task, default_artifacts()), project_id=project_id):
         assert (
             _publish(client, workspace_headers, project_id, task_id).status_code == 201
         )
@@ -859,7 +949,7 @@ def test_results_listing_scoped_to_owner(
 ) -> None:
     project_id = _create_project(client, workspace_headers)
     task_id, task = fresh_task()
-    with fake_inference(FakeUpstream(task, default_artifacts())):
+    with fake_inference(FakeUpstream(task, default_artifacts()), project_id=project_id):
         assert (
             _publish(client, workspace_headers, project_id, task_id).status_code == 201
         )
@@ -886,7 +976,7 @@ def test_project_deletion_cascades_published_rows(
 ) -> None:
     project_id = _create_project(client, workspace_headers)
     task_id, task = fresh_task()
-    with fake_inference(FakeUpstream(task, default_artifacts())):
+    with fake_inference(FakeUpstream(task, default_artifacts()), project_id=project_id):
         assert (
             _publish(client, workspace_headers, project_id, task_id).status_code == 201
         )
@@ -900,3 +990,82 @@ def test_project_deletion_cascades_published_rows(
     assert _result_rows(db, task_id) == []
     assert _frame_rows(db, task_id) == []
     assert db.get(Project, uuid.UUID(project_id)) is None
+
+
+def test_library_revocation_hides_owned_derivatives_and_agent_scope(
+    client: TestClient,
+    workspace_headers: dict[str, str],
+    superuser_token_headers: dict[str, str],
+) -> None:
+    project_id = _create_project(client, workspace_headers)
+    owner = client.get("/api/v1/users/me", headers=workspace_headers).json()
+    grant_url = f"/api/v1/users/{owner['id']}/whole-library-access"
+    assert (
+        client.put(
+            grant_url,
+            headers=superuser_token_headers,
+            json={"granted": True, "reason": "synthetic scope test"},
+        ).status_code
+        == 200
+    )
+    task_id, task = fresh_task()
+    upstream = FakeUpstream(task, default_artifacts())
+    with fake_inference(upstream, project_id=project_id):
+        with Session(engine) as setup:
+            setup.exec(
+                delete(ExperimentAccess).where(
+                    ExperimentAccess.user_id == uuid.UUID(owner["id"])
+                )
+            )
+            setup.commit()
+        assert (
+            _publish(client, workspace_headers, project_id, task_id).status_code == 201
+        )
+        results_url = f"/api/v1/projects/{project_id}/results"
+        assert client.get(results_url, headers=workspace_headers).json()["count"] == 1
+        assert (
+            client.get(
+                f"/api/v1/inference/tasks/{task_id}", headers=superuser_token_headers
+            ).status_code
+            == 404
+        )
+        assert (
+            client.put(
+                grant_url,
+                headers=superuser_token_headers,
+                json={"granted": False, "reason": "synthetic revocation"},
+            ).status_code
+            == 200
+        )
+        upstream.requests.clear()
+        assert client.get(results_url, headers=workspace_headers).json()["count"] == 0
+        assert (
+            client.get(
+                results_url + f"/{task_id}/frames", headers=workspace_headers
+            ).status_code
+            == 404
+        )
+        assert (
+            client.get("/api/v1/inference/tasks", headers=workspace_headers).json()
+            == []
+        )
+        assert (
+            client.get(
+                f"/api/v1/inference/tasks/{task_id}/artifacts/overlay.mp4",
+                headers={**workspace_headers, "Range": "bytes=0-4"},
+            ).status_code
+            == 403
+        )
+        with patch.object(settings, "AGENT_AUTHORIZATION_TOKEN", "synthetic-callback"):
+            callback = client.post(
+                "/api/v1/internal/agent/authorize",
+                headers={"Authorization": "Bearer synthetic-callback"},
+                json={
+                    "user_id": owner["id"],
+                    "data_scope": "project",
+                    "project_id": project_id,
+                },
+            )
+        assert callback.status_code == 200
+        assert callback.json()["allowed_publication_task_ids"] == []
+        assert upstream.requests == []

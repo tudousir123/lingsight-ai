@@ -5,6 +5,14 @@ import uuid
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from app.api.deps import CurrentUser, SessionDep, ensure_workspace_user, owned_project
 from app.api.gateway import (
@@ -15,7 +23,9 @@ from app.api.gateway import (
     forward,
     read_payload,
 )
+from app.contracts import CompletionMode, DataScope, ErrorCode
 from app.core.config import settings
+from app.scope import capable_agent, has_whole_library_access
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -51,7 +61,9 @@ OPERATIONS = OperationTable(
 
 # 128_000 covers task/chat JSON payloads; 60 s covers JSON responses (this
 # service streams events, not media).
-POLICY = GatewayPolicy(body_cap_bytes=128_000, read_timeout_s=60, sse_cursor=True)
+POLICY = GatewayPolicy(
+    body_cap_bytes=128_000, read_timeout_s=60, sse_cursor=True, agent_errors=True
+)
 CAPABILITY_POLICY = GatewayPolicy(body_cap_bytes=0, read_timeout_s=5)
 
 UNKNOWN_OPERATION = "Unknown Agent operation"
@@ -68,7 +80,9 @@ def _service() -> UpstreamService:
     )
 
 
-async def ensure_project_support(request: Request, service: UpstreamService) -> None:
+async def ensure_project_support(
+    request: Request, service: UpstreamService, *, project: bool = False
+) -> None:
     """Refuse old Agent versions before they can create an unscoped task."""
     unavailable = "科研 Agent 项目分析尚未就绪，请先更新服务并配置项目数据源"
     probe = Request({**request.scope, "method": "GET", "query_string": b""})
@@ -85,16 +99,50 @@ async def ensure_project_support(request: Request, service: UpstreamService) -> 
                 if len(payload) > 4096:
                     raise HTTPException(503, unavailable)
             capabilities = json.loads(payload)
-            if not isinstance(capabilities, dict) or (
-                capabilities.get("project_scope") != "immutable-v1"
-                or capabilities.get("project_data_configured") is not True
-            ):
+            if not capable_agent(capabilities, project=project):
                 raise HTTPException(503, unavailable)
         finally:
             if response.background is not None:
                 await response.background()
     except HTTPException, ValueError, UnicodeDecodeError, httpx.HTTPError:
         raise HTTPException(503, unavailable) from None
+
+
+class TaskInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    goal: str = Field(min_length=1, max_length=12000)
+    project_id: uuid.UUID | None = None
+    data_scope: DataScope | None = None
+    completion_mode: CompletionMode = "auto"
+
+    @field_validator("goal", mode="before")
+    @classmethod
+    def trim_goal(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def scope_combination(self) -> TaskInput:
+        if "data_scope" in self.model_fields_set and self.data_scope is None:
+            raise ValueError("data_scope cannot be null")
+        self.data_scope = self.data_scope or (
+            "project" if "project_id" in self.model_fields_set else "none"
+        )
+        if self.data_scope == "project" and self.project_id is None:
+            raise ValueError("project scope requires project_id")
+        if self.data_scope != "project" and "project_id" in self.model_fields_set:
+            raise ValueError("project_id is forbidden for this scope")
+        return self
+
+
+class MessageInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(min_length=1, max_length=12000)
+    completion_mode: CompletionMode = "auto"
+
+    @field_validator("text", mode="before")
+    @classmethod
+    def trim_text(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
 
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PATCH"])
@@ -104,18 +152,81 @@ async def agent_gateway(
     ensure_workspace_user(current_user)
     OPERATIONS.check(request.method, path, UNKNOWN_OPERATION)
     service = _service()
-    payload = None
-    if request.method == "POST" and path == "tasks" and service.api_token:
-        payload = await read_payload(request, POLICY)
+    if not service.api_token:
+        raise HTTPException(503, service.unconfigured_detail)
+    payload = await read_payload(request, POLICY)
+    project_scope = False
+    if request.method in {"POST", "PATCH"} and (
+        payload or path == "tasks" or path.endswith("/messages")
+    ):
+        if (
+            request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+            != "application/json"
+        ):
+            raise HTTPException(
+                415,
+                {
+                    "code": ErrorCode.UNSUPPORTED_MEDIA_TYPE,
+                    "message": "Expected application/json",
+                },
+            )
+    if request.method == "POST" and (path == "tasks" or path.endswith("/messages")):
         try:
             body = json.loads(payload)
         except ValueError, UnicodeDecodeError:
-            body = None  # Upstream retains validation of non-project payloads.
-        if isinstance(body, dict) and body.get("project_id") is not None:
-            try:
-                project_id = uuid.UUID(body["project_id"])
-            except ValueError, TypeError, AttributeError:
-                raise HTTPException(422, "Invalid project_id") from None
-            owned_project(session, current_user, project_id)
-            await ensure_project_support(request, service)
-    return await forward(request, path, service, POLICY, payload=payload)
+            raise HTTPException(
+                400, {"code": ErrorCode.INVALID_INPUT, "message": "Invalid JSON"}
+            ) from None
+        try:
+            parsed = (
+                TaskInput.model_validate(body)
+                if path == "tasks"
+                else MessageInput.model_validate(body)
+            )
+        except ValidationError as error:
+            raise HTTPException(
+                422,
+                {
+                    "code": ErrorCode.INVALID_INPUT,
+                    "message": "Invalid task input",
+                    "fields": {
+                        ".".join(map(str, item["loc"])) or "body": item["msg"]
+                        for item in error.errors()
+                    },
+                },
+            ) from None
+        if isinstance(parsed, TaskInput):
+            if parsed.project_id is not None:
+                owned_project(session, current_user, parsed.project_id)
+                project_scope = True
+            if parsed.data_scope == "whole_library" and not has_whole_library_access(
+                session, current_user
+            ):
+                raise HTTPException(
+                    403,
+                    {
+                        "code": ErrorCode.PERMISSION_DENIED,
+                        "message": "Whole-library access denied",
+                    },
+                )
+        # Do not send project_id:null for none/whole_library: Agent distinguishes
+        # a missing field from an invalid explicit null on task creation.
+        payload = parsed.model_dump_json(exclude_none=True).encode()
+    # Validate cursor before making the capability probe, including malformed IDs.
+    if path.endswith("/events"):
+        from app.api.gateway import MAX_CURSOR
+
+        cursor = request.query_params.get(
+            "after", request.headers.get("last-event-id", "0")
+        )
+        if not cursor.isdecimal() or int(cursor) > MAX_CURSOR:
+            raise HTTPException(422, "Invalid event cursor")
+    await ensure_project_support(request, service, project=project_scope)
+    return await forward(
+        request,
+        path,
+        service,
+        POLICY,
+        payload=payload,
+        trusted_user_id=str(current_user.id),
+    )

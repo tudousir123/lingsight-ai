@@ -21,6 +21,11 @@ FROM python:3.14
 
 ENV PYTHONUNBUFFERED=1
 
+# Platform uploads validate decoded frames and prepare verified MP4 inputs.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv
 # Ref: https://docs.astral.sh/uv/guides/integration/docker/#installing-uv
 COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /uvx /bin/

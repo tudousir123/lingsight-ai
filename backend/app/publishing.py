@@ -28,13 +28,15 @@ import json
 import logging
 import re
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
+from app.contracts import ErrorCode
+from app.inference_access import failure, owned_binding
 from app.inference_client import (
     JSON_ARTIFACTS,
     InferenceArtifactTooLarge,
@@ -44,7 +46,8 @@ from app.inference_client import (
     InferenceUnreachable,
     InferenceUpstreamError,
 )
-from app.models import PublishedFrame, PublishedResult, PublishedResultPublic
+from app.models import PublishedFrame, PublishedResult, PublishedResultPublic, User
+from app.preannotations import verify_consumed_confirmation
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +106,9 @@ class PreparedPublish:
     fingerprint: str
     frames: list[PublishedFrame]
     readback_digest: str
+    source_kind: str = "filesystem"
+    original_video_sha256: str | None = None
+    confirmation_id: uuid.UUID | None = None
 
 
 def _sha256_hex(payload: bytes) -> str:
@@ -511,6 +517,9 @@ def _write_whole_version(
         frames_with_heading=prepared.frames_with_heading,
         proposal_frames=prepared.proposal_frames,
         video_sha256=prepared.video_sha256,
+        source_kind=prepared.source_kind,
+        original_video_sha256=prepared.original_video_sha256,
+        confirmation_id=prepared.confirmation_id,
         first_frame_model_sha256=prepared.first_frame_model_sha256,
         mark_model_sha256=prepared.mark_model_sha256,
         tracking_model_sha256=prepared.tracking_model_sha256,
@@ -617,8 +626,15 @@ def publish_task_results(
     task_id: str,
 ) -> tuple[PublishedResult, bool]:
     """Publish one reviewed task into a project; returns (result, replayed)."""
+    user = session.get(User, user_id)
+    if user is None:
+        raise failure(404, ErrorCode.RESOURCE_NOT_FOUND, "Task not found")
+    binding = owned_binding(session, user, task_id)
+    if binding.project_id != project_id:
+        raise failure(409, ErrorCode.STATE_CONFLICT, CROSS_PROJECT_DETAIL)
     try:
         task = client.fetch_task(task_id)
+        verify_consumed_confirmation(session, binding, task)
         # The human gate runs before any artifact is pulled: an unreviewed
         # task must not cost three downloads plus an overlay stream.
         _gate(task)
@@ -638,6 +654,13 @@ def publish_task_results(
         raise HTTPException(502, "推理产物超出发布大小上限") from None
 
     prepared = _prepare(task_id, task, artifacts, overlay.sha256, overlay.size_bytes)
+    prepared = replace(
+        prepared,
+        video_id=binding.video_id,
+        source_kind=binding.source_kind,
+        original_video_sha256=binding.original_video_sha256,
+        confirmation_id=binding.confirmation_id,
+    )
 
     existing = session.exec(
         select(PublishedResult).where(col(PublishedResult.task_id) == task_id)
@@ -678,6 +701,9 @@ def result_public(
         heading_algorithm=result.heading_algorithm,
         keypoint_protocol=result.keypoint_protocol,
         video_sha256=result.video_sha256,
+        source_kind=result.source_kind,
+        original_video_sha256=result.original_video_sha256,
+        confirmation_id=result.confirmation_id,
         content_fingerprint=result.content_fingerprint,
         review_note=result.review_note,
         published_at=result.published_at,

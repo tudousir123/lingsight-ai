@@ -24,10 +24,8 @@ def _workspace_gate_definitions() -> list[Path]:
     return hits
 
 
-def test_workspace_gate_defined_once_repo_wide() -> None:
-    assert _workspace_gate_definitions() == [
-        _repo_root() / "backend" / "app" / "api" / "deps.py"
-    ]
+def test_retired_shared_workspace_gate_is_absent_repo_wide() -> None:
+    assert _workspace_gate_definitions() == []
 
 
 def test_forwarding_implementation_defined_once() -> None:
@@ -45,7 +43,10 @@ def test_forwarding_implementation_defined_once() -> None:
 
 
 def test_whitelist_regexes_rendered_not_handwritten() -> None:
-    routes = sorted((_repo_root() / "backend" / "app" / "api" / "routes").glob("*.py"))
+    # Only operation gateways declare these whitelists. Other routes may parse
+    # unrelated protocol fields, such as an uploaded video's HTTP Range header.
+    route_directory = _repo_root() / "backend" / "app" / "api" / "routes"
+    routes = [route_directory / name for name in ("agent.py", "inference.py")]
     offenders = [
         path.name
         for path in routes

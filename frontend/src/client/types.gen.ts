@@ -5,6 +5,24 @@ export type ClientOptions = {
 };
 
 /**
+ * AuthorizationInput
+ */
+export type AuthorizationInput = {
+    /**
+     * User Id
+     */
+    user_id: string;
+    /**
+     * Data Scope
+     */
+    data_scope: 'none' | 'project' | 'whole_library';
+    /**
+     * Project Id
+     */
+    project_id: string | null;
+};
+
+/**
  * Body_login-login_access_token
  */
 export type Body_login_login_access_token = {
@@ -79,6 +97,50 @@ export type HTTPValidationError = {
      * Detail
      */
     detail?: Array<ValidationError>;
+};
+
+/**
+ * LibraryAccessPublic
+ */
+export type LibraryAccessPublic = {
+    /**
+     * User Id
+     */
+    user_id: string;
+    /**
+     * Granted
+     */
+    granted: boolean;
+    /**
+     * Effective
+     */
+    effective: boolean;
+    /**
+     * Reason
+     */
+    reason: string | null;
+    /**
+     * Updated At
+     */
+    updated_at: string | null;
+    /**
+     * Updated By
+     */
+    updated_by: string | null;
+};
+
+/**
+ * LibraryAccessUpdate
+ */
+export type LibraryAccessUpdate = {
+    /**
+     * Granted
+     */
+    granted: boolean;
+    /**
+     * Reason
+     */
+    reason: string;
 };
 
 /**
@@ -655,6 +717,18 @@ export type PublishedResultPublic = {
      * Video Sha256
      */
     video_sha256: string;
+    /**
+     * Source Kind
+     */
+    source_kind?: string;
+    /**
+     * Original Video Sha256
+     */
+    original_video_sha256?: string | null;
+    /**
+     * Confirmation Id
+     */
+    confirmation_id?: string | null;
     /**
      * Content Fingerprint
      */
@@ -1435,6 +1509,26 @@ export type usersUpdatePasswordMeResponses = {
 
 export type usersUpdatePasswordMeResponse = usersUpdatePasswordMeResponses[keyof usersUpdatePasswordMeResponses];
 
+export type usersReadWorkspaceData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me/workspace';
+};
+
+export type usersReadWorkspaceResponses = {
+    /**
+     * Response Users-Read Workspace
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type usersReadWorkspaceResponse = usersReadWorkspaceResponses[keyof usersReadWorkspaceResponses];
+
 export type usersRegisterUserData = {
     body: UserRegister;
     path?: never;
@@ -1549,6 +1643,66 @@ export type usersUpdateUserResponses = {
 };
 
 export type usersUpdateUserResponse = usersUpdateUserResponses[keyof usersUpdateUserResponses];
+
+export type usersReadLibraryAccessData = {
+    body?: never;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/whole-library-access';
+};
+
+export type usersReadLibraryAccessErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type usersReadLibraryAccessError = usersReadLibraryAccessErrors[keyof usersReadLibraryAccessErrors];
+
+export type usersReadLibraryAccessResponses = {
+    /**
+     * Successful Response
+     */
+    200: LibraryAccessPublic;
+};
+
+export type usersReadLibraryAccessResponse = usersReadLibraryAccessResponses[keyof usersReadLibraryAccessResponses];
+
+export type usersUpdateLibraryAccessData = {
+    body: LibraryAccessUpdate;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/whole-library-access';
+};
+
+export type usersUpdateLibraryAccessErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type usersUpdateLibraryAccessError = usersUpdateLibraryAccessErrors[keyof usersUpdateLibraryAccessErrors];
+
+export type usersUpdateLibraryAccessResponses = {
+    /**
+     * Successful Response
+     */
+    200: LibraryAccessPublic;
+};
+
+export type usersUpdateLibraryAccessResponse = usersUpdateLibraryAccessResponses[keyof usersUpdateLibraryAccessResponses];
 
 export type utilsTestEmailData = {
     body?: never;
@@ -2257,6 +2411,41 @@ export type agentAgentGateway3Responses = {
     200: unknown;
 };
 
+export type internalAgentAuthorizeData = {
+    body: AuthorizationInput;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/internal/agent/authorize';
+};
+
+export type internalAgentAuthorizeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type internalAgentAuthorizeError = internalAgentAuthorizeErrors[keyof internalAgentAuthorizeErrors];
+
+export type internalAgentAuthorizeResponses = {
+    /**
+     * Response Internal-Agent-Authorize
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type internalAgentAuthorizeResponse = internalAgentAuthorizeResponses[keyof internalAgentAuthorizeResponses];
+
 export type inferenceInferenceArtifactData = {
     body?: never;
     path: {
@@ -2317,6 +2506,8 @@ export type inferenceInferenceGatewayError = inferenceInferenceGatewayErrors[key
 
 export type inferenceInferenceGatewayResponses = {
     /**
+     * Response Inference-Inference Gateway
+     *
      * Successful Response
      */
     200: unknown;
@@ -2344,6 +2535,309 @@ export type inferenceInferenceGateway2Errors = {
 export type inferenceInferenceGateway2Error = inferenceInferenceGateway2Errors[keyof inferenceInferenceGateway2Errors];
 
 export type inferenceInferenceGateway2Responses = {
+    /**
+     * Response Inference-Inference Gateway
+     *
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type preannotationsGetPreannotationData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Video Id
+         */
+        video_id: string;
+    };
+    query: {
+        /**
+         * Task Id
+         */
+        task_id: string;
+    };
+    url: '/api/v1/projects/{project_id}/videos/{video_id}/preannotation';
+};
+
+export type preannotationsGetPreannotationErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type preannotationsGetPreannotationError = preannotationsGetPreannotationErrors[keyof preannotationsGetPreannotationErrors];
+
+export type preannotationsGetPreannotationResponses = {
+    /**
+     * Response Preannotations-Get Preannotation
+     *
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type preannotationsGetConfirmationData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Video Id
+         */
+        video_id: string;
+    };
+    query?: {
+        /**
+         * Confirmation Id
+         */
+        confirmation_id?: string | null;
+    };
+    url: '/api/v1/projects/{project_id}/videos/{video_id}/preannotation-confirmation';
+};
+
+export type preannotationsGetConfirmationErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type preannotationsGetConfirmationError = preannotationsGetConfirmationErrors[keyof preannotationsGetConfirmationErrors];
+
+export type preannotationsGetConfirmationResponses = {
+    /**
+     * Response Preannotations-Get Confirmation
+     *
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type preannotationsConfirmPreannotationData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Video Id
+         */
+        video_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/videos/{video_id}/preannotation-confirmations';
+};
+
+export type preannotationsConfirmPreannotationErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type preannotationsConfirmPreannotationError = preannotationsConfirmPreannotationErrors[keyof preannotationsConfirmPreannotationErrors];
+
+export type preannotationsConfirmPreannotationResponses = {
+    /**
+     * Response Preannotations-Confirm Preannotation
+     *
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type videosListVideosData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: {
+        /**
+         * Offset
+         */
+        offset?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/projects/{project_id}/videos';
+};
+
+export type videosListVideosErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type videosListVideosError = videosListVideosErrors[keyof videosListVideosErrors];
+
+export type videosListVideosResponses = {
+    /**
+     * Response Videos-List Videos
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type videosListVideosResponse = videosListVideosResponses[keyof videosListVideosResponses];
+
+export type videosUploadVideoData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/videos';
+};
+
+export type videosUploadVideoErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type videosUploadVideoError = videosUploadVideoErrors[keyof videosUploadVideoErrors];
+
+export type videosUploadVideoResponses = {
+    /**
+     * Response Videos-Upload Video
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type videosUploadVideoResponse = videosUploadVideoResponses[keyof videosUploadVideoResponses];
+
+export type videosGetVideoData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Video Id
+         */
+        video_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/videos/{video_id}';
+};
+
+export type videosGetVideoErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type videosGetVideoError = videosGetVideoErrors[keyof videosGetVideoErrors];
+
+export type videosGetVideoResponses = {
+    /**
+     * Response Videos-Get Video
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type videosGetVideoResponse = videosGetVideoResponses[keyof videosGetVideoResponses];
+
+export type videosOriginalMediaData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Video Id
+         */
+        video_id: string;
+    };
+    query?: {
+        /**
+         * Token
+         */
+        token?: string | null;
+    };
+    url: '/api/v1/projects/{project_id}/videos/{video_id}/media';
+};
+
+export type videosOriginalMediaErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type videosOriginalMediaError = videosOriginalMediaErrors[keyof videosOriginalMediaErrors];
+
+export type videosOriginalMediaResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type videosPreviewMediaData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Video Id
+         */
+        video_id: string;
+    };
+    query?: {
+        /**
+         * Token
+         */
+        token?: string | null;
+    };
+    url: '/api/v1/projects/{project_id}/videos/{video_id}/preview';
+};
+
+export type videosPreviewMediaErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type videosPreviewMediaError = videosPreviewMediaErrors[keyof videosPreviewMediaErrors];
+
+export type videosPreviewMediaResponses = {
     /**
      * Successful Response
      */

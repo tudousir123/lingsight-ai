@@ -24,6 +24,7 @@ historical order before calling ``forward()``; ``forward()`` owns everything
 from the service-token check onwards.
 """
 
+import json
 import re
 from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass, field
@@ -32,6 +33,8 @@ import httpx
 from fastapi import HTTPException, Request
 from starlette.background import BackgroundTask
 from starlette.responses import StreamingResponse
+
+from app.contracts import ErrorCode
 
 CONNECT_TIMEOUT_S = 30
 MAX_CURSOR = 9007199254740991  # 2**53 - 1, the SSE event-cursor ceiling
@@ -115,6 +118,7 @@ class GatewayPolicy:
     body_cap_bytes: int
     read_timeout_s: int
     sse_cursor: bool = False
+    agent_errors: bool = False
     range_streaming: bool = False
     forward_client_accept: bool = False
     forward_path_query_routes: frozenset[str] = frozenset()
@@ -140,6 +144,7 @@ async def forward(
     policy: GatewayPolicy,
     *,
     payload: bytes | None = None,
+    trusted_user_id: str | None = None,
 ) -> StreamingResponse:
     """Forward one whitelisted request upstream under the platform policy."""
     if not upstream.api_token:
@@ -153,6 +158,8 @@ async def forward(
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
+    if trusted_user_id is not None:
+        headers["X-LingSight-User-Id"] = trusted_user_id
     if policy.forward_client_accept:
         headers["Accept"] = request.headers.get("accept", "application/json")
     params: dict[str, str] = {}
@@ -198,6 +205,40 @@ async def forward(
         await client.aclose()
 
     if (
+        policy.agent_errors
+        and (
+            400 <= upstream_response.status_code < 500
+            or upstream_response.status_code == 503
+        )
+        and upstream_response.status_code != 401
+    ):
+        # Only the documented business-error envelope is exposed. Service-token
+        # failures and unstructured upstream diagnostics remain configuration errors.
+        try:
+            error_payload = bytearray()
+            async for chunk in upstream_response.aiter_bytes():
+                error_payload.extend(chunk)
+                if len(error_payload) > 128_000:
+                    raise ValueError("oversized upstream error")
+            body = json.loads(error_payload)
+            error = body.get("error") if isinstance(body, dict) else None
+            if (
+                not isinstance(error, dict)
+                or not isinstance(error.get("code"), str)
+                or not isinstance(error.get("message"), str)
+                or error["code"] == ErrorCode.AUTHENTICATION_REQUIRED
+            ):
+                raise ValueError("invalid upstream error")
+            detail = {
+                key: error[key] for key in ("code", "message", "fields") if key in error
+            }
+        except ValueError, UnicodeDecodeError, httpx.HTTPError:
+            await close()
+            raise HTTPException(502, upstream.upstream_error_detail) from None
+        await close()
+        raise HTTPException(upstream_response.status_code, detail)
+
+    if (
         upstream_response.status_code in (401, 403)
         or upstream_response.status_code >= 500
     ):
@@ -220,7 +261,7 @@ async def forward(
             await close()
 
     response_headers = {
-        "Cache-Control": "no-store",
+        "Cache-Control": "private, no-store" if policy.agent_errors else "no-store",
         "X-Content-Type-Options": "nosniff",
         "Content-Security-Policy": "sandbox; default-src 'none'",
     }
