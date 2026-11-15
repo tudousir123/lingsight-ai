@@ -32,7 +32,8 @@ class Settings(BaseSettings):
     # Personal Agent workspace. Never expose this service credential to the browser.
     AGENT_BASE_URL: str = "http://127.0.0.1:19100"
     AGENT_API_TOKEN: str = ""
-    AGENT_WORKSPACE_EMAIL: str = ""
+    AGENT_WORKSPACE_EMAIL: str = ""  # Legacy setting; no authorization effect.
+    AGENT_AUTHORIZATION_TOKEN: str = ""  # Agent -> platform callback only.
     INFERENCE_BASE_URL: str = "http://127.0.0.1:19200"
     INFERENCE_API_TOKEN: str = ""
 
