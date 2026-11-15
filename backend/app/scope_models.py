@@ -5,6 +5,7 @@ from datetime import datetime
 
 from pydantic import StrictBool, field_validator
 from sqlmodel import Field, SQLModel
+from sqlmodel._compat import SQLModelConfig
 
 from app.models import Char36UUID, get_datetime_utc
 
@@ -35,7 +36,7 @@ class LibraryAccessAudit(SQLModel, table=True):
 
 
 class LibraryAccessUpdate(SQLModel):
-    model_config = {"extra": "forbid"}
+    model_config = SQLModelConfig(extra="forbid")
     granted: StrictBool
     reason: str = Field(min_length=1, max_length=1000)
 
