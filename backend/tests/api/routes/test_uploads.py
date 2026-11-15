@@ -6,6 +6,8 @@ import hashlib
 import asyncio
 import struct
 import shutil
+import fcntl
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from collections.abc import AsyncIterator
 
@@ -503,3 +505,191 @@ def test_historical_unowned_upload_reference_is_hidden(
     listing = client.get("/api/v1/projects/", headers=normal_user_token_headers)
     stored = next(p for p in listing.json()["data"] if p["id"] == project)
     assert stored["members"] == []
+
+
+def test_restart_recovers_abandoned_files_but_preserves_committed_and_active(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    media_root: Path,
+    mp4: bytes,
+) -> None:
+    from app.main import app
+
+    headers = normal_user_token_headers
+    project = client.post(
+        "/api/v1/projects/", headers=headers, json={"name": uuid.uuid4().hex}
+    ).json()["id"]
+    response = client.post(
+        f"/api/v1/projects/{project}/videos",
+        headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        files={"file": ("a.mp4", mp4, "video/mp4")},
+    )
+    assert response.status_code == 201, response.text
+    abandoned = media_root / "staging" / uuid.uuid4().hex
+    abandoned.mkdir()
+    (abandoned / "incoming").write_bytes(b"partial")
+    orphan = media_root / "objects" / uuid.uuid4().hex
+    orphan.mkdir()
+    (orphan / "original.mp4").write_bytes(mp4)
+    active = media_root / "staging" / uuid.uuid4().hex
+    active.mkdir()
+    with (active / ".lock").open("wb") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        with TestClient(app) as restarted:
+            assert (
+                restarted.get(response.json()["media_url"], headers=headers).content
+                == mp4
+            )
+        assert active.exists()
+    assert not abandoned.exists()
+    assert not orphan.exists()
+    with TestClient(app):
+        pass
+    assert not active.exists()
+
+
+def test_upload_recovery_observes_commit_after_request_auth_snapshot(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    media_root: Path,
+    mp4: bytes,
+) -> None:
+    from app.core.db import engine
+    from app.main import app
+    from sqlalchemy import event
+
+    headers = normal_user_token_headers
+    first, second = [
+        client.post(
+            "/api/v1/projects/", headers=headers, json={"name": uuid.uuid4().hex}
+        ).json()["id"]
+        for _ in range(2)
+    ]
+    entered, resume = threading.Event(), threading.Event()
+
+    def pause_after_project(
+        _conn, _cursor, statement, parameters, _context, _executemany
+    ):
+        if (
+            "FROM project" in statement
+            and isinstance(parameters, dict)
+            and second in [str(v) for v in parameters.values()]
+            and not entered.is_set()
+        ):
+            entered.set()
+            assert resume.wait(20), "concurrent upload did not complete"
+
+    def delayed_upload() -> httpx.Response:
+        with TestClient(app) as other:
+            return other.post(
+                f"/api/v1/projects/{second}/videos",
+                headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+                files={"file": ("second.mp4", mp4, "video/mp4")},
+            )
+
+    event.listen(engine, "after_cursor_execute", pause_after_project)
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            delayed = pool.submit(delayed_upload)
+            assert entered.wait(20), "second upload did not reach auth snapshot"
+            try:
+                committed = client.post(
+                    f"/api/v1/projects/{first}/videos",
+                    headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+                    files={"file": ("first.mp4", mp4, "video/mp4")},
+                )
+                assert committed.status_code == 201, committed.text
+            finally:
+                resume.set()
+            assert delayed.result(timeout=20).status_code == 201
+        assert client.get(committed.json()["media_url"], headers=headers).content == mp4
+        assert len(list((media_root / "objects").iterdir())) == 2
+    finally:
+        resume.set()
+        event.remove(engine, "after_cursor_execute", pause_after_project)
+
+
+def test_media_query_token_invalid_ranges_and_same_name_isolation(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    superuser_token_headers: dict[str, str],
+    media_root: Path,
+    mp4: bytes,
+) -> None:
+    videos = []
+    for headers in [normal_user_token_headers, superuser_token_headers]:
+        project = client.post(
+            "/api/v1/projects/", headers=headers, json={"name": uuid.uuid4().hex}
+        ).json()["id"]
+        response = client.post(
+            f"/api/v1/projects/{project}/videos",
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+            files={"file": ("same.mp4", mp4, "video/mp4")},
+        )
+        assert response.status_code == 201
+        videos.append(response.json())
+    assert videos[0]["video_id"] != videos[1]["video_id"]
+    assert videos[0]["source_id"] != videos[1]["source_id"]
+    token = normal_user_token_headers["Authorization"].split()[1]
+    assert (
+        client.get(
+            videos[0]["media_url"] + "?token=" + token, headers={"Range": "bytes=-8"}
+        ).content
+        == mp4[-8:]
+    )
+    assert (
+        client.get(
+            videos[1]["media_url"] + "?token=" + token, headers={"Range": "bytes=0-1"}
+        ).status_code
+        == 404
+    )
+    for value in ["bytes=99999999-", "bytes=broken", "cats=0-1"]:
+        response = client.get(
+            videos[0]["media_url"],
+            headers={**normal_user_token_headers, "Range": value},
+        )
+        assert response.status_code == 416, response.text
+        assert response.headers["cache-control"] == "private, no-store"
+
+
+def test_multipart_extra_fields_and_untrusted_storage_configuration(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    media_root: Path,
+    mp4: bytes,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    headers = {**normal_user_token_headers, "Idempotency-Key": str(uuid.uuid4())}
+    project = client.post(
+        "/api/v1/projects/", headers=headers, json={"name": uuid.uuid4().hex}
+    ).json()["id"]
+    url = f"/api/v1/projects/{project}/videos"
+    extra = client.post(
+        url,
+        headers=headers,
+        files=[
+            ("file", ("a.mp4", mp4, "video/mp4")),
+            ("file", ("b.mp4", mp4, "video/mp4")),
+        ],
+    )
+    assert extra.status_code == 422
+    override = client.post(
+        url,
+        headers=headers,
+        files={"file": ("a.mp4", mp4, "video/mp4")},
+        data={"owner": str(uuid.uuid4())},
+    )
+    assert override.status_code == 422
+    linked = tmp_path / "link"
+    linked.symlink_to(media_root, target_is_directory=True)
+    code = tmp_path / "code"
+    code.mkdir()
+    (code / ".git").write_text("gitdir: /not-a-real-repository")
+    for root in [linked, code, Path("/mnt/ugnas_forbidden/media")]:
+        monkeypatch.setenv("PLATFORM_MEDIA_ROOT", str(root))
+        rejected = client.post(
+            url, headers=headers, files={"file": ("a.mp4", mp4, "video/mp4")}
+        )
+        assert rejected.status_code == 503
+        assert str(root) not in rejected.text

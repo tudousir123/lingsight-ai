@@ -3,6 +3,7 @@
 import fcntl
 import hashlib
 import os
+import re
 import shutil
 import uuid
 from pathlib import Path
@@ -16,7 +17,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import col, select
 from starlette.concurrency import run_in_threadpool
 from starlette.requests import ClientDisconnect
-from starlette.responses import FileResponse
+from starlette.responses import FileResponse, JSONResponse
 
 from app import crud
 from app.api.deps import CurrentUser, MediaUserDep, SessionDep, owned_project
@@ -311,31 +312,61 @@ def get_video(
     )
 
 
+def _media_response(request: Request, path: Path, media_type: str) -> Response:
+    headers = {"Cache-Control": "private, no-store"}
+    byte_range = request.headers.get("range")
+    size = path.stat().st_size
+    if byte_range:
+        valid = len(byte_range) <= 4096 and bool(
+            re.fullmatch(r"bytes=\d*-\d*(?:,\s*\d*-\d*)*", byte_range)
+        )
+        if valid:
+            for item in byte_range[6:].split(","):
+                start, end = item.strip().split("-")
+                if not start:
+                    valid = bool(end) and int(end) > 0
+                else:
+                    valid = int(start) < size and (not end or int(end) >= int(start))
+                if not valid:
+                    break
+        if not valid:
+            return JSONResponse(
+                status_code=416,
+                content={
+                    "detail": {"code": "invalid_range", "message": "请求的字节范围无效"}
+                },
+                headers={
+                    **headers,
+                    "Content-Range": f"bytes */{size}",
+                    "Accept-Ranges": "bytes",
+                },
+            )
+    return FileResponse(path, media_type=media_type, headers=headers)
+
+
 @router.get("/{video_id}/media")
 def original_media(
+    request: Request,
     session: SessionDep,
     current_user: MediaUserDep,
     project_id: uuid.UUID,
     video_id: str,
-) -> FileResponse:
+) -> Response:
     video = owned_video(session, current_user, project_id, video_id)
-    return FileResponse(
+    return _media_response(
+        request,
         media_path(video.storage_key),
-        media_type="video/mp4" if video.format == "mp4" else "video/x-msvideo",
-        headers={"Cache-Control": "private, no-store"},
+        "video/mp4" if video.format == "mp4" else "video/x-msvideo",
     )
 
 
 @router.get("/{video_id}/preview")
 def preview_media(
+    request: Request,
     session: SessionDep,
     current_user: MediaUserDep,
     project_id: uuid.UUID,
     video_id: str,
-) -> FileResponse:
+) -> Response:
     video = owned_video(session, current_user, project_id, video_id)
-    return FileResponse(
-        media_path(video.preview_storage_key),
-        media_type="video/mp4",
-        headers={"Cache-Control": "private, no-store"},
-    )
+    return _media_response(request, media_path(video.preview_storage_key), "video/mp4")

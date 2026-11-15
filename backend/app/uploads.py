@@ -450,7 +450,8 @@ def inference_input(video: UploadedVideo) -> tuple[str, str]:
     source = config.PLATFORM_MEDIA_INFERENCE_SOURCE_ID
     if not config.PLATFORM_MEDIA_READONLY_READY or not source:
         raise problem(503, "service_unavailable", "推理服务只读媒体挂载尚未就绪")
-    media_path(video.inference_storage_key)
+    if file_hash(media_path(video.inference_storage_key)) != video.inference_sha256:
+        raise problem(409, "state_conflict", "推理输入内容已变化")
     directory = str(Path(video.inference_storage_key).parent)
     try:
         listing = InferenceClient().fetch_directory(source, directory)
