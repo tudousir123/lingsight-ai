@@ -1,19 +1,18 @@
 """Upload HTTP contracts with generated, nonresearch media."""
 
-import subprocess
-import uuid
-import hashlib
 import asyncio
-import struct
-import shutil
 import fcntl
+import hashlib
+import shutil
+import struct
+import subprocess
 import threading
-from concurrent.futures import ThreadPoolExecutor
+import uuid
 from collections.abc import AsyncIterator
-
-import httpx
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -49,10 +48,10 @@ def mp4(tmp_path: Path) -> bytes:
     return path.read_bytes()
 
 
+@pytest.mark.usefixtures("media_root")
 def test_upload_survives_reload_and_media_range(
     client: TestClient,
     normal_user_token_headers: dict[str, str],
-    media_root: Path,
     mp4: bytes,
 ) -> None:
     headers = normal_user_token_headers
@@ -85,11 +84,11 @@ def test_upload_survives_reload_and_media_range(
     assert part.headers["cache-control"] == "private, no-store"
 
 
+@pytest.mark.usefixtures("media_root")
 def test_upload_reference_cannot_be_stolen_or_orphaned(
     client: TestClient,
     normal_user_token_headers: dict[str, str],
     superuser_token_headers: dict[str, str],
-    media_root: Path,
     mp4: bytes,
 ) -> None:
     headers = normal_user_token_headers
@@ -153,10 +152,10 @@ def test_upload_reference_cannot_be_stolen_or_orphaned(
     )
 
 
+@pytest.mark.usefixtures("media_root")
 def test_avi_original_and_lossless_preview_preserve_all_frames(
     client: TestClient,
     normal_user_token_headers: dict[str, str],
-    media_root: Path,
     tmp_path: Path,
 ) -> None:
     source = tmp_path / "input.avi"
@@ -327,10 +326,10 @@ def test_real_two_gigabyte_stream_without_content_length(
         shutil.rmtree(media_root)
 
 
+@pytest.mark.usefixtures("media_root")
 def test_concurrent_removals_keep_one_valid_project_reference(
     client: TestClient,
     normal_user_token_headers: dict[str, str],
-    media_root: Path,
     mp4: bytes,
 ) -> None:
     headers = normal_user_token_headers
@@ -377,8 +376,9 @@ def test_auth_before_body_and_disconnect_cleanup(
     normal_user_token_headers: dict[str, str],
     media_root: Path,
 ) -> None:
-    from app.main import app
     from starlette.requests import ClientDisconnect
+
+    from app.main import app
 
     headers = normal_user_token_headers
     project = client.post(
@@ -434,9 +434,10 @@ def test_storage_failures_do_not_publish_or_leave_files(
     monkeypatch: pytest.MonkeyPatch,
     failure: str,
 ) -> None:
-    from app.core.db import engine
     from sqlalchemy import event
     from sqlalchemy.exc import OperationalError
+
+    from app.core.db import engine
 
     headers = normal_user_token_headers
     project = client.post(
@@ -484,8 +485,8 @@ def test_historical_unowned_upload_reference_is_hidden(
     normal_user_token_headers: dict[str, str],
     db,
 ) -> None:
-    from app.models import ProjectMember
     from app.crud import project_member_key
+    from app.models import ProjectMember
 
     project = client.post(
         "/api/v1/projects/",
@@ -554,9 +555,10 @@ def test_upload_recovery_observes_commit_after_request_auth_snapshot(
     media_root: Path,
     mp4: bytes,
 ) -> None:
+    from sqlalchemy import event
+
     from app.core.db import engine
     from app.main import app
-    from sqlalchemy import event
 
     headers = normal_user_token_headers
     first, second = [
@@ -609,11 +611,11 @@ def test_upload_recovery_observes_commit_after_request_auth_snapshot(
         event.remove(engine, "after_cursor_execute", pause_after_project)
 
 
+@pytest.mark.usefixtures("media_root")
 def test_media_query_token_invalid_ranges_and_same_name_isolation(
     client: TestClient,
     normal_user_token_headers: dict[str, str],
     superuser_token_headers: dict[str, str],
-    media_root: Path,
     mp4: bytes,
 ) -> None:
     videos = []
@@ -722,15 +724,16 @@ def test_nonempty_unmarked_directory_is_never_adopted_or_cleaned(
     assert not (unrelated / ".lingsight-media-root").exists()
 
 
+@pytest.mark.usefixtures("media_root")
 def test_concurrent_same_idempotency_key_creates_one_upload(
     client: TestClient,
     normal_user_token_headers: dict[str, str],
-    media_root: Path,
     mp4: bytes,
 ) -> None:
-    from app.main import app
-    from app.core.db import engine
     from sqlalchemy import event
+
+    from app.core.db import engine
+    from app.main import app
 
     headers = {**normal_user_token_headers, "Idempotency-Key": str(uuid.uuid4())}
     project = client.post(

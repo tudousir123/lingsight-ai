@@ -1,18 +1,17 @@
 """Project entity API: user-owned grouping of agent tasks and videos (#42)."""
 
-import uuid
 import json
+import uuid
 from collections.abc import Iterator
 from unittest.mock import patch
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core.config import settings
-from app.models import Project, ExperimentAccess, User
-from sqlmodel import select
+from app.models import ExperimentAccess, Project, User
 from tests.utils.user import create_random_user
 
 
@@ -62,6 +61,7 @@ def authorized_directories(
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[None]:
     user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER)).one()
+    assert normal_user_token_headers
     grant = ExperimentAccess(user_id=user.id, experiment_id="project-folder-test")
     db.add(grant)
     db.commit()
