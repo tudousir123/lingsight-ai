@@ -6,11 +6,13 @@ import hashlib
 import json
 import math
 import os
+import re
 import shutil
 import subprocess
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
+from datetime import UTC
 from fractions import Fraction
 from pathlib import Path
 from typing import Any, BinaryIO
@@ -125,6 +127,26 @@ def media_root() -> Path:
         raise problem(503, "service_unavailable", "请配置专用平台媒体目录")
     if not root.is_dir():
         raise problem(503, "service_unavailable", "平台媒体存储不可用")
+    marker = root / ".lingsight-media-root"
+    try:
+        if not marker.exists() and any(root.iterdir()):
+            raise problem(503, "service_unavailable", "平台媒体目录必须为空的专用目录")
+        fd = os.open(marker, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "r+b") as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            identity = handle.read(128)
+            if not identity:
+                if any(child != marker for child in root.iterdir()):
+                    raise problem(
+                        503, "service_unavailable", "平台媒体目录必须为空的专用目录"
+                    )
+                handle.write(b"lingsight-platform-media-v1\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            elif identity != b"lingsight-platform-media-v1\n":
+                raise problem(503, "service_unavailable", "平台媒体目录标识无效")
+    except OSError:
+        raise problem(503, "service_unavailable", "平台媒体存储不可用") from None
     return root
 
 
@@ -152,9 +174,13 @@ def storage_lock(root: Path) -> Iterator[None]:
 
 def cleanup_abandoned(session: Session, root: Path) -> None:
     """Called under the shared storage lock; active uploads hold per-dir locks."""
-    known = {
-        v.storage_key.split("/")[1] for v in session.exec(select(UploadedVideo)).all()
-    }
+    # Authentication may have opened a repeatable-read snapshot before another
+    # worker committed. Recovery needs a fresh snapshot under publication lock.
+    with Session(session.get_bind()) as snapshot:
+        known = {
+            v.storage_key.split("/")[1]
+            for v in snapshot.exec(select(UploadedVideo)).all()
+        }
     for bucket in ("staging", "objects"):
         directory = root / bucket
         if directory.is_symlink():
@@ -164,6 +190,7 @@ def cleanup_abandoned(session: Session, root: Path) -> None:
             if (
                 item.is_symlink()
                 or not item.is_dir()
+                or re.fullmatch(r"[0-9a-f]{32}", item.name) is None
                 or (bucket == "objects" and item.name in known)
             ):
                 continue
@@ -445,7 +472,8 @@ def inference_input(video: UploadedVideo) -> tuple[str, str]:
     source = config.PLATFORM_MEDIA_INFERENCE_SOURCE_ID
     if not config.PLATFORM_MEDIA_READONLY_READY or not source:
         raise problem(503, "service_unavailable", "推理服务只读媒体挂载尚未就绪")
-    media_path(video.inference_storage_key)
+    if file_hash(media_path(video.inference_storage_key)) != video.inference_sha256:
+        raise problem(409, "state_conflict", "推理输入内容已变化")
     directory = str(Path(video.inference_storage_key).parent)
     try:
         listing = InferenceClient().fetch_directory(source, directory)
@@ -494,6 +522,9 @@ def video_public(video: UploadedVideo, project_id: uuid.UUID) -> dict[str, Any]:
             "created_at",
         )
     } | {
+        "created_at": video.created_at.replace(tzinfo=UTC)
+        if video.created_at.tzinfo is None
+        else video.created_at,
         "project_id": project_id,
         "source_kind": "user_upload",
         "media_url": url + "/media",

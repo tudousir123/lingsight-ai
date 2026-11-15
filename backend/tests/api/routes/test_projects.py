@@ -1,16 +1,84 @@
 """Project entity API: user-owned grouping of agent tasks and videos (#42)."""
 
+import json
 import uuid
+from collections.abc import Iterator
 from unittest.mock import patch
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core.config import settings
-from app.models import Project
+from app.models import ExperimentAccess, Project, User
 from tests.utils.user import create_random_user
+
+
+@pytest.fixture
+def authorized_agent(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Capable upstream independently confirms owner for synthetic known tasks."""
+    original = httpx.Client
+
+    def upstream(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/capabilities":
+            return httpx.Response(
+                200,
+                json={
+                    "user_scope": "platform-user-v1",
+                    "data_scope": "authorized-v1",
+                    "qa_completion": "intent-v1",
+                    "project_scope": "immutable-v1",
+                    "project_data_configured": True,
+                },
+            )
+        task_id = request.url.path.rsplit("/", 1)[-1]
+        return httpx.Response(
+            200,
+            json={
+                "id": task_id,
+                "owner_user_id": request.headers["X-LingSight-User-Id"],
+                "data_scope": "none",
+                "project_id": None,
+            },
+        )
+
+    monkeypatch.setattr(settings, "AGENT_API_TOKEN", "synthetic-agent-token")
+    monkeypatch.setattr(settings, "AGENT_BASE_URL", "http://agent.test")
+    with patch(
+        "httpx.Client",
+        side_effect=lambda **kw: original(
+            transport=httpx.MockTransport(upstream), **kw
+        ),
+    ):
+        yield
+
+
+@pytest.fixture
+def authorized_directories(
+    db: Session,
+    normal_user_token_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[None]:
+    user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER)).one()
+    assert normal_user_token_headers
+    grant = ExperimentAccess(user_id=user.id, experiment_id="project-folder-test")
+    db.add(grant)
+    db.commit()
+    monkeypatch.setenv(
+        "INFERENCE_EXPERIMENT_DIRECTORIES",
+        json.dumps(
+            {
+                "lab-nas": {"project-folder-test": "Day1/Batch2"},
+                "legacy": {"project-folder-test": ""},
+            }
+        ),
+    )
+    try:
+        yield
+    finally:
+        db.delete(grant)
+        db.commit()
 
 
 def _unique_name(prefix: str) -> str:
@@ -155,6 +223,7 @@ def test_projects_are_private_to_their_owner(
         _cleanup(db, project_id)
 
 
+@pytest.mark.usefixtures("authorized_agent")
 def test_member_add_remove_is_idempotent(
     client: TestClient, db: Session, normal_user_token_headers: dict[str, str]
 ) -> None:
@@ -165,14 +234,14 @@ def test_member_add_remove_is_idempotent(
 
         first = client.post(
             member_url,
-            json={"kind": "agent_task", "id": "task-1"},
+            json={"kind": "agent_task", "id": "00000000-0000-4000-8000-000000000001"},
             headers=normal_user_token_headers,
         )
         assert first.status_code == 201, first.text
 
         again = client.post(
             member_url,
-            json={"kind": "agent_task", "id": "task-1"},
+            json={"kind": "agent_task", "id": "00000000-0000-4000-8000-000000000001"},
             headers=normal_user_token_headers,
         )
         assert again.status_code == 200, again.text
@@ -182,20 +251,23 @@ def test_member_add_remove_is_idempotent(
             json={"kind": "video", "id": "video-9", "label": "Day5-Trial3.mp4"},
             headers=normal_user_token_headers,
         )
-        assert video.status_code == 201, video.text
+        assert video.status_code == 422, video.text
 
         listing = _list_projects(client, normal_user_token_headers)
         stored = next(item for item in listing if item["id"] == project_id)
-        assert [m["id"] for m in stored["members"]] == ["task-1", "video-9"]
-        assert stored["members"][1]["label"] == "Day5-Trial3.mp4"
+        assert [m["id"] for m in stored["members"]] == [
+            "00000000-0000-4000-8000-000000000001"
+        ]
 
         removed = client.delete(
-            f"{member_url}/agent_task/task-1", headers=normal_user_token_headers
+            f"{member_url}/agent_task/00000000-0000-4000-8000-000000000001",
+            headers=normal_user_token_headers,
         )
         assert removed.status_code == 204
 
         missing = client.delete(
-            f"{member_url}/agent_task/task-1", headers=normal_user_token_headers
+            f"{member_url}/agent_task/00000000-0000-4000-8000-000000000001",
+            headers=normal_user_token_headers,
         )
         assert missing.status_code == 404
 
@@ -209,6 +281,7 @@ def test_member_add_remove_is_idempotent(
         _cleanup(db, project_id)
 
 
+@pytest.mark.usefixtures("authorized_agent")
 def test_import_local_projects_is_idempotent_and_never_overwrites(
     client: TestClient, db: Session, normal_user_token_headers: dict[str, str]
 ) -> None:
@@ -217,7 +290,14 @@ def test_import_local_projects_is_idempotent_and_never_overwrites(
     import_url = f"{settings.API_V1_STR}/projects/import"
     payload = {
         "projects": [
-            {"name": keep, "task_ids": ["task-a", "task-b", "task-a"]},
+            {
+                "name": keep,
+                "task_ids": [
+                    "00000000-0000-4000-8000-000000000002",
+                    "00000000-0000-4000-8000-000000000003",
+                    "00000000-0000-4000-8000-000000000002",
+                ],
+            },
             {"name": fresh, "task_ids": []},
         ]
     }
@@ -229,12 +309,15 @@ def test_import_local_projects_is_idempotent_and_never_overwrites(
     listing = _list_projects(client, normal_user_token_headers)
     imported = next(item for item in listing if item["name"] == keep)
     # Duplicate ids inside one folder collapse into one reference.
-    assert [m["id"] for m in imported["members"]] == ["task-a", "task-b"]
+    assert [m["id"] for m in imported["members"]] == [
+        "00000000-0000-4000-8000-000000000002",
+        "00000000-0000-4000-8000-000000000003",
+    ]
     keep_id = str(imported["id"])
 
     # The user reorganizes server-side: one member is removed by hand.
     removed = client.delete(
-        f"{settings.API_V1_STR}/projects/{keep_id}/members/agent_task/task-a",
+        f"{settings.API_V1_STR}/projects/{keep_id}/members/agent_task/00000000-0000-4000-8000-000000000002",
         headers=normal_user_token_headers,
     )
     assert removed.status_code == 204
@@ -245,11 +328,20 @@ def test_import_local_projects_is_idempotent_and_never_overwrites(
     # Replaying did not resurrect the manually removed member.
     listing = _list_projects(client, normal_user_token_headers)
     imported = next(item for item in listing if item["id"] == keep_id)
-    assert [m["id"] for m in imported["members"]] == ["task-b"]
+    assert [m["id"] for m in imported["members"]] == [
+        "00000000-0000-4000-8000-000000000003"
+    ]
 
     extra = client.post(
         import_url,
-        json={"projects": [{"name": _unique_name("追加"), "task_ids": ["task-c"]}]},
+        json={
+            "projects": [
+                {
+                    "name": _unique_name("追加"),
+                    "task_ids": ["00000000-0000-4000-8000-000000000004"],
+                }
+            ]
+        },
         headers=normal_user_token_headers,
     )
     assert extra.json() == {"created": 1, "skipped": 0}
@@ -264,6 +356,7 @@ def test_import_local_projects_is_idempotent_and_never_overwrites(
     _cleanup(db, *created_ids)
 
 
+@pytest.mark.usefixtures("authorized_agent")
 def test_import_is_private_to_the_importing_user(
     client: TestClient,
     db: Session,
@@ -273,7 +366,11 @@ def test_import_is_private_to_the_importing_user(
     name = _unique_name("私导")
     response = client.post(
         f"{settings.API_V1_STR}/projects/import",
-        json={"projects": [{"name": name, "task_ids": ["task-x"]}]},
+        json={
+            "projects": [
+                {"name": name, "task_ids": ["00000000-0000-4000-8000-000000000005"]}
+            ]
+        },
         headers=normal_user_token_headers,
     )
     assert response.status_code == 200
@@ -298,7 +395,7 @@ def test_random_new_user_gets_an_empty_project_list(
     assert listing == []
 
 
-def test_long_video_reference_round_trip(
+def test_unverifiable_long_video_reference_is_rejected(
     client: TestClient, db: Session, normal_user_token_headers: dict[str, str]
 ) -> None:
     project = _create_project(client, normal_user_token_headers, _unique_name("长视频"))
@@ -311,27 +408,18 @@ def test_long_video_reference_round_trip(
             json={"kind": "video", "id": video_id},
             headers=normal_user_token_headers,
         )
-        assert first.status_code == 201, first.text
-        replay = client.post(
-            url,
-            json={"kind": "video", "id": video_id},
-            headers=normal_user_token_headers,
-        )
-        assert replay.status_code == 200, replay.text
+        assert first.status_code == 422, first.text
         saved = next(
             p
             for p in _list_projects(client, normal_user_token_headers)
             if p["id"] == project_id
         )
-        assert [m["id"] for m in saved["members"]] == [video_id]
-        removed = client.delete(
-            f"{url}/video/{video_id}", headers=normal_user_token_headers
-        )
-        assert removed.status_code == 204, removed.text
+        assert saved["members"] == []
     finally:
         _cleanup(db, project_id)
 
 
+@pytest.mark.usefixtures("authorized_directories")
 def test_selected_video_folder_survives_project_reload(
     client: TestClient, db: Session, normal_user_token_headers: dict[str, str]
 ) -> None:
@@ -384,6 +472,7 @@ def test_selected_video_folder_survives_project_reload(
 
 
 @pytest.mark.parametrize("status", [404, 503, 500])
+@pytest.mark.usefixtures("authorized_directories")
 def test_unreadable_folder_does_not_replace_saved_reference(
     client: TestClient,
     db: Session,
