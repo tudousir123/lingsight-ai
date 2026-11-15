@@ -325,9 +325,39 @@ export function AgentWorkspace({
     : agentRoutes.tasks()
   useEffect(() => {
     if (!requestOwner) return
+    let alive = true
+    const controller = new AbortController()
     try {
       const saved = pendingRequest(requestOwner, inputPath)
       const text = saved?.body.text ?? saved?.body.goal
+      if (!taskId && Array.isArray(saved?.body.input_ids)) {
+        const ids = saved.body.input_ids
+        setFilesBusy(true)
+        void agentJson<FileInputRef[]>(
+          agentRoutes.inputs(),
+          undefined,
+          "GET",
+          controller.signal,
+        )
+          .then((refs) => {
+            if (!alive) return
+            const selected = ids.map((id) => refs.find((ref) => ref.id === id))
+            if (selected.some((ref) => !ref))
+              throw new Error(
+                "上次请求的材料引用不可用，已保留原请求。请先核查任务，不要另建替代任务。",
+              )
+            setFileInputs(selected as FileInputRef[])
+          })
+          .catch((error) => {
+            if (alive)
+              setError(
+                error instanceof Error ? error.message : "无法恢复材料引用。",
+              )
+          })
+          .finally(() => {
+            if (alive) setFilesBusy(false)
+          })
+      }
       if (typeof text === "string") {
         setDraft(text)
         setError(
@@ -337,7 +367,11 @@ export function AgentWorkspace({
     } catch (error) {
       setError(error instanceof Error ? error.message : "未确认请求不可用。")
     }
-  }, [requestOwner, inputPath])
+    return () => {
+      alive = false
+      controller.abort()
+    }
+  }, [requestOwner, inputPath, taskId])
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: tasksKey })
     void queryClient.invalidateQueries({ queryKey: taskKey(taskId) })
@@ -469,6 +503,10 @@ export function AgentWorkspace({
     input.current?.focus({ preventScroll: true })
   }
   const startVideoAnalysis = (source: WorkflowVideo["source"]) => {
+    if (fileInputs.length) {
+      setError("请先移除分析文件，再切换视频流程；两种输入不会混用。")
+      return
+    }
     if (!canAttach) {
       void navigate({ to: source === "drive" ? "/inference" : "/annotations" })
       return
@@ -517,8 +555,10 @@ export function AgentWorkspace({
             value={fileInputs}
             onChange={setFileInputs}
             onBusy={setFilesBusy}
+            key={`${projectId ?? ""}:${personal.data?.id ?? ""}`}
             disabled={
               pending ||
+              filesBusy ||
               !executionReady ||
               execution.data?.files !== true ||
               videos.length > 0
@@ -563,7 +603,7 @@ export function AgentWorkspace({
           }}
         />
         <div className="agent-composer-toolbar">
-          {canAttach && (
+          {canAttach && fileInputs.length === 0 && (
             <VideoAttachment
               open={attachmentOpen}
               onOpenChange={setAttachmentOpen}

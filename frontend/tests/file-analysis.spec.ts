@@ -23,6 +23,7 @@ test("workspace uploads small authorized content and sends only opaque server re
   )
   let uploaded: unknown
   let created: unknown
+  const intents: unknown[] = []
   const id = "11111111-1111-4111-8111-111111111111"
   await page.route("**/api/v1/agent/**", async (route) => {
     const path = new URL(route.request().url()).pathname.split("/agent/")[1]
@@ -34,12 +35,20 @@ test("workspace uploads small authorized content and sends only opaque server re
             contract: "durable-run-v1",
             engine: "pi-durable",
             version: "1.5.2",
+            requests: "persistent-v1",
+            recovery: "safe-v1",
             enabled: true,
           },
         },
       })
     if (path === "personal-agent")
       return route.fulfill({ json: personalAgentFixture })
+    if (path === "inputs" && route.request().method() === "GET")
+      return route.fulfill({
+        json: [
+          { id, name: "observations.csv", sha256: "a".repeat(64), bytes: 8 },
+        ],
+      })
     if (path === "inputs") {
       uploaded = route.request().postDataJSON()
       return route.fulfill({
@@ -54,6 +63,7 @@ test("workspace uploads small authorized content and sends only opaque server re
     }
     if (path === "tasks" && route.request().method() === "POST") {
       created = route.request().postDataJSON()
+      intents.push(created)
       return route.fulfill({
         status: 503,
         json: { detail: "Synthetic stop after capturing intent" },
@@ -77,7 +87,15 @@ test("workspace uploads small authorized content and sends only opaque server re
   await page.getByRole("button", { name: "发送研究问题", exact: true }).click()
   await expect
     .poll(() => created)
-    .toEqual({ goal: "Create a synthetic report", input_ids: [id] })
+    .toMatchObject({ goal: "Create a synthetic report", input_ids: [id] })
+  const first = created
+  await page.reload()
+  await expect(
+    page.getByText("observations.csv", { exact: true }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "发送研究问题", exact: true }).click()
+  await expect.poll(() => intents.length).toBe(2)
+  expect(intents[1]).toEqual(first)
   expect(uploaded).toEqual({ name: "observations.csv", content: "x\n1\n" })
   await expect(page.getByRole("textbox", { name: "研究问题" })).toHaveValue(
     "Create a synthetic report",

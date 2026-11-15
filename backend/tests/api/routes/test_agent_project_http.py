@@ -36,7 +36,11 @@ def agent_http(
     if isinstance(fixture_name, tuple):
         fixture_name, durable = fixture_name
         monkeypatch.setenv("AGENT_CONTRACT_DURABLE", "1" if durable else "0")
-    if fixture_name not in {"contract-fixture.ts", "memory-contract-fixture.ts"}:
+    if fixture_name not in {
+        "contract-fixture.ts",
+        "memory-contract-fixture.ts",
+        "file-contract-fixture.ts",
+    }:
         pytest.fail("Unknown isolated Agent contract fixture")
     script = Path(repository) / "scripts" / fixture_name
     if not script.is_file():
@@ -92,8 +96,9 @@ def agent_http(
         with selectors.DefaultSelector() as ready:
             ready.register(process.stdout, selectors.EVENT_READ)
             assert ready.select(timeout=20), "Synthetic Agent did not start"
-        url = json.loads(process.stdout.readline())["url"]
-        token = "synthetic-contract-token-000000000"
+        information = json.loads(process.stdout.readline())
+        url = information["url"]
+        token = information.get("token", "synthetic-contract-token-000000000")
         with httpx.Client(trust_env=False) as probe:
             response = probe.get(
                 f"{url}/v1/capabilities", headers={"Authorization": f"Bearer {token}"}
@@ -483,3 +488,103 @@ def test_real_durable_gateway_completion_and_sourced_output(
     with zipfile.ZipFile(io.BytesIO(bundle.content)) as archive:
         manifest = json.loads(archive.read("manifest.json"))
         assert manifest["runs"][-1]["execution"] == run["execution"]
+
+
+@pytest.mark.parametrize("agent_http", ["file-contract-fixture.ts"], indirect=True)
+def test_real_file_analysis_gateway_harness_container_and_owned_downloads(
+    client: TestClient,
+    agent_http: str,
+    db: Session,
+) -> None:
+    import hashlib
+    from tests.api.routes.test_platform_user_flow import signup
+
+    owner, owner_id = signup(client)
+    other, _ = signup(client)
+    api = settings.API_V1_STR
+    csv = "frame_idx,heading_angle_deg\n1,15\n2,25\n"
+    uploaded = client.post(
+        f"{api}/agent/inputs",
+        headers=owner,
+        json={"name": "observations.csv", "content": csv},
+    )
+    assert uploaded.status_code == 201, uploaded.text
+    ref = uploaded.json()
+    assert ref["owner_user_id"] == owner_id
+    assert ref["sha256"] == hashlib.sha256(csv.encode()).hexdigest()
+    assert "path" not in ref
+    assert client.get(f"{api}/agent/inputs", headers=other).json() == []
+    intent = {
+        "goal": "Create a synthetic report, table and figures",
+        "input_ids": [ref["id"]],
+        "request_id": str(uuid.uuid4()),
+    }
+    assert (
+        client.post(f"{api}/agent/tasks", headers=other, json=intent).status_code == 404
+    )
+    first = client.post(f"{api}/agent/tasks", headers=owner, json=intent)
+    assert first.status_code == 202, first.text
+    accepted = first.json()
+    repeated = client.post(f"{api}/agent/tasks", headers=owner, json=intent)
+    assert repeated.json() == accepted
+    assert (
+        client.post(
+            f"{api}/agent/tasks", headers=owner, json={**intent, "input_ids": []}
+        ).status_code
+        == 409
+    )
+    task_id = accepted["task"]["id"]
+    path = f"{api}/agent/tasks/{task_id}"
+    deadline = time.monotonic() + 30
+    while True:
+        detail = client.get(path, headers=owner).json()
+        state = detail["runs"][-1]
+        if state["status"] == "succeeded":
+            break
+        assert state["status"] not in {"failed", "cancelled"}, state
+        assert time.monotonic() < deadline, state
+        time.sleep(0.05)
+    assert state["execution"]["engine"] == "pi-durable"
+    assert state["completion_contract"]["mode"] == "research"
+    table = next(a for a in detail["artifacts"] if a["kind"] == "table")
+    assert client.get(f"{api}/agent/artifacts/{table['id']}", headers=owner).text == csv
+    for artifact in detail["artifacts"]:
+        response = client.get(f"{api}/agent/artifacts/{artifact['id']}", headers=owner)
+        assert hashlib.sha256(response.content).hexdigest() == artifact["sha256"]
+        assert (
+            client.get(
+                f"{api}/agent/artifacts/{artifact['id']}", headers=other
+            ).status_code
+            == 404
+        )
+    assert client.get(path, headers=other).status_code == 404
+    assert client.get(f"{path}/bundle", headers=other).status_code == 404
+    bundle = client.get(f"{path}/bundle", headers=owner)
+    assert bundle.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(bundle.content)) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        assert manifest["runs"][0]["status"] == "succeeded"
+        assert any(name.endswith("synthetic.png") for name in archive.namelist())
+    # Revoke the actual platform account; the independent Agent's callback
+    # must deny the already-known task and every saved material download.
+    from app.models import User
+
+    account = db.get(User, uuid.UUID(owner_id))
+    assert account is not None
+    account.is_active = False
+    db.add(account)
+    db.commit()
+    try:
+        with httpx.Client(trust_env=False) as direct:
+            denied = direct.get(
+                f"{agent_http}/v1/artifacts/{table['id']}",
+                headers={
+                    "Authorization": f"Bearer {settings.AGENT_API_TOKEN}",
+                    "X-LingSight-User-Id": owner_id,
+                },
+            )
+            assert denied.status_code == 403, denied.text
+    finally:
+        account.is_active = True
+        db.add(account)
+        db.commit()
