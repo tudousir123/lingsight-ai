@@ -26,6 +26,8 @@ class AgentGatewayTest(unittest.TestCase):
         self.capabilities = httpx.Response(
             200,
             json={
+                "personal_agent": "persistent-v1",
+                "environment": "task-workspace-v1",
                 "project_scope": "immutable-v1",
                 "project_data_configured": True,
                 "user_scope": "platform-user-v1",
@@ -60,6 +62,60 @@ class AgentGatewayTest(unittest.TestCase):
             self.addCleanup(p.stop)
         self.client = TestClient(self.app)
         self.addCleanup(self.client.close)
+
+    def test_personal_identity_uses_current_user_and_requires_new_capability(
+        self,
+    ) -> None:
+        self.capabilities = httpx.Response(
+            200,
+            json={
+                **self.capabilities.json(),
+                "personal_agent": "persistent-v1",
+                "environment": "task-workspace-v1",
+            },
+        )
+        identity = {
+            "id": TASK,
+            "owner_user_id": str(self.user.id),
+            "environment": {"id": TASK, "status": "ready"},
+        }
+        self.response = httpx.Response(200, json=identity)
+        result = self.client.get(
+            "/agent/personal-agent", headers={"X-LingSight-User-Id": TASK}
+        )
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.json(), identity)
+        self.assertEqual(self.calls[-1].url.path, "/v1/personal-agent")
+        self.assertEqual(
+            self.calls[-1].headers["x-lingsight-user-id"], str(self.user.id)
+        )
+        self.calls.clear()
+        self.capabilities = httpx.Response(200, json={"user_scope": "platform-user-v1"})
+        self.assertEqual(self.client.get("/agent/personal-agent").status_code, 503)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(self.calls[0].url.path, "/v1/capabilities")
+
+    def test_new_work_requires_personal_capability_and_identity_has_no_selector(
+        self,
+    ) -> None:
+        self.capabilities = httpx.Response(
+            200,
+            json={
+                k: v
+                for k, v in self.capabilities.json().items()
+                if k != "personal_agent"
+            },
+        )
+        result = self.client.post(
+            "/agent/tasks", json={"goal": "Explain synthetic task"}
+        )
+        self.assertEqual(result.status_code, 503)
+        self.assertEqual(len(self.calls), 1)
+        self.calls.clear()
+        self.assertEqual(
+            self.client.get(f"/agent/personal-agent?user_id={TASK}").status_code, 422
+        )
+        self.assertFalse(self.calls)
 
     def test_login_required(self) -> None:
         self.app.dependency_overrides.clear()

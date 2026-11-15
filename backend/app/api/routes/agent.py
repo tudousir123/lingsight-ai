@@ -35,6 +35,7 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 OPERATIONS = OperationTable(
     operations={
         "GET": (
+            "personal-agent",
             "tasks",
             "tasks/{task_id}",
             "tasks/{task_id}/events",
@@ -81,10 +82,16 @@ def _service() -> UpstreamService:
 
 
 async def ensure_project_support(
-    request: Request, service: UpstreamService, *, project: bool = False
+    request: Request,
+    service: UpstreamService,
+    *,
+    project: bool = False,
+    personal: bool = False,
 ) -> None:
     """Refuse old Agent versions before they can create an unscoped task."""
     unavailable = "科研 Agent 项目分析尚未就绪，请先更新服务并配置项目数据源"
+    if personal:
+        unavailable = "个人 Agent 持久工作环境尚未就绪，请先更新服务"
     probe = Request({**request.scope, "method": "GET", "query_string": b""})
     try:
         response = await forward(
@@ -99,7 +106,13 @@ async def ensure_project_support(
                 if len(payload) > 4096:
                     raise HTTPException(503, unavailable)
             capabilities = json.loads(payload)
-            if not capable_agent(capabilities, project=project):
+            if not capable_agent(capabilities, project=project) or (
+                personal
+                and (
+                    capabilities.get("personal_agent") != "persistent-v1"
+                    or capabilities.get("environment") != "task-workspace-v1"
+                )
+            ):
                 raise HTTPException(503, unavailable)
         finally:
             if response.background is not None:
@@ -151,6 +164,12 @@ async def agent_gateway(
 ) -> Response:
     ensure_workspace_user(current_user)
     OPERATIONS.check(request.method, path, UNKNOWN_OPERATION)
+    if path == "personal-agent" and (
+        request.query_params
+        or request.headers.get("content-length", "0") != "0"
+        or request.headers.get("transfer-encoding")
+    ):
+        raise HTTPException(422, "Personal identity accepts no selectors or body")
     service = _service()
     if not service.api_token:
         raise HTTPException(503, service.unconfigured_detail)
@@ -221,7 +240,13 @@ async def agent_gateway(
         )
         if not cursor.isdecimal() or int(cursor) > MAX_CURSOR:
             raise HTTPException(422, "Invalid event cursor")
-    await ensure_project_support(request, service, project=project_scope)
+    await ensure_project_support(
+        request,
+        service,
+        project=project_scope,
+        personal=path == "personal-agent"
+        or (path == "tasks" and request.method == "POST"),
+    )
     return await forward(
         request,
         path,
