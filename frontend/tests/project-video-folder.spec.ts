@@ -472,3 +472,181 @@ test("后台刷新项目文件夹后，视频列表跟随已保存的新目录",
     page.getByRole("checkbox", { name: "选择视频 旧视频.mp4" }),
   ).toHaveCount(0)
 })
+
+// 与后端一致的目录替身：未授权范围 403；已授权但不在已保存项目文件夹内 404；
+// 保存（PUT）独立校验授权，通过后目录接口才放行新范围。
+async function scopedFolders(
+  page: Page,
+  authorized: (source: string, path: string) => boolean,
+  saved: { source_id: string; path: string },
+) {
+  const current = { ...saved }
+  const puts: { source_id: string; path: string }[] = []
+  const within = (path: string, root: string) =>
+    !root || path === root || path.startsWith(`${root}/`)
+  const denied = {
+    status: 403,
+    json: {
+      detail: {
+        code: "permission_denied",
+        message: "Video source scope is not authorized",
+      },
+    },
+  }
+  await page.route("**/api/v1/inference/sources", (route) =>
+    route.fulfill({
+      json: [
+        { id: "nas", label: "NAS 视频", kind: "filesystem", available: true },
+        { id: "nas-b", label: "NAS B", kind: "filesystem", available: true },
+      ],
+    }),
+  )
+  await page.route("**/api/v1/inference/videos?*", (route) => {
+    const query = new URL(route.request().url()).searchParams
+    const source = query.get("source_id") ?? ""
+    const path = query.get("path") ?? ""
+    if (!authorized(source, path)) return route.fulfill(denied)
+    if (source !== current.source_id || !within(path, current.path))
+      return route.fulfill({
+        status: 404,
+        json: {
+          detail: {
+            code: "resource_not_found",
+            message: "Directory is not in project folder",
+          },
+        },
+      })
+    return route.fulfill({
+      json: [
+        {
+          type: "video",
+          id: `${source}:${path}/鼠.mp4`,
+          name: `${source}-${path || "根"}.mp4`,
+        },
+      ],
+    })
+  })
+  const folderLabel = () => `${current.source_id} / ${current.path || "根目录"}`
+  await page.route(/\/api\/v1\/projects\/?$/, (route) =>
+    route.fulfill({
+      json: {
+        data: [
+          {
+            id: "folder-project",
+            name: "视频研究",
+            members: [],
+            video_folder: { ...current, label: folderLabel() },
+          },
+        ],
+        count: 1,
+      },
+    }),
+  )
+  await page.route(
+    "**/api/v1/projects/folder-project/video-folder",
+    (route) => {
+      const body = route.request().postDataJSON()
+      puts.push(body)
+      if (!authorized(body.source_id, body.path)) return route.fulfill(denied)
+      Object.assign(current, body)
+      return route.fulfill({
+        json: {
+          id: "folder-project",
+          name: "视频研究",
+          members: [],
+          video_folder: { ...current, label: folderLabel() },
+        },
+      })
+    },
+  )
+  return { current, puts }
+}
+
+test("已保存来源 A 时可改存另一已授权来源 B 的根目录，由保存接口校验", async ({
+  page,
+}) => {
+  await workspace(page)
+  const scope = await scopedFolders(page, () => true, {
+    source_id: "nas",
+    path: "十月",
+  })
+  await page.goto("/projects/folder-project?view=details")
+  await page.getByText(/^(添加视频|管理视频来源)$/).click()
+  await expect(
+    page.getByRole("checkbox", { name: "选择视频 nas-十月.mp4" }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "更换文件夹" }).click()
+  await page.getByLabel("视频来源", { exact: true }).selectOption("nas-b")
+  await expect(page.getByText(/不在当前已保存的项目文件夹内/)).toBeVisible()
+  await expect(page.getByRole("alert")).toHaveCount(0)
+  await page.getByRole("button", { name: "使用此文件夹" }).click()
+  await expect(page.getByText("nas-b / 根目录", { exact: true })).toBeVisible()
+  expect(scope.puts).toEqual([{ source_id: "nas-b", path: "" }])
+  await expect(
+    page.getByRole("checkbox", { name: "选择视频 nas-b-根.mp4" }),
+  ).toBeVisible()
+})
+
+test("已保存子目录时可上移并保存已授权的父目录", async ({ page }) => {
+  await workspace(page)
+  const scope = await scopedFolders(page, () => true, {
+    source_id: "nas",
+    path: "十月/第一周",
+  })
+  await page.goto("/projects/folder-project?view=details")
+  await page.getByText(/^(添加视频|管理视频来源)$/).click()
+  await page.getByRole("button", { name: "更换文件夹" }).click()
+  await page.getByRole("button", { name: "上一级" }).click()
+  await expect(page.getByText("当前文件夹：十月")).toBeVisible()
+  await page.getByRole("button", { name: "使用此文件夹" }).click()
+  await expect(page.getByText("nas / 十月", { exact: true })).toBeVisible()
+  expect(scope.puts).toEqual([{ source_id: "nas", path: "十月" }])
+})
+
+test("越出授权范围的目录读取 403 不可保存；保存被拒时显示错误并保留原文件夹", async ({
+  page,
+}) => {
+  await workspace(page)
+  // 只授权 nas 的 “十月” 子树（单实验授权），nas-b 读取放行但保存被拒。
+  const scope = await scopedFolders(
+    page,
+    (source, path) =>
+      source === "nas-b" ||
+      (source === "nas" && (path === "十月" || path.startsWith("十月/"))),
+    { source_id: "nas", path: "十月" },
+  )
+  // nas-b 的读取允许，但保存时改为未授权，模拟 PUT 独立校验得出的拒绝。
+  await page.route(
+    "**/api/v1/projects/folder-project/video-folder",
+    (route) => {
+      scope.puts.push(route.request().postDataJSON())
+      return route.fulfill({
+        status: 403,
+        json: {
+          detail: {
+            code: "permission_denied",
+            message: "Video source scope is not authorized",
+          },
+        },
+      })
+    },
+  )
+  await page.goto("/projects/folder-project?view=details")
+  await page.getByText(/^(添加视频|管理视频来源)$/).click()
+  await page.getByRole("button", { name: "更换文件夹" }).click()
+  await page.getByRole("button", { name: "上一级" }).click()
+  await expect(page.getByRole("alert")).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "使用此文件夹" }),
+  ).toBeDisabled()
+  await page.getByLabel("视频来源", { exact: true }).selectOption("nas-b")
+  await page.getByRole("button", { name: "使用此文件夹" }).click()
+  await expect(page.getByRole("alert")).toBeVisible()
+  expect(scope.puts).toEqual([{ source_id: "nas-b", path: "" }])
+  expect(scope.current).toEqual({ source_id: "nas", path: "十月" })
+  await expect(page.getByText("nas / 十月", { exact: true })).toBeVisible()
+  await page.getByRole("button", { name: "取消更换" }).click()
+  await expect(
+    page.getByRole("checkbox", { name: "选择视频 nas-十月.mp4" }),
+  ).toBeVisible()
+})

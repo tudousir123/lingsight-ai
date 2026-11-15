@@ -41,10 +41,11 @@ type Drag =
 const dispatchText: Record<string, string> = {
   pending: "确认已保存，追踪尚未下发。",
   accepted: "上游已接受该确认；这只表示追踪任务已受理，并不代表追踪完成。",
-  failed: "确认已保存，但下发追踪失败，可重试下发（不会重复启动追踪）。",
+  failed: "确认已保存，但下发追踪失败。",
 }
 
-type Attempt = { payload: string; key: string }
+// confirmationId is recorded once the server answers for this key.
+type Attempt = { payload: string; key: string; confirmationId?: string }
 // The browser keeps only the request in flight, so a reload can still replay it.
 const attemptKey = (taskId: string) => `lingsight.confirm-attempt.${taskId}`
 function readAttempt(taskId: string): Attempt | null {
@@ -63,6 +64,29 @@ function writeAttempt(taskId: string, attempt: Attempt | null) {
   } catch {
     // Storage is best effort.
   }
+}
+
+const geometryOf = (
+  value: Pick<ConfirmationInput, "seed" | "pool" | "marks">,
+) =>
+  JSON.stringify({
+    seed: [value.seed.frame, value.seed.x, value.seed.y],
+    pool: [value.pool.cx, value.pool.cy, value.pool.radius],
+    marks: value.marks.map((mark) => [mark.label, mark.polygon]),
+  })
+
+// Only the exact request that produced this version may be replayed; anything
+// else would be a new confirmation, not a redispatch of the saved one.
+function replayable(attempt: Attempt | null, confirmed: Confirmation) {
+  if (!attempt) return false
+  if (attempt.confirmationId) return attempt.confirmationId === confirmed.id
+  // Saved before the response arrived (e.g. a reload mid-request).
+  const sent = JSON.parse(attempt.payload) as ConfirmationInput
+  return (
+    sent.task_id === confirmed.task_id &&
+    sent.candidate_version === confirmed.candidate_version &&
+    geometryOf(sent) === geometryOf(confirmed)
+  )
 }
 
 type ReviewTask = {
@@ -84,8 +108,10 @@ export function PreannotationConfirm({ task }: { task: ReviewTask }) {
     queryFn: ({ signal }) =>
       fetchPreannotation(projectId as string, task.video_id, task.id, signal),
   })
-  const confirmation = useQuery({
-    queryKey: confirmationKey(projectId ?? "", task.video_id),
+  // The project/video latest is only the optimistic-lock base for a new
+  // confirmation; it may belong to another task of the same video.
+  const latest = useQuery({
+    queryKey: confirmationKey(projectId ?? "", task.video_id, null),
     enabled: !!projectId,
     retry: false,
     queryFn: async ({ signal }) => {
@@ -93,6 +119,7 @@ export function PreannotationConfirm({ task }: { task: ReviewTask }) {
         return await fetchConfirmation(
           projectId as string,
           task.video_id,
+          null,
           signal,
         )
       } catch (error) {
@@ -102,9 +129,30 @@ export function PreannotationConfirm({ task }: { task: ReviewTask }) {
       }
     },
   })
+  // This task's own immutable version, read by ID even when a later task
+  // has replaced the latest.
+  const own = useQuery({
+    // Never share the latest key: its 404 means "none yet", here it is an error.
+    queryKey: task.confirmation_id
+      ? confirmationKey(projectId ?? "", task.video_id, task.confirmation_id)
+      : ["preannotation-confirmation", "unconfirmed-task", task.id],
+    enabled: !!projectId && !!task.confirmation_id,
+    retry: false,
+    queryFn: ({ signal }) =>
+      fetchConfirmation(
+        projectId as string,
+        task.video_id,
+        task.confirmation_id as string,
+        signal,
+      ),
+  })
   if (!projectId)
     return <p role="alert">该推理任务没有项目归属，无法确认预标注。</p>
-  if (candidate.isPending || confirmation.isPending)
+  if (
+    candidate.isPending ||
+    latest.isPending ||
+    (!!task.confirmation_id && own.isPending)
+  )
     return <p>正在读取候选预标注…</p>
   if (candidate.error)
     return (
@@ -119,7 +167,31 @@ export function PreannotationConfirm({ task }: { task: ReviewTask }) {
         </button>
       </p>
     )
-  const mine = confirmation.data?.task_id === task.id ? confirmation.data : null
+  const readError = latest.error ?? (task.confirmation_id ? own.error : null)
+  // A failed read is not "unconfirmed": submitting would rest on a guess.
+  if (readError)
+    return (
+      <p role="alert">
+        无法读取已保存的确认版本：
+        {problemText(readError, "请稍后重试。")}
+        <button
+          type="button"
+          className="project-action"
+          onClick={() => {
+            if (latest.error) void latest.refetch()
+            if (own.error) void own.refetch()
+          }}
+        >
+          重试
+        </button>
+      </p>
+    )
+  const confirmed = task.confirmation_id
+    ? own.data
+    : // Just confirmed, before task polling reports the new ID.
+      latest.data?.task_id === task.id
+      ? latest.data
+      : null
   return (
     <ConfirmEditor
       // A new candidate version replaces the browser draft; polling must not.
@@ -127,7 +199,8 @@ export function PreannotationConfirm({ task }: { task: ReviewTask }) {
       task={task}
       projectId={projectId}
       candidate={candidate.data}
-      confirmed={mine}
+      confirmed={confirmed ?? null}
+      latestId={latest.data?.id ?? null}
     />
   )
 }
@@ -137,11 +210,13 @@ function ConfirmEditor({
   projectId,
   candidate,
   confirmed,
+  latestId,
 }: {
   task: ReviewTask
   projectId: string
   candidate: Preannotation
   confirmed: Confirmation | null
+  latestId: string | null
 }) {
   const frame: Frame = candidate
   const [draft, setDraft] = useState<Draft>(() =>
@@ -163,16 +238,21 @@ function ConfirmEditor({
   const errors = validateDraft(draft, frame)
   const locked = task.status !== "waiting_for_review"
   const dispatch = confirmed?.tracking_dispatch
+  const canReplay = !!confirmed && replayable(attempt.current, confirmed)
 
-  function send(input: ConfirmationInput) {
-    const payload = JSON.stringify(input)
-    // Same payload keeps its key so a retry replays instead of duplicating.
-    if (attempt.current?.payload !== payload)
-      attempt.current = { payload, key: newUuid() }
-    writeAttempt(task.id, attempt.current)
+  function post(next: Attempt) {
+    attempt.current = next
+    writeAttempt(task.id, next)
     confirm.mutate(
-      { input, idempotencyKey: attempt.current.key },
       {
+        input: JSON.parse(next.payload) as ConfirmationInput,
+        idempotencyKey: next.key,
+      },
+      {
+        onSuccess: (saved) => {
+          attempt.current = { ...next, confirmationId: saved.id }
+          writeAttempt(task.id, attempt.current)
+        },
         onError: (error) => {
           if (apiProblem(error).code === "idempotency_conflict") {
             attempt.current = null
@@ -184,22 +264,29 @@ function ConfirmEditor({
   }
 
   function submit() {
-    send({
+    const payload = JSON.stringify({
       task_id: task.id,
       candidate_version: candidate.candidate_version,
-      expected_confirmation_id: task.confirmation_id ?? confirmed?.id ?? null,
+      // The server compares against the project/video latest, whichever task
+      // produced it.
+      expected_confirmation_id: latestId,
       seed: draft.seed,
       pool: draft.pool,
       marks: draft.marks,
-    })
+    } satisfies ConfirmationInput)
+    // Same payload keeps its key so a retry replays instead of duplicating.
+    post(
+      attempt.current?.payload === payload
+        ? attempt.current
+        : { payload, key: newUuid() },
+    )
   }
 
-  // Redispatching must replay the saved request verbatim (same key and
-  // payload), never create a second confirmation.
+  // Redispatching replays the saved request verbatim (same key and payload);
+  // without it there is nothing to replay, and a new key would be a new
+  // confirmation rather than this version's dispatch.
   function retryDispatch() {
-    const stored = attempt.current
-    if (stored) send(JSON.parse(stored.payload) as ConfirmationInput)
-    else submit()
+    if (canReplay && attempt.current) post(attempt.current)
   }
 
   return (
@@ -298,16 +385,22 @@ function ConfirmEditor({
             {confirmed.tracking_dispatch.error_code &&
               `（${confirmed.tracking_dispatch.error_code}）`}
           </p>
-          {confirmed.tracking_dispatch.status !== "accepted" && !locked && (
-            <button
-              type="button"
-              className="rounded border px-3 py-1"
-              disabled={confirm.isPending}
-              onClick={retryDispatch}
-            >
-              重试下发
-            </button>
-          )}
+          {confirmed.tracking_dispatch.status !== "accepted" &&
+            !locked &&
+            (canReplay ? (
+              <button
+                type="button"
+                className="rounded border px-3 py-1"
+                disabled={confirm.isPending}
+                onClick={retryDispatch}
+              >
+                重试下发
+              </button>
+            ) : (
+              <p className="text-amber-700">
+                本浏览器会话没有该版本的原始提交记录，无法在此重试下发；需在最初提交确认的浏览器会话中恢复下发。重新确认会创建新的版本，不会恢复这一版本。
+              </p>
+            ))}
           <p className="text-sm text-muted-foreground">
             预标注确认不等于发布：追踪完成后仍需人工复核结果（tracking_ok）再发布到项目。
           </p>

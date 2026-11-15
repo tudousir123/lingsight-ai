@@ -38,12 +38,47 @@ type Confirmation = {
   tracking_dispatch: { status: string; error_code: string | null }
 }
 
-// 可控的平台替身：候选、确认持久化、任务状态都在这里，且记录对旧 /confirm 的任何调用。
+type MockTask = { id: string; status: string; confirmation_id: string | null }
+
+const CONFIRMED_ID = "22222222-2222-4222-8222-222222222222"
+
+function confirmationFor(
+  id: string,
+  taskId: string,
+  dispatch: Confirmation["tracking_dispatch"],
+  geometry: { seed: unknown; pool: unknown; marks: unknown } = {
+    seed: { frame: 7, x: 450, y: 350 },
+    pool: { cx: 500, cy: 400, radius: 300 },
+    marks: [],
+  },
+): Confirmation {
+  return {
+    id,
+    project_id: PROJECT,
+    video_id: VIDEO,
+    task_id: taskId,
+    candidate_version: VERSION,
+    video_sha256: "b".repeat(64),
+    width: W,
+    height: H,
+    frame_count: 300,
+    ...geometry,
+    confirmed_by: "user",
+    confirmed_at: "2026-11-15T01:02:03Z",
+    tracking_dispatch: dispatch,
+  }
+}
+
+// 可控的平台替身：候选、确认持久化（按 project/video 取最新，或按 confirmation_id 取指定版本）、
+// 任务状态都在这里，且记录对旧 /confirm 的任何调用。
 async function mockPlatform(
   page: Page,
   options: {
     dispatch?: "pending" | "accepted" | "failed"
     confirmError?: { status: number; code: string }
+    tasks?: MockTask[]
+    confirmations?: Confirmation[]
+    confirmationReadError?: number
   } = {},
 ) {
   await page.addInitScript(() => {
@@ -81,19 +116,24 @@ async function mockPlatform(
     },
   ])
   const state = {
-    status: "waiting_for_review",
-    confirmation: null as Confirmation | null,
+    tasks: options.tasks ?? [
+      { id: TASK, status: "waiting_for_review", confirmation_id: null },
+    ],
+    // 末尾即 project/video 的最新确认。
+    confirmations: [...(options.confirmations ?? [])],
+    confirmationReadError: options.confirmationReadError ?? null,
+    confirmationReads: [] as (string | null)[],
     posts: [] as { body: Record<string, unknown>; key: string }[],
     legacyConfirmCalls: 0,
   }
-  const task = () => ({
-    id: TASK,
+  const toTask = (task: MockTask) => ({
+    id: task.id,
     project_id: PROJECT,
     video_id: VIDEO,
     source_kind: "user_upload",
-    confirmation_id: state.confirmation?.id ?? null,
-    status: state.status,
-    stage: state.status === "waiting_for_review" ? "preannotation" : "tracking",
+    confirmation_id: task.confirmation_id,
+    status: task.status,
+    stage: task.status === "waiting_for_review" ? "preannotation" : "tracking",
     error: null,
     review: null,
   })
@@ -111,7 +151,7 @@ async function mockPlatform(
     if (url.pathname.includes("/artifacts/candidate.jpg"))
       return route.fulfill({ contentType: "image/png", body: PNG })
     if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
-      return route.fulfill({ json: [task()] })
+      return route.fulfill({ json: state.tasks.map(toTask) })
     return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
   })
   const base = `**/api/v1/projects/${PROJECT}/videos/${VIDEO}`
@@ -120,7 +160,7 @@ async function mockPlatform(
       json: {
         project_id: PROJECT,
         video_id: VIDEO,
-        task_id: TASK,
+        task_id: new URL(route.request().url()).searchParams.get("task_id"),
         candidate_version: VERSION,
         video_sha256: "b".repeat(64),
         frame_index: 7,
@@ -140,20 +180,31 @@ async function mockPlatform(
       },
     }),
   )
-  await page.route(`${base}/preannotation-confirmation`, (route) =>
-    state.confirmation
-      ? route.fulfill({ json: state.confirmation })
-      : route.fulfill({
-          status: 404,
-          json: { detail: { code: "resource_not_found", message: "x" } },
-        }),
-  )
+  const notFound = (route: Route) =>
+    route.fulfill({
+      status: 404,
+      json: { detail: { code: "resource_not_found", message: "x" } },
+    })
+  await page.route(`${base}/preannotation-confirmation**`, (route) => {
+    const wanted = new URL(route.request().url()).searchParams.get(
+      "confirmation_id",
+    )
+    state.confirmationReads.push(wanted)
+    if (state.confirmationReadError)
+      return route.fulfill({
+        status: state.confirmationReadError,
+        json: { detail: { code: "service_unavailable", message: "x" } },
+      })
+    const found = wanted
+      ? state.confirmations.find((c) => c.id === wanted)
+      : state.confirmations.at(-1)
+    return found ? route.fulfill({ json: found }) : notFound(route)
+  })
   await page.route(`${base}/preannotation-confirmations`, (route: Route) => {
     const body = route.request().postDataJSON()
-    state.posts.push({
-      body,
-      key: route.request().headers()["idempotency-key"] ?? "",
-    })
+    const key = route.request().headers()["idempotency-key"] ?? ""
+    const replay = state.posts.some((post) => post.key === key)
+    state.posts.push({ body, key })
     if (options.confirmError)
       return route.fulfill({
         status: options.confirmError.status,
@@ -161,47 +212,50 @@ async function mockPlatform(
           detail: { code: options.confirmError.code, message: "server" },
         },
       })
-    const replay =
-      state.confirmation &&
-      state.posts.filter(
-        (post) => post.key === state.posts[state.posts.length - 1].key,
-      ).length > 1
-    state.confirmation = {
-      id: "22222222-2222-4222-8222-222222222222",
-      project_id: PROJECT,
-      video_id: VIDEO,
-      task_id: TASK,
-      candidate_version: body.candidate_version,
-      video_sha256: "b".repeat(64),
-      width: W,
-      height: H,
-      frame_count: 300,
+    const task = state.tasks.find((t) => t.id === body.task_id)
+    if (!task) return notFound(route)
+    // 与后端一致：新确认必须带 project/video 的最新确认 ID。
+    if (
+      !replay &&
+      (state.confirmations.at(-1)?.id ?? null) !== body.expected_confirmation_id
+    )
+      return route.fulfill({
+        status: 409,
+        json: { detail: { code: "stale_version", message: "server" } },
+      })
+    const id = replay
+      ? (task.confirmation_id as string)
+      : state.confirmations.length
+        ? `3333333${state.confirmations.length}-3333-4333-8333-333333333333`
+        : CONFIRMED_ID
+    const dispatch = {
+      status: replay ? "accepted" : (options.dispatch ?? "pending"),
+      error_code:
+        !replay && options.dispatch === "failed" ? "upstream_error" : null,
+    }
+    const saved = confirmationFor(id, task.id, dispatch, {
       seed: body.seed,
       pool: body.pool,
       marks: body.marks,
-      confirmed_by: "user",
-      confirmed_at: "2026-11-15T01:02:03Z",
-      tracking_dispatch: {
-        status: replay ? "accepted" : (options.dispatch ?? "pending"),
-        error_code:
-          !replay && options.dispatch === "failed" ? "upstream_error" : null,
-      },
-    }
-    state.status =
-      state.confirmation.tracking_dispatch.status === "failed"
-        ? "waiting_for_review"
-        : "queued"
-    return route.fulfill({
-      status: replay ? 200 : 201,
-      json: state.confirmation,
     })
+    state.confirmations = [
+      ...state.confirmations.filter((c) => c.id !== id),
+      saved,
+    ]
+    task.confirmation_id = id
+    task.status = dispatch.status === "failed" ? "waiting_for_review" : "queued"
+    return route.fulfill({ status: replay ? 200 : 201, json: saved })
   })
   return state
 }
 
-async function openTask(page: Page) {
+async function openTask(page: Page, taskId?: string) {
   await page.goto(`/inference?project_id=${PROJECT}`)
-  await page.getByRole("button", { name: /等待预标注确认/ }).click()
+  await page
+    .getByRole("button", {
+      name: taskId ? new RegExp(taskId) : /等待预标注确认/,
+    })
+    .click()
   await expect(page.getByRole("img", { name: "预标注参考帧" })).toBeVisible()
 }
 
@@ -264,9 +318,7 @@ test("画布按候选帧原像素叠加，拖动起点后提交的是原视频�
   ])
 
   // 服务器上的确认版本被读回并显示，状态为待下发而非追踪完成。
-  await expect(
-    page.getByText("22222222-2222-4222-8222-222222222222"),
-  ).toBeVisible()
+  await expect(page.getByText(CONFIRMED_ID)).toBeVisible()
   await expect(page.getByText("追踪尚未下发")).toBeVisible()
   await expect(page.getByText(/预标注确认不等于发布/)).toBeVisible()
   await page
@@ -277,9 +329,7 @@ test("画布按候选帧原像素叠加，拖动起点后提交的是原视频�
   // 刷新后仍能从服务器读到同一确认版本（草稿不在浏览器里）。
   await page.reload()
   await page.getByRole("button", { name: /排队中/ }).click()
-  await expect(
-    page.getByText("22222222-2222-4222-8222-222222222222"),
-  ).toBeVisible()
+  await expect(page.getByText(CONFIRMED_ID)).toBeVisible()
   expect(state.legacyConfirmCalls).toBe(0)
 })
 
@@ -362,4 +412,137 @@ test("下发失败可用同一幂等键重试；accepted 不代表追踪完成",
   expect(state.posts[1].body).toEqual(state.posts[0].body)
   await expect(page.getByText(/并不代表追踪完成/)).toBeVisible()
   expect(state.legacyConfirmCalls).toBe(0)
+})
+
+const T1 = "44444444-4444-4444-8444-444444444444"
+const C1 = "55555555-5555-4555-8555-555555555555"
+const C2 = "66666666-6666-4666-8666-666666666666"
+// 与候选（起点 300,300）明显不同，用来判断草稿是否误用了别的任务的几何。
+const C1_GEOMETRY = {
+  seed: { frame: 7, x: 610, y: 480 },
+  pool: { cx: 500, cy: 400, radius: 250 },
+  marks: [],
+}
+
+test("同一视频的新任务以最新确认 C1 作乐观锁，但不复用旧任务的几何", async ({
+  page,
+}) => {
+  const state = await mockPlatform(page, {
+    tasks: [
+      { id: T1, status: "succeeded", confirmation_id: C1 },
+      { id: TASK, status: "waiting_for_review", confirmation_id: null },
+    ],
+    confirmations: [
+      confirmationFor(
+        C1,
+        T1,
+        { status: "accepted", error_code: null },
+        C1_GEOMETRY,
+      ),
+    ],
+  })
+  await openTask(page, TASK)
+  // 草稿来自本任务候选，不是 T1 的确认；也不把 C1 当作本任务的已确认版本。
+  await expect(page.getByLabel("小鼠 X")).toHaveValue("300")
+  await expect(page.getByText(C1)).toHaveCount(0)
+  await page.getByRole("button", { name: "确认并开始追踪" }).click()
+  await expect.poll(() => state.posts.length).toBe(1)
+  expect(state.posts[0].body).toMatchObject({
+    task_id: TASK,
+    expected_confirmation_id: C1,
+    seed: { frame: 7, x: 300, y: 300 },
+  })
+  const saved = state.confirmations.at(-1)?.id as string
+  expect(saved).not.toBe(C1)
+  await expect(page.getByText(saved)).toBeVisible()
+  await expect(page.getByText(/确认失败/)).toHaveCount(0)
+})
+
+test("重新打开旧任务时按 task.confirmation_id 读取并显示它自己的版本 C1，而非最新 C2", async ({
+  page,
+}) => {
+  const state = await mockPlatform(page, {
+    tasks: [
+      { id: T1, status: "succeeded", confirmation_id: C1 },
+      { id: TASK, status: "queued", confirmation_id: C2 },
+    ],
+    confirmations: [
+      confirmationFor(
+        C1,
+        T1,
+        { status: "accepted", error_code: null },
+        C1_GEOMETRY,
+      ),
+      confirmationFor(C2, TASK, { status: "accepted", error_code: null }),
+    ],
+  })
+  await openTask(page, T1)
+  await expect(page.getByText(C1)).toBeVisible()
+  await expect(page.getByText(C2)).toHaveCount(0)
+  await expect(page.getByLabel("小鼠 X")).toHaveValue("610")
+  expect(state.confirmationReads).toContain(C1)
+})
+
+test("确认读取 503 显示可重试的错误，不当作未确认，也不能提交", async ({
+  page,
+}) => {
+  const state = await mockPlatform(page, { confirmationReadError: 503 })
+  await page.goto(`/inference?project_id=${PROJECT}`)
+  await page.getByRole("button", { name: /等待预标注确认/ }).click()
+  const alert = page.getByRole("alert").filter({ hasText: "确认" })
+  await expect(alert).toContainText(/无法读取已保存的确认/)
+  await expect(
+    page.getByRole("button", { name: "确认并开始追踪" }),
+  ).toHaveCount(0)
+  state.confirmationReadError = null
+  await alert.getByRole("button", { name: "重试" }).click()
+  await expect(
+    page.getByRole("button", { name: "确认并开始追踪" }),
+  ).toBeEnabled()
+  expect(state.posts).toHaveLength(0)
+})
+
+for (const dispatch of [
+  { status: "pending", error_code: "dispatch_outcome_unknown" },
+  { status: "failed", error_code: "upstream_error" },
+] as const) {
+  test(`本浏览器没有原始请求时（${dispatch.status}），不提供伪装成原版本的重试下发`, async ({
+    page,
+  }) => {
+    const state = await mockPlatform(page, {
+      tasks: [
+        {
+          id: TASK,
+          status: "waiting_for_review",
+          confirmation_id: CONFIRMED_ID,
+        },
+      ],
+      confirmations: [confirmationFor(CONFIRMED_ID, TASK, dispatch)],
+    })
+    await openTask(page, TASK)
+    await expect(page.getByText(CONFIRMED_ID)).toBeVisible()
+    await expect(
+      page.getByText(/需在最初提交确认的浏览器会话中恢复下发/),
+    ).toBeVisible()
+    await expect(page.getByRole("button", { name: "重试下发" })).toHaveCount(0)
+    expect(state.posts).toHaveLength(0)
+  })
+}
+
+test("同一会话保存了原始请求时，重试下发原样重放原键与原载荷并读回服务器版本", async ({
+  page,
+}) => {
+  const state = await mockPlatform(page, { dispatch: "failed" })
+  await openTask(page)
+  await page.getByRole("button", { name: "确认并开始追踪" }).click()
+  await expect(page.getByText(/下发追踪失败/)).toBeVisible()
+  // 刷新后仍在同一会话：sessionStorage 中的原始请求可用于重放。
+  await page.reload()
+  await page.getByRole("button", { name: new RegExp(TASK) }).click()
+  await expect(page.getByText(CONFIRMED_ID)).toBeVisible()
+  await page.getByRole("button", { name: "重试下发" }).click()
+  await expect.poll(() => state.posts.length).toBe(2)
+  expect(state.posts[1]).toEqual(state.posts[0])
+  await expect(page.getByText(/并不代表追踪完成/)).toBeVisible()
+  await expect(page.getByText(CONFIRMED_ID)).toBeVisible()
 })

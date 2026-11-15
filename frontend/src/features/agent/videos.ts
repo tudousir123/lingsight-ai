@@ -107,8 +107,19 @@ export const workspaceKey = (userId?: string) =>
   ["workspace-info", userId] as const
 export const projectVideosKey = (projectId: string) =>
   ["project-videos", projectId] as const
-export const confirmationKey = (projectId: string, videoId: string) =>
-  ["preannotation-confirmation", projectId, videoId] as const
+// confirmationId null = the project/video latest (the optimistic-lock base);
+// an ID reads that immutable version.
+export const confirmationKey = (
+  projectId: string,
+  videoId: string,
+  confirmationId: string | null,
+) =>
+  [
+    "preannotation-confirmation",
+    projectId,
+    videoId,
+    confirmationId ?? "latest",
+  ] as const
 
 export function hasLibraryScope(workspace?: WorkspaceInfo): boolean {
   return (
@@ -201,11 +212,13 @@ export async function fetchPreannotation(
 export async function fetchConfirmation(
   projectId: string,
   videoId: string,
+  confirmationId: string | null,
   signal?: AbortSignal,
 ) {
   return (
     await PreannotationsService.getConfirmation({
       path: { project_id: projectId, video_id: videoId },
+      query: confirmationId ? { confirmation_id: confirmationId } : undefined,
       signal,
     })
   ).data as unknown as Confirmation
@@ -232,7 +245,15 @@ export function useConfirmPreannotation(projectId: string, videoId: string) {
         })
       ).data as unknown as Confirmation,
     onSuccess: (confirmation) => {
-      client.setQueryData(confirmationKey(projectId, videoId), confirmation)
+      // A replayed key may return an older version, so only its own ID key is
+      // seeded; the latest is re-read from the server.
+      client.setQueryData(
+        confirmationKey(projectId, videoId, confirmation.id),
+        confirmation,
+      )
+      void client.invalidateQueries({
+        queryKey: ["preannotation-confirmation", projectId, videoId],
+      })
       void client.invalidateQueries({ queryKey: ["inference", "tasks"] })
     },
   })

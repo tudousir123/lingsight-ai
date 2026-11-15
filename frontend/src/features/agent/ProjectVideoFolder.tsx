@@ -78,7 +78,8 @@ function FolderBrowser({
     (!sourceId ? sources.data?.[0] : undefined)
   const currentSource = source?.id ?? sourceId
   const listing = useQuery({
-    queryKey: ["video-folder", userId, currentSource, directory],
+    // The listing is scoped by the project's saved folder, so it is per project.
+    queryKey: ["video-folder", userId, project.id, currentSource, directory],
     enabled: !!userId && !!source?.available,
     queryFn: ({ signal }) =>
       json<Entry[]>(
@@ -87,6 +88,12 @@ function FolderBrowser({
       ),
     retry: false,
   })
+  // The listing only serves the saved project folder (404 outside it, 403 when
+  // unauthorized). An authorized scope outside it can still be saved: the PUT
+  // checks authorization itself and only then opens the new scope.
+  const outsideSaved =
+    apiProblem(listing.error).status === 404 &&
+    !(saved?.source_id === currentSource && (saved.path ?? "") === directory)
   const save = useMutation({
     mutationFn: async () =>
       (
@@ -237,18 +244,19 @@ function FolderBrowser({
             type="button"
             className="project-action"
             disabled={
-              // 项目尚无文件夹时目录接口只认已保存的文件夹，必须先保存根目录。
               !source?.available ||
-              !(
-                listing.isSuccess ||
-                (!saved && apiProblem(listing.error).status === 404)
-              ) ||
+              !(listing.isSuccess || outsideSaved) ||
               save.isPending
             }
             onClick={() => save.mutate()}
           >
             {save.isPending ? "正在保存…" : "使用此文件夹"}
           </button>
+          {saved && outsideSaved && (
+            <p className="text-sm text-muted-foreground">
+              该文件夹不在当前已保存的项目文件夹内，保存后才能浏览其中的视频；保存时会校验你对它的访问权限。
+            </p>
+          )}
           {saved && (
             <button
               type="button"
@@ -289,7 +297,7 @@ function FolderBrowser({
         <p role="alert">已保存的视频来源当前不可用，请选择其他来源。</p>
       )}
       {source?.available && listing.isPending && <p>正在读取文件夹…</p>}
-      {listing.error && (saved || apiProblem(listing.error).status !== 404) && (
+      {listing.error && !outsideSaved && (
         <p role="alert">
           {listing.error.message}
           <button
