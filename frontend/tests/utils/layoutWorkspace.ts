@@ -50,6 +50,9 @@ export async function mockLayoutWorkspace(
     localStorage.setItem("access_token", "layout-test")
     localStorage.setItem("lingsight.onboarding-seen.v1", "1")
   })
+  // Registered first so the layout fixtures below (later routes win) replace
+  // its empty experiments stub.
+  const projects = stubProjectsApi(page, options.projects ?? layoutProjects)
   await page.route("**/api/v1/users/me", (route) =>
     route.fulfill({
       json: {
@@ -74,16 +77,15 @@ export async function mockLayoutWorkspace(
     const path = new URL(route.request().url()).pathname
     if (path.endsWith("/videos"))
       return route.fulfill({
-        json: {
-          items: [
-            { type: "directory", name: "0804", path: "0804" },
-            { type: "video", name: "test.mp4", id: "one" },
-          ],
-        },
+        json: [
+          { type: "directory", name: "0804", path: "0804" },
+          { type: "video", name: "test.mp4", id: "one" },
+        ],
       })
-    return route.fulfill({ json: { items: [] } })
+    // The inference list endpoints answer bare arrays.
+    return route.fulfill({ json: [] })
   })
-  return stubProjectsApi(page, options.projects ?? layoutProjects)
+  return projects
 }
 
 /** A short synthetic 4:3 WebM, as bytes that can be fed to the file input. */

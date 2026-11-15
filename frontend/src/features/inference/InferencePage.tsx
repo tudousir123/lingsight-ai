@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { z } from "zod"
+import { Link } from "@tanstack/react-router"
+import { useRef, useState } from "react"
 import { PageHeader } from "@/components/Common/PageHeader"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,10 +15,25 @@ import {
   usePublishResult,
   useWorkspaceProjects,
 } from "@/features/agent/projects"
+import {
+  formatBytes,
+  hasLibraryScope,
+  type ProjectVideo,
+  useProjectVideos,
+  useWorkspaceInfo,
+} from "@/features/agent/videos"
 import { inferenceArtifactUrl } from "@/features/inference/artifacts"
-import type { Entry, Mark, Task } from "@/features/inference/contract"
+import type { Entry, Task } from "@/features/inference/contract"
+import { useTrialByVideoName } from "@/features/trials/videoTrial"
+import {
+  ApiRequestError,
+  problemFromResponse,
+  problemText,
+} from "@/lib/apiError"
 import { authHeaders } from "@/lib/credentials"
 import { inferenceGatewayBase, inferenceRoutes } from "@/lib/upstreamRoutes.gen"
+import { newUuid } from "@/lib/uuid"
+import { PreannotationConfirm } from "./PreannotationConfirm"
 
 const labels: Record<string, string> = {
   queued: "排队中",
@@ -36,104 +51,50 @@ const stageLabels: Record<string, string> = {
   overlay: "生成叠加视频",
 }
 
-const tasksKey = ["inference", "tasks"] as const
-const videosKey = (directory: string, sourceId?: string) =>
-  ["inference", "videos", directory, sourceId ?? null] as const
-
-type NumericDraft = Record<string, string>
-const toDraft = (values: Record<string, number>): NumericDraft =>
-  Object.fromEntries(Object.entries(values).map(([k, v]) => [k, String(v)]))
-
-// 清空输入框时不能变成 0：状态保存原始字符串，渲染与提交前再校验。
-function numberError(raw: string, integer = false): string | null {
-  if (raw.trim() === "") return "请填写数值"
-  const value = Number(raw)
-  if (!Number.isFinite(value)) return "请输入有效数字"
-  if (value < 0) return "不能小于 0"
-  if (integer && !Number.isInteger(value)) return "需为整数"
-  return null
-}
-const numberOrZero = (raw: string) => (numberError(raw) ? 0 : Number(raw))
-
-const pointSchema = z.tuple([z.number().finite(), z.number().finite()])
-const marksSchema = z.array(
-  z.object({
-    label: z.string(),
-    polygon: z.array(pointSchema).nullable(),
-    confidence: z.number().finite().optional(),
-  }),
-)
-
-function parseMarks(
-  text: string,
-): { value: Mark[]; error: null } | { value: null; error: string } {
-  try {
-    const parsed: unknown = JSON.parse(text)
-    if (!Array.isArray(parsed)) {
-      return { value: null, error: "轮廓需为 JSON 数组" }
-    }
-    const checked = marksSchema.safeParse(parsed)
-    if (!checked.success) {
-      const issue = checked.error.issues[0]
-      const where = issue.path.length
-        ? `（第 ${Number(issue.path[0]) + 1} 项）`
-        : ""
-      return {
-        value: null,
-        error: `轮廓格式有误${where}：每项需含字符串 label 和 polygon（[x, y] 数字点数组或 null）`,
-      }
-    }
-    // 返回原始解析结果而非 zod 输出，避免静默丢弃服务端附带的额外字段。
-    return { value: parsed as Mark[], error: null }
-  } catch (e) {
-    return {
-      value: null,
-      error: `JSON 格式有误：${e instanceof Error ? e.message : "无法解析"}`,
-    }
-  }
-}
+const tasksKey = (projectId?: string) =>
+  ["inference", "tasks", projectId ?? null] as const
+const videosKey = (
+  projectId: string | undefined,
+  directory: string,
+  sourceId?: string,
+) => ["inference", "videos", projectId, directory, sourceId ?? null] as const
 
 async function request<T>(
   path: string,
   data?: unknown,
   signal?: AbortSignal,
+  idempotencyKey?: string,
 ): Promise<T> {
   const response = await fetch(`${inferenceGatewayBase}/${path}`, {
     method: data === undefined ? "GET" : "POST",
     signal,
     headers: {
       "Content-Type": "application/json",
+      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       ...authHeaders(),
     },
     ...(data === undefined ? {} : { body: JSON.stringify(data) }),
   })
   if (!response.ok) {
-    const body = await response.json().catch(() => ({}))
-    throw new Error(
-      typeof body.detail === "string"
-        ? body.detail
-        : `请求失败 (${response.status})`,
-    )
+    throw new ApiRequestError(await problemFromResponse(response))
   }
   return response.json() as Promise<T>
 }
+
 export function InferencePage({
+  projectId,
   sourceId,
   directory,
+  onProjectChange,
   onDirectoryChange,
 }: {
+  projectId?: string
   sourceId?: string
-  directory: string
+  directory?: string
+  onProjectChange: (projectId: string | undefined) => void
   onDirectoryChange: (directory: string) => void
 }) {
   const [current, setCurrent] = useState<Task | null>(null)
-  const [seed, setSeed] = useState<NumericDraft>(
-    toDraft({ frame: 0, x: 0, y: 0 }),
-  )
-  const [pool, setPool] = useState<NumericDraft>(
-    toDraft({ cx: 0, cy: 0, radius: 0 }),
-  )
-  const [marks, setMarks] = useState("[]")
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState("")
@@ -146,69 +107,77 @@ export function InferencePage({
   const publishResult = usePublishResult()
   const [publishNote, setPublishNote] = useState("")
   const [publishError, setPublishError] = useState("")
+  // A start retried after an ambiguous failure replays the same key instead
+  // of creating a second task.
+  const startKeys = useRef(new Map<string, string>())
 
-  const initializedTask = useRef<string | null>(null)
   const queryClient = useQueryClient()
+  const workspace = useWorkspaceInfo()
+  const project = projects.data?.find((item) => item.id === projectId)
+  const folder = project?.video_folder ?? null
+  const libraryAllowed = hasLibraryScope(workspace.data) && !!folder
+  const folderSource = sourceId ?? folder?.source_id
+  const folderDirectory = directory ?? folder?.path ?? ""
+  const uploads = useProjectVideos(project?.id)
   const videosQuery = useQuery({
-    queryKey: videosKey(directory, sourceId),
+    queryKey: videosKey(project?.id, folderDirectory, folderSource),
+    enabled: libraryAllowed,
     queryFn: ({ signal }) =>
-      request<{ items: Entry[] }>(
-        `${inferenceRoutes.videos()}?${new URLSearchParams({ path: directory, ...(sourceId ? { source_id: sourceId } : {}) })}`,
+      request<Entry[]>(
+        `${inferenceRoutes.videos()}?${new URLSearchParams({
+          path: folderDirectory,
+          project_id: project?.id ?? "",
+          ...(folderSource ? { source_id: folderSource } : {}),
+        })}`,
         undefined,
         signal,
       ),
     retry: false,
   })
   const tasksQuery = useQuery({
-    queryKey: tasksKey,
+    queryKey: tasksKey(project?.id),
+    enabled: !projects.isPending,
     queryFn: ({ signal }) =>
-      request<{ items: Task[] }>(inferenceRoutes.tasks(), undefined, signal),
+      request<Task[]>(
+        project
+          ? `${inferenceRoutes.tasks()}?${new URLSearchParams({ project_id: project.id })}`
+          : inferenceRoutes.tasks(),
+        undefined,
+        signal,
+      ),
     refetchInterval: 3000,
     // 页面隐藏时不轮询；回到前台由 refetchOnWindowFocus 立即补一次。
     refetchIntervalInBackground: false,
     retry: false,
   })
-  const entries = videosQuery.data?.items ?? []
-  const tasks = tasksQuery.data?.items ?? []
-  const loadError = (videosQuery.error ?? tasksQuery.error)?.message ?? ""
-  const shownError = error || loadError
-  const tasksData = tasksQuery.data
-  useEffect(() => {
-    if (!tasksData) return
-    setCurrent((old) =>
-      old ? (tasksData.items.find((t) => t.id === old.id) ?? old) : null,
-    )
-  }, [tasksData])
-  const loadTasks = () => queryClient.invalidateQueries({ queryKey: tasksKey })
-  const marksResult = useMemo(() => parseMarks(marks), [marks])
-  const seedErrors = {
-    frame: numberError(seed.frame ?? "", true),
-    x: numberError(seed.x ?? ""),
-    y: numberError(seed.y ?? ""),
-  }
-  const poolErrors = {
-    cx: numberError(pool.cx ?? ""),
-    cy: numberError(pool.cy ?? ""),
-    radius: numberError(pool.radius ?? ""),
-  }
-  const formValid =
-    marksResult.error === null &&
-    ![...Object.values(seedErrors), ...Object.values(poolErrors)].some(Boolean)
-  useEffect(() => {
-    if (current?.status !== "waiting_for_review" || !current.candidate) return
-    if (initializedTask.current === current.id) return
-    initializedTask.current = current.id
-    const c = current.candidate
-    setSeed(toDraft(c.seed ?? { frame: 0, x: 0, y: 0 }))
-    setPool(toDraft(c.pool ?? { cx: 0, cy: 0, radius: 0 }))
-    setMarks(
-      JSON.stringify(
-        c.marks.map((m) => ({ label: m.label, polygon: m.polygon ?? [] })),
-        null,
-        2,
-      ),
-    )
-  }, [current])
+  const entries = videosQuery.data ?? []
+  const tasks = tasksQuery.data ?? []
+  const loadError = [
+    projects.error,
+    uploads.error,
+    videosQuery.error,
+    tasksQuery.error,
+  ]
+    .filter(Boolean)
+    .map((item) => problemText(item, "加载失败，请稍后重试。"))[0]
+  const shownError = error || loadError || ""
+  // Keep the open task fresh from the polled list.
+  const live = current
+    ? (tasks.find((task) => task.id === current.id) ?? current)
+    : null
+  const loadTasks = () =>
+    queryClient.invalidateQueries({ queryKey: ["inference", "tasks"] })
+
+  const currentVideo = live
+    ? uploads.data?.find((video) => video.video_id === live.video_id)
+    : undefined
+  const libraryEntry = live
+    ? entries.find((entry) => entry.id === live.video_id)
+    : undefined
+  const trial = useTrialByVideoName(
+    libraryEntry?.name,
+    live?.source_kind !== "user_upload" && hasLibraryScope(workspace.data),
+  )
 
   async function act(operation: () => Promise<void>) {
     setBusy(true)
@@ -216,7 +185,7 @@ export function InferencePage({
     try {
       await operation()
     } catch (e) {
-      setError(e instanceof Error ? e.message : "操作失败")
+      setError(problemText(e, "操作失败"))
     } finally {
       setBusy(false)
     }
@@ -226,13 +195,36 @@ export function InferencePage({
     setCurrent(task)
     await loadTasks()
   }
+  async function start(videoId: string) {
+    if (!project) return
+    const key = startKeys.current.get(videoId) ?? newUuid()
+    startKeys.current.set(videoId, key)
+    try {
+      const task = await request<Task>(
+        inferenceRoutes.tasks(),
+        { project_id: project.id, video_id: videoId },
+        undefined,
+        key,
+      )
+      startKeys.current.delete(videoId)
+      setCurrent(task)
+      await loadTasks()
+    } catch (e) {
+      if (
+        e instanceof ApiRequestError &&
+        e.problem.code === "idempotency_conflict"
+      )
+        startKeys.current.delete(videoId)
+      throw e
+    }
+  }
   const inputClass =
     "w-full rounded-md border border-border bg-background px-2 py-1"
   return (
     <div className="agent-results-page space-y-6">
       <PageHeader
         title="视频推理"
-        description="选择实验视频，确认场景后生成小鼠轨迹和 v9 头尾结果。"
+        description="选择项目内的视频，确认场景后生成小鼠轨迹和 v9 头尾结果。"
       />
       {shownError && (
         <p
@@ -242,25 +234,134 @@ export function InferencePage({
           {shownError}
         </p>
       )}
+      <section className="rounded-xl border border-border p-5">
+        <label className="flex flex-wrap items-center gap-3">
+          <span className="text-xl font-medium">项目</span>
+          <select
+            aria-label="选择项目"
+            className="rounded-md border border-border bg-background px-2 py-1"
+            value={project?.id ?? ""}
+            disabled={projects.isPending || !projects.data?.length}
+            onChange={(event) => {
+              setCurrent(null)
+              onProjectChange(event.target.value || undefined)
+            }}
+          >
+            <option value="">请选择项目</option>
+            {(projects.data ?? []).map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {projects.isSuccess && !projects.data.length && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            还没有项目。视频必须先归入你的项目才能上传和推理：先在左侧栏“新建项目”，再到项目资料页上传视频。
+          </p>
+        )}
+        {projects.isSuccess && projects.data.length > 0 && !project && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            选择一个项目后显示该项目的视频。
+          </p>
+        )}
+      </section>
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-xl border border-border p-5">
-          <h2 className="text-xl font-medium">实验视频</h2>
-          <p className="my-2 text-sm text-muted-foreground">
-            {directory || "实验视频目录"}
-          </p>
-          {directory && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mb-3"
-              onClick={() =>
-                onDirectoryChange(directory.split("/").slice(0, -1).join("/"))
-              }
-            >
-              返回上一级
-            </Button>
+          <h2 className="text-xl font-medium">项目视频</h2>
+          {project && (
+            <>
+              <ul className="mt-3 max-h-80 space-y-2 overflow-auto">
+                {(uploads.data ?? []).map((video) => (
+                  <li
+                    key={video.video_id}
+                    className="flex items-center justify-between gap-3 border-b border-border pb-2"
+                  >
+                    <span className="break-all">
+                      🎞 {video.filename}
+                      <small className="block text-muted-foreground">
+                        上传 · {video.format.toUpperCase()} ·{" "}
+                        {formatBytes(video.bytes)}
+                      </small>
+                    </span>
+                    <Button
+                      type="button"
+                      disabled={busy}
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      aria-label={`开始推理 ${video.filename}`}
+                      onClick={() => void act(() => start(video.video_id))}
+                    >
+                      开始
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+              {uploads.isSuccess && !uploads.data.length && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  该项目还没有上传的视频。
+                  <Link
+                    className="ml-1 underline"
+                    to="/projects/$projectId"
+                    params={{ projectId: project.id }}
+                    search={{ view: "details" }}
+                  >
+                    到项目资料页上传
+                  </Link>
+                </p>
+              )}
+            </>
           )}
+        </section>
+        <section className="rounded-xl border border-border p-5">
+          <h2 className="text-xl font-medium">推理任务</h2>
+          <ul className="mt-3 max-h-80 space-y-2 overflow-auto">
+            {tasks.map((task) => (
+              <li key={task.id}>
+                <button
+                  type="button"
+                  className="w-full rounded-md border p-3 text-left"
+                  onClick={() => setCurrent(task)}
+                >
+                  <span className="font-medium">
+                    {labels[task.status] ?? task.status}
+                  </span>{" "}
+                  · {stageLabels[task.stage] ?? task.stage}
+                  <br />
+                  <small className="text-muted-foreground">{task.id}</small>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {tasksQuery.isSuccess && tasks.length === 0 && (
+            <p className="mt-3 text-sm text-muted-foreground">暂无推理任务</p>
+          )}
+        </section>
+      </div>
+      {libraryAllowed && (
+        <section className="rounded-xl border border-border p-5">
+          <h2 className="text-xl font-medium">已授权的实验视频目录</h2>
+          <p className="my-2 text-sm text-muted-foreground">
+            {folderDirectory || "实验视频目录"}
+          </p>
+          {folder &&
+            folderDirectory !== (folder.path ?? "") &&
+            folderDirectory.startsWith(folder.path ?? "") && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mb-3"
+                onClick={() =>
+                  onDirectoryChange(
+                    folderDirectory.split("/").slice(0, -1).join("/"),
+                  )
+                }
+              >
+                返回上一级
+              </Button>
+            )}
           <ul className="max-h-80 space-y-2 overflow-auto">
             {entries.map((entry) => (
               <li
@@ -299,20 +400,12 @@ export function InferencePage({
                     )}
                     <Button
                       type="button"
-                      disabled={busy}
+                      disabled={busy || !entry.id}
                       variant="outline"
                       size="sm"
+                      aria-label={`开始推理 ${entry.name}`}
                       onClick={() =>
-                        void act(async () => {
-                          const task = await request<Task>(
-                            inferenceRoutes.tasks(),
-                            {
-                              video_id: entry.id,
-                            },
-                          )
-                          setCurrent(task)
-                          await loadTasks()
-                        })
+                        entry.id && void act(() => start(entry.id as string))
                       }
                     >
                       开始
@@ -322,43 +415,26 @@ export function InferencePage({
               </li>
             ))}
           </ul>
-        </section>
-        <section className="rounded-xl border border-border p-5">
-          <h2 className="text-xl font-medium">推理任务</h2>
-          <ul className="mt-3 max-h-80 space-y-2 overflow-auto">
-            {tasks.map((task) => (
-              <li key={task.id}>
-                <button
-                  type="button"
-                  className="w-full rounded-md border p-3 text-left"
-                  onClick={() => setCurrent(task)}
-                >
-                  <span className="font-medium">
-                    {labels[task.status] ?? task.status}
-                  </span>{" "}
-                  · {stageLabels[task.stage] ?? task.stage}
-                  <br />
-                  <small className="text-muted-foreground">{task.id}</small>
-                </button>
-              </li>
-            ))}
-          </ul>
-          {tasks.length === 0 && (
-            <p className="mt-3 text-sm text-muted-foreground">暂无推理任务</p>
+          {videosQuery.isSuccess && entries.length === 0 && (
+            <p className="mt-3 text-sm text-muted-foreground">此目录为空。</p>
           )}
         </section>
-      </div>
-      {current && (
+      )}
+      {live && (
         <section className="rounded-xl border border-border p-5 space-y-4">
           <div>
             <h2 className="text-xl font-medium">
-              {labels[current.status] ?? current.status} ·{" "}
-              {stageLabels[current.stage] ?? current.stage}
+              {labels[live.status] ?? live.status} ·{" "}
+              {stageLabels[live.stage] ?? live.stage}
             </h2>
-            <p className="text-xs text-muted-foreground">
-              任务版本 {current.id}
-            </p>
-            {current.error && <p className="text-red-700">{current.error}</p>}
+            <p className="text-xs text-muted-foreground">任务版本 {live.id}</p>
+            <VideoLine
+              task={live}
+              upload={currentVideo}
+              entry={libraryEntry}
+              trial={trial.data ?? null}
+            />
+            {live.error && <p className="text-red-700">{live.error}</p>}
           </div>
           {[
             "queued",
@@ -366,21 +442,21 @@ export function InferencePage({
             "waiting_for_review",
             "failed",
             "interrupted",
-          ].includes(current.status) && (
+          ].includes(live.status) && (
             <Button
               type="button"
               variant="outline"
               disabled={busy}
               onClick={() =>
                 void act(() =>
-                  submit(inferenceRoutes.tasksByTaskIdCancel(current.id), {}),
+                  submit(inferenceRoutes.tasksByTaskIdCancel(live.id), {}),
                 )
               }
             >
               取消任务
             </Button>
           )}
-          {["failed", "interrupted", "cancelled"].includes(current.status) && (
+          {["failed", "interrupted", "cancelled"].includes(live.status) && (
             <Button
               type="button"
               variant="outline"
@@ -388,174 +464,23 @@ export function InferencePage({
               disabled={busy}
               onClick={() =>
                 void act(() =>
-                  submit(inferenceRoutes.tasksByTaskIdRetry(current.id), {}),
+                  submit(inferenceRoutes.tasksByTaskIdRetry(live.id), {}),
                 )
               }
             >
               重试当前阶段
             </Button>
           )}
-          {current.status === "waiting_for_review" && current.candidate && (
-            <div className="space-y-4">
-              <p>
-                请对照视频帧确认或补齐水池、四个标志物和小鼠起点。缺少隐藏平台标定仍可追踪。
-              </p>
-              {current.candidate.evidence.review_reasons.length > 0 && (
-                <p className="text-amber-700">
-                  需核对：{current.candidate.evidence.review_reasons.join("；")}
-                </p>
-              )}
-              <div className="relative max-w-3xl">
-                <img
-                  src={inferenceArtifactUrl(current.id, "candidate.jpg")}
-                  alt="预标注参考帧"
-                  className="w-full"
-                />
-                <svg
-                  aria-label="水池、小鼠起点和标志物候选"
-                  role="img"
-                  className="absolute inset-0 h-full w-full"
-                  viewBox={`0 0 ${current.candidate.width} ${current.candidate.height}`}
-                >
-                  <circle
-                    cx={numberOrZero(pool.cx ?? "")}
-                    cy={numberOrZero(pool.cy ?? "")}
-                    r={numberOrZero(pool.radius ?? "")}
-                    fill="none"
-                    stroke="#00d8ff"
-                    strokeWidth="4"
-                  />
-                  <circle
-                    cx={numberOrZero(seed.x ?? "")}
-                    cy={numberOrZero(seed.y ?? "")}
-                    r="10"
-                    fill="#ff3c6a"
-                  />
-                  {marksResult.value?.map((m, i) =>
-                    m.polygon && m.polygon.length >= 3 ? (
-                      <polygon
-                        key={`${m.label}-${i}`}
-                        points={m.polygon.map((p) => p.join(",")).join(" ")}
-                        fill="#ffda3040"
-                        stroke="#ffda30"
-                        strokeWidth="4"
-                      />
-                    ) : null,
-                  )}
-                </svg>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {(
-                  [
-                    ["起始帧", "frame"],
-                    ["小鼠 X", "x"],
-                    ["小鼠 Y", "y"],
-                  ] as const
-                ).map(([label, key]) => (
-                  <div key={key}>
-                    <label>
-                      {label}
-                      <input
-                        type="number"
-                        min="0"
-                        className={inputClass}
-                        value={seed[key]}
-                        aria-invalid={seedErrors[key] !== null}
-                        onChange={(e) =>
-                          setSeed({ ...seed, [key]: e.target.value })
-                        }
-                      />
-                    </label>
-                    {seedErrors[key] && (
-                      <p role="alert" className="text-sm text-red-700">
-                        {label}：{seedErrors[key]}
-                      </p>
-                    )}
-                  </div>
-                ))}
-                {(
-                  [
-                    ["水池中心 X", "cx"],
-                    ["水池中心 Y", "cy"],
-                    ["水池半径", "radius"],
-                  ] as const
-                ).map(([label, key]) => (
-                  <div key={key}>
-                    <label>
-                      {label}
-                      <input
-                        type="number"
-                        min="0"
-                        className={inputClass}
-                        value={pool[key]}
-                        aria-invalid={poolErrors[key] !== null}
-                        onChange={(e) =>
-                          setPool({ ...pool, [key]: e.target.value })
-                        }
-                      />
-                    </label>
-                    {poolErrors[key] && (
-                      <p role="alert" className="text-sm text-red-700">
-                        {label}：{poolErrors[key]}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <label className="block">
-                四个标志物的轮廓坐标（图像像素）
-                <textarea
-                  className={`${inputClass} mt-2 font-mono text-sm`}
-                  rows={10}
-                  value={marks}
-                  aria-invalid={marksResult.error !== null}
-                  onChange={(e) => setMarks(e.target.value)}
-                />
-              </label>
-              {marksResult.error && (
-                <p role="alert" className="text-sm text-red-700">
-                  {marksResult.error}
-                </p>
-              )}
-              <p className="text-sm text-muted-foreground">
-                每项填写 label 和 polygon，polygon 是至少三个 [x, y] 点。
-              </p>
-              <Button
-                type="button"
-                disabled={busy || !formValid}
-                onClick={() =>
-                  void act(async () => {
-                    if (!formValid || marksResult.value === null) return
-                    await submit(
-                      inferenceRoutes.tasksByTaskIdConfirm(current.id),
-                      {
-                        seed: {
-                          frame: Number(seed.frame),
-                          x: Number(seed.x),
-                          y: Number(seed.y),
-                        },
-                        pool: {
-                          cx: Number(pool.cx),
-                          cy: Number(pool.cy),
-                          radius: Number(pool.radius),
-                        },
-                        marks: marksResult.value,
-                      },
-                    )
-                  })
-                }
-              >
-                确认并开始追踪
-              </Button>
-            </div>
+          {(live.status === "waiting_for_review" || live.confirmation_id) && (
+            <PreannotationConfirm key={live.id} task={live} />
           )}
-          {current.status === "succeeded" && (
+          {live.status === "succeeded" && (
             <div className="space-y-3">
               {/* biome-ignore lint/a11y/useMediaCaption: 推理叠加视频不含音轨。 */}
               <video
                 controls
                 className="w-full max-w-3xl"
-                src={inferenceArtifactUrl(current.id, "overlay.mp4")}
+                src={inferenceArtifactUrl(live.id, "overlay.mp4")}
               />
               <p className="text-sm text-muted-foreground">
                 绿色为小鼠
@@ -564,38 +489,38 @@ export function InferencePage({
               <div className="flex flex-wrap gap-4">
                 <a
                   className="underline"
-                  href={inferenceArtifactUrl(current.id, "tracking.json")}
+                  href={inferenceArtifactUrl(live.id, "tracking.json")}
                 >
                   下载轨迹与 mask
                 </a>
                 <a
                   className="underline"
-                  href={inferenceArtifactUrl(current.id, "keypoints.json")}
+                  href={inferenceArtifactUrl(live.id, "keypoints.json")}
                 >
                   下载 v9 关键点
                 </a>
                 <a
                   className="underline"
-                  href={inferenceArtifactUrl(current.id, "provenance.json")}
+                  href={inferenceArtifactUrl(live.id, "provenance.json")}
                 >
                   下载来源记录
                 </a>
               </div>
               <p>隐藏平台未标定时，上台事件与相关指标不可用。</p>
-              {current.review ? (
+              {live.review ? (
                 <div className="space-y-2">
                   <p>
-                    结果已核对：{current.review.tracking_ok ? "通过" : "需复查"}{" "}
-                    {current.review.note}
+                    结果已核对：{live.review.tracking_ok ? "通过" : "需复查"}{" "}
+                    {live.review.note}
                   </p>
-                  {current.review.tracking_ok && (
+                  {live.review.tracking_ok && (
                     <Button
                       type="button"
                       disabled={busy}
                       onClick={() => {
                         setPublishError("")
                         setPublishNote("")
-                        setPublishingTask(current)
+                        setPublishingTask(live)
                       }}
                     >
                       发布到项目
@@ -619,13 +544,10 @@ export function InferencePage({
                     className="mt-2"
                     onClick={() =>
                       void act(() =>
-                        submit(
-                          inferenceRoutes.tasksByTaskIdReview(current.id),
-                          {
-                            tracking_ok: true,
-                            note,
-                          },
-                        ),
+                        submit(inferenceRoutes.tasksByTaskIdReview(live.id), {
+                          tracking_ok: true,
+                          note,
+                        }),
                       )
                     }
                   >
@@ -638,13 +560,10 @@ export function InferencePage({
                     className="ml-2"
                     onClick={() =>
                       void act(() =>
-                        submit(
-                          inferenceRoutes.tasksByTaskIdReview(current.id),
-                          {
-                            tracking_ok: false,
-                            note,
-                          },
-                        ),
+                        submit(inferenceRoutes.tasksByTaskIdReview(live.id), {
+                          tracking_ok: false,
+                          note,
+                        }),
                       )
                     }
                   >
@@ -784,5 +703,42 @@ export function InferencePage({
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+function VideoLine({
+  task,
+  upload,
+  entry,
+  trial,
+}: {
+  task: Task
+  upload?: ProjectVideo
+  entry?: Entry
+  trial: {
+    group_name: string
+    mouse_id: string
+    phase: string
+    trial_no: string
+    video_name: string
+  } | null
+}) {
+  const name = upload?.filename ?? entry?.name
+  return (
+    <p className="text-sm text-muted-foreground" data-testid="task-video">
+      {task.source_kind === "user_upload" ? "上传视频" : "项目视频"}：
+      {name ?? task.video_id}
+      {trial ? (
+        <span data-testid="task-trial">
+          {" "}
+          · 对应试次：{trial.group_name} · {trial.mouse_id} · 试次{" "}
+          {trial.trial_no}（按文件名匹配，映射未核验，仅作视频级参考）
+        </span>
+      ) : (
+        task.source_kind === "user_upload" && (
+          <span> · 用户上传，不对应科研库试次</span>
+        )
+      )}
+    </p>
   )
 }

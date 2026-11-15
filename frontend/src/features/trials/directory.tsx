@@ -173,8 +173,11 @@ export function TrialDirectoryPage({
         </Card>
       ) : experiments.data.length === 0 ? (
         <Card>
-          <CardContent>
-            暂无可访问的实验。请联系管理员确认实验权限。
+          <CardContent className="space-y-1">
+            <p>暂无可访问的实验。请联系管理员确认实验权限。</p>
+            <p className="text-sm text-muted-foreground">
+              新账号默认只能看到自己上传的视频及其项目内结果，不显示水迷宫整库；整库需管理员明确授权。
+            </p>
           </CardContent>
         </Card>
       ) : (

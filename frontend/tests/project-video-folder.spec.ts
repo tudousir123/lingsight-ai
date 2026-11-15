@@ -56,24 +56,18 @@ async function workspace(
   )
   await page.route("**/api/v1/inference/sources", (route) =>
     route.fulfill({
-      json: {
-        items: [
-          { id: "nas", label: "NAS 视频", kind: "filesystem", available: true },
-        ],
-      },
+      json: [
+        { id: "nas", label: "NAS 视频", kind: "filesystem", available: true },
+      ],
     }),
   )
   await page.route("**/api/v1/inference/videos?*", (route) => {
     const url = new URL(route.request().url())
     return route.fulfill({
-      json: {
-        source_id: url.searchParams.get("source_id"),
-        path: url.searchParams.get("path"),
-        items:
-          url.searchParams.get("path") === "十月"
-            ? [{ type: "video", id: "nas:十月/鼠1.mp4", name: "鼠1.mp4" }]
-            : [{ type: "directory", path: "十月", name: "十月" }],
-      },
+      json:
+        url.searchParams.get("path") === "十月"
+          ? [{ type: "video", id: "nas:十月/鼠1.mp4", name: "鼠1.mp4" }]
+          : [{ type: "directory", path: "十月", name: "十月" }],
     })
   })
   return state
@@ -109,12 +103,10 @@ test("批量归入所选视频，部分失败后保留失败项供重试，长�
   const longId = `source:nas:${"深层目录/".repeat(100)}鼠2.mp4`
   await page.route("**/api/v1/inference/videos?*", (route) =>
     route.fulfill({
-      json: {
-        items: [
-          { type: "video", id: "nas:十月/鼠1.mp4", name: "鼠1.mp4" },
-          { type: "video", id: longId, name: "鼠2.mp4" },
-        ],
-      },
+      json: [
+        { type: "video", id: "nas:十月/鼠1.mp4", name: "鼠1.mp4" },
+        { type: "video", id: longId, name: "鼠2.mp4" },
+      ],
     }),
   )
   let fail = true
@@ -160,18 +152,16 @@ test("来源离线和保存失败给出错误，取消更换保留原文件夹",
   })
   await page.route("**/api/v1/inference/sources", (route) =>
     route.fulfill({
-      json: {
-        items: [
-          { id: "nas", label: "NAS 视频", kind: "filesystem", available: true },
-          {
-            id: "offline",
-            label: "另一台 NAS",
-            kind: "filesystem",
-            available: false,
-            error: { code: "source_unavailable", message: "NAS 暂时离线" },
-          },
-        ],
-      },
+      json: [
+        { id: "nas", label: "NAS 视频", kind: "filesystem", available: true },
+        {
+          id: "offline",
+          label: "另一台 NAS",
+          kind: "filesystem",
+          available: false,
+          error: { code: "source_unavailable", message: "NAS 暂时离线" },
+        },
+      ],
     }),
   )
   await page.route("**/api/v1/projects/folder-project/video-folder", (route) =>
@@ -200,22 +190,20 @@ test("切换来源后慢响应不会覆盖新目录", async ({ page }) => {
   await workspace(page)
   await page.route("**/api/v1/inference/sources", (route) =>
     route.fulfill({
-      json: {
-        items: [
-          {
-            id: "slow",
-            label: "慢速 NAS",
-            kind: "filesystem",
-            available: true,
-          },
-          {
-            id: "fast",
-            label: "其他 NAS",
-            kind: "filesystem",
-            available: true,
-          },
-        ],
-      },
+      json: [
+        {
+          id: "slow",
+          label: "慢速 NAS",
+          kind: "filesystem",
+          available: true,
+        },
+        {
+          id: "fast",
+          label: "其他 NAS",
+          kind: "filesystem",
+          available: true,
+        },
+      ],
     }),
   )
   let release: () => void = () => {}
@@ -233,7 +221,7 @@ test("切换来源后慢响应不会覆盖新目录", async ({ page }) => {
       await held
       try {
         await route.fulfill({
-          json: { items: [{ type: "directory", name: "旧来源", path: "old" }] },
+          json: [{ type: "directory", name: "旧来源", path: "old" }],
         })
       } finally {
         finished()
@@ -241,7 +229,7 @@ test("切换来源后慢响应不会覆盖新目录", async ({ page }) => {
       return
     }
     return route.fulfill({
-      json: { items: [{ type: "directory", name: "新来源", path: "new" }] },
+      json: [{ type: "directory", name: "新来源", path: "new" }],
     })
   })
   const slow = page.waitForRequest((request) =>
@@ -275,7 +263,7 @@ test("读取目录失败不冒充空目录，重试恢复", async ({ page }) => 
             detail: { code: "source_unavailable", message: "NAS 连接已中断" },
           },
         })
-      : route.fulfill({ json: { items: [] } }),
+      : route.fulfill({ json: [] }),
   )
   await page.goto("/projects/folder-project?view=details")
   await page.getByText(/^(添加视频|管理视频来源)$/).click()
@@ -334,16 +322,14 @@ test("退出并切换账号后不显示上个账号的文件夹或来源缓存",
   await page.route("**/api/v1/inference/sources", (route) =>
     secondAccount
       ? route.fulfill({
-          json: {
-            items: [
-              {
-                id: "another-nas",
-                label: "另一个账号的 NAS",
-                kind: "filesystem",
-                available: true,
-              },
-            ],
-          },
+          json: [
+            {
+              id: "another-nas",
+              label: "另一个账号的 NAS",
+              kind: "filesystem",
+              available: true,
+            },
+          ],
         })
       : route.fallback(),
   )
@@ -376,23 +362,23 @@ test("项目文件夹带到推理页，同源目录的视频仅在点击开始�
   page,
 }) => {
   await workspace(page)
-  const starts: string[] = []
+  const starts: { body: Record<string, string>; key: string }[] = []
   const opaqueId = "v1:nas:5Y2B5pyIL-m8oDEubXA0"
   await page.route("**/api/v1/inference/videos?*", (route) => {
     const query = new URL(route.request().url()).searchParams
     return route.fulfill({
-      json: {
-        items:
-          query.get("source_id") === "nas" && query.get("path") === "十月"
-            ? [{ type: "video", id: opaqueId, name: "鼠1.mp4" }]
-            : [{ type: "directory", name: "十月", path: "十月" }],
-      },
+      json:
+        query.get("source_id") === "nas" && query.get("path") === "十月"
+          ? [{ type: "video", id: opaqueId, name: "鼠1.mp4" }]
+          : [{ type: "directory", name: "十月", path: "十月" }],
     })
   })
   await page.route("**/api/v1/inference/tasks", (route) => {
-    if (route.request().method() === "GET")
-      return route.fulfill({ json: { items: [] } })
-    starts.push(route.request().postDataJSON().video_id)
+    if (route.request().method() === "GET") return route.fulfill({ json: [] })
+    starts.push({
+      body: route.request().postDataJSON(),
+      key: route.request().headers()["idempotency-key"] ?? "",
+    })
     return route.fulfill({
       json: {
         id: "synthetic-inference-task",
@@ -413,11 +399,14 @@ test("项目文件夹带到推理页，同源目录的视频仅在点击开始�
   await page.getByRole("link", { name: "前往视频推理" }).click()
   await expect(page.getByText("鼠1.mp4", { exact: false })).toBeVisible()
   expect(starts).toEqual([])
-  await page.getByRole("button", { name: "开始", exact: true }).click()
+  await page.getByRole("button", { name: "开始推理 鼠1.mp4" }).click()
   await expect(
     page.getByRole("heading", { name: "排队中 · 预标注" }),
   ).toBeVisible()
-  expect(starts).toEqual([opaqueId])
+  expect(starts.map((start) => start.body)).toEqual([
+    { project_id: "folder-project", video_id: opaqueId },
+  ])
+  expect(starts[0].key).toMatch(/^[0-9a-f-]{36}$/)
 })
 
 test("后台刷新项目文件夹后，视频列表跟随已保存的新目录", async ({ page }) => {
@@ -448,24 +437,22 @@ test("后台刷新项目文件夹后，视频列表跟随已保存的新目录",
   )
   await page.route("**/api/v1/inference/videos?*", (route) =>
     route.fulfill({
-      json: {
-        items:
-          new URL(route.request().url()).searchParams.get("path") === "十一月"
-            ? [
-                {
-                  type: "video",
-                  id: "nas:十一月/新视频.mp4",
-                  name: "新视频.mp4",
-                },
-              ]
-            : [
-                {
-                  type: "video",
-                  id: "nas:十月/旧视频.mp4",
-                  name: "旧视频.mp4",
-                },
-              ],
-      },
+      json:
+        new URL(route.request().url()).searchParams.get("path") === "十一月"
+          ? [
+              {
+                type: "video",
+                id: "nas:十一月/新视频.mp4",
+                name: "新视频.mp4",
+              },
+            ]
+          : [
+              {
+                type: "video",
+                id: "nas:十月/旧视频.mp4",
+                name: "旧视频.mp4",
+              },
+            ],
     }),
   )
   await page.goto("/projects/folder-project?view=details")
@@ -484,4 +471,182 @@ test("后台刷新项目文件夹后，视频列表跟随已保存的新目录",
   await expect(
     page.getByRole("checkbox", { name: "选择视频 旧视频.mp4" }),
   ).toHaveCount(0)
+})
+
+// 与后端一致的目录替身：未授权范围 403；已授权但不在已保存项目文件夹内 404；
+// 保存（PUT）独立校验授权，通过后目录接口才放行新范围。
+async function scopedFolders(
+  page: Page,
+  authorized: (source: string, path: string) => boolean,
+  saved: { source_id: string; path: string },
+) {
+  const current = { ...saved }
+  const puts: { source_id: string; path: string }[] = []
+  const within = (path: string, root: string) =>
+    !root || path === root || path.startsWith(`${root}/`)
+  const denied = {
+    status: 403,
+    json: {
+      detail: {
+        code: "permission_denied",
+        message: "Video source scope is not authorized",
+      },
+    },
+  }
+  await page.route("**/api/v1/inference/sources", (route) =>
+    route.fulfill({
+      json: [
+        { id: "nas", label: "NAS 视频", kind: "filesystem", available: true },
+        { id: "nas-b", label: "NAS B", kind: "filesystem", available: true },
+      ],
+    }),
+  )
+  await page.route("**/api/v1/inference/videos?*", (route) => {
+    const query = new URL(route.request().url()).searchParams
+    const source = query.get("source_id") ?? ""
+    const path = query.get("path") ?? ""
+    if (!authorized(source, path)) return route.fulfill(denied)
+    if (source !== current.source_id || !within(path, current.path))
+      return route.fulfill({
+        status: 404,
+        json: {
+          detail: {
+            code: "resource_not_found",
+            message: "Directory is not in project folder",
+          },
+        },
+      })
+    return route.fulfill({
+      json: [
+        {
+          type: "video",
+          id: `${source}:${path}/鼠.mp4`,
+          name: `${source}-${path || "根"}.mp4`,
+        },
+      ],
+    })
+  })
+  const folderLabel = () => `${current.source_id} / ${current.path || "根目录"}`
+  await page.route(/\/api\/v1\/projects\/?$/, (route) =>
+    route.fulfill({
+      json: {
+        data: [
+          {
+            id: "folder-project",
+            name: "视频研究",
+            members: [],
+            video_folder: { ...current, label: folderLabel() },
+          },
+        ],
+        count: 1,
+      },
+    }),
+  )
+  await page.route(
+    "**/api/v1/projects/folder-project/video-folder",
+    (route) => {
+      const body = route.request().postDataJSON()
+      puts.push(body)
+      if (!authorized(body.source_id, body.path)) return route.fulfill(denied)
+      Object.assign(current, body)
+      return route.fulfill({
+        json: {
+          id: "folder-project",
+          name: "视频研究",
+          members: [],
+          video_folder: { ...current, label: folderLabel() },
+        },
+      })
+    },
+  )
+  return { current, puts }
+}
+
+test("已保存来源 A 时可改存另一已授权来源 B 的根目录，由保存接口校验", async ({
+  page,
+}) => {
+  await workspace(page)
+  const scope = await scopedFolders(page, () => true, {
+    source_id: "nas",
+    path: "十月",
+  })
+  await page.goto("/projects/folder-project?view=details")
+  await page.getByText(/^(添加视频|管理视频来源)$/).click()
+  await expect(
+    page.getByRole("checkbox", { name: "选择视频 nas-十月.mp4" }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "更换文件夹" }).click()
+  await page.getByLabel("视频来源", { exact: true }).selectOption("nas-b")
+  await expect(page.getByText(/不在当前已保存的项目文件夹内/)).toBeVisible()
+  await expect(page.getByRole("alert")).toHaveCount(0)
+  await page.getByRole("button", { name: "使用此文件夹" }).click()
+  await expect(page.getByText("nas-b / 根目录", { exact: true })).toBeVisible()
+  expect(scope.puts).toEqual([{ source_id: "nas-b", path: "" }])
+  await expect(
+    page.getByRole("checkbox", { name: "选择视频 nas-b-根.mp4" }),
+  ).toBeVisible()
+})
+
+test("已保存子目录时可上移并保存已授权的父目录", async ({ page }) => {
+  await workspace(page)
+  const scope = await scopedFolders(page, () => true, {
+    source_id: "nas",
+    path: "十月/第一周",
+  })
+  await page.goto("/projects/folder-project?view=details")
+  await page.getByText(/^(添加视频|管理视频来源)$/).click()
+  await page.getByRole("button", { name: "更换文件夹" }).click()
+  await page.getByRole("button", { name: "上一级" }).click()
+  await expect(page.getByText("当前文件夹：十月")).toBeVisible()
+  await page.getByRole("button", { name: "使用此文件夹" }).click()
+  await expect(page.getByText("nas / 十月", { exact: true })).toBeVisible()
+  expect(scope.puts).toEqual([{ source_id: "nas", path: "十月" }])
+})
+
+test("越出授权范围的目录读取 403 不可保存；保存被拒时显示错误并保留原文件夹", async ({
+  page,
+}) => {
+  await workspace(page)
+  // 只授权 nas 的 “十月” 子树（单实验授权），nas-b 读取放行但保存被拒。
+  const scope = await scopedFolders(
+    page,
+    (source, path) =>
+      source === "nas-b" ||
+      (source === "nas" && (path === "十月" || path.startsWith("十月/"))),
+    { source_id: "nas", path: "十月" },
+  )
+  // nas-b 的读取允许，但保存时改为未授权，模拟 PUT 独立校验得出的拒绝。
+  await page.route(
+    "**/api/v1/projects/folder-project/video-folder",
+    (route) => {
+      scope.puts.push(route.request().postDataJSON())
+      return route.fulfill({
+        status: 403,
+        json: {
+          detail: {
+            code: "permission_denied",
+            message: "Video source scope is not authorized",
+          },
+        },
+      })
+    },
+  )
+  await page.goto("/projects/folder-project?view=details")
+  await page.getByText(/^(添加视频|管理视频来源)$/).click()
+  await page.getByRole("button", { name: "更换文件夹" }).click()
+  await page.getByRole("button", { name: "上一级" }).click()
+  await expect(page.getByRole("alert")).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "使用此文件夹" }),
+  ).toBeDisabled()
+  await page.getByLabel("视频来源", { exact: true }).selectOption("nas-b")
+  await page.getByRole("button", { name: "使用此文件夹" }).click()
+  await expect(page.getByRole("alert")).toBeVisible()
+  expect(scope.puts).toEqual([{ source_id: "nas-b", path: "" }])
+  expect(scope.current).toEqual({ source_id: "nas", path: "十月" })
+  await expect(page.getByText("nas / 十月", { exact: true })).toBeVisible()
+  await page.getByRole("button", { name: "取消更换" }).click()
+  await expect(
+    page.getByRole("checkbox", { name: "选择视频 nas-十月.mp4" }),
+  ).toBeVisible()
 })

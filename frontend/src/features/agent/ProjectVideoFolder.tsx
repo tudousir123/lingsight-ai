@@ -5,6 +5,11 @@ import { useState } from "react"
 import { ProjectsService } from "@/client"
 import type { Entry, VideoSource } from "@/features/inference/contract"
 import useAuth from "@/hooks/useAuth"
+import {
+  ApiRequestError,
+  apiProblem,
+  problemFromResponse,
+} from "@/lib/apiError"
 import { authHeaders } from "@/lib/credentials"
 import { inferenceGatewayBase, inferenceRoutes } from "@/lib/upstreamRoutes.gen"
 import {
@@ -19,17 +24,9 @@ async function json<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...options,
     headers: { "Content-Type": "application/json", ...authHeaders() },
   })
+  if (!response.ok)
+    throw new ApiRequestError(await problemFromResponse(response))
   const body = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    const detail = body.detail ?? body.error
-    throw new Error(
-      typeof detail === "string"
-        ? detail
-        : typeof detail?.message === "string"
-          ? detail.message
-          : `请求失败（${response.status}）`,
-    )
-  }
   return body as T
 }
 
@@ -68,26 +65,35 @@ function FolderBrowser({
     queryKey: ["video-sources", userId],
     enabled: !!userId,
     queryFn: ({ signal }) =>
-      json<{ items: VideoSource[] }>(
+      json<VideoSource[]>(
         `${inferenceGatewayBase}/${inferenceRoutes.sources()}`,
         { signal },
       ),
+    // 用户上传走项目视频列表，不经目录接口；这里只列既有目录来源。
+    select: (items) => items.filter((item) => item.kind !== "user_upload"),
     retry: false,
   })
   const source =
-    sources.data?.items.find((item) => item.id === sourceId) ??
-    (!sourceId ? sources.data?.items[0] : undefined)
+    sources.data?.find((item) => item.id === sourceId) ??
+    (!sourceId ? sources.data?.[0] : undefined)
   const currentSource = source?.id ?? sourceId
   const listing = useQuery({
-    queryKey: ["video-folder", userId, currentSource, directory],
+    // The listing is scoped by the project's saved folder, so it is per project.
+    queryKey: ["video-folder", userId, project.id, currentSource, directory],
     enabled: !!userId && !!source?.available,
     queryFn: ({ signal }) =>
-      json<{ items: Entry[] }>(
-        `${inferenceGatewayBase}/${inferenceRoutes.videos()}?${new URLSearchParams({ source_id: currentSource, path: directory })}`,
+      json<Entry[]>(
+        `${inferenceGatewayBase}/${inferenceRoutes.videos()}?${new URLSearchParams({ source_id: currentSource, path: directory, project_id: project.id })}`,
         { signal },
       ),
     retry: false,
   })
+  // The listing only serves the saved project folder (404 outside it, 403 when
+  // unauthorized). An authorized scope outside it can still be saved: the PUT
+  // checks authorization itself and only then opens the new scope.
+  const outsideSaved =
+    apiProblem(listing.error).status === 404 &&
+    !(saved?.source_id === currentSource && (saved.path ?? "") === directory)
   const save = useMutation({
     mutationFn: async () =>
       (
@@ -103,7 +109,7 @@ function FolderBrowser({
       setEditing(false)
     },
   })
-  const videos = (listing.data?.items ?? []).filter(
+  const videos = (listing.data ?? []).filter(
     (item) => item.type === "video" && item.id,
   )
   const existing = new Set(
@@ -151,7 +157,11 @@ function FolderBrowser({
         <Link
           className="project-action"
           to="/inference"
-          search={{ source_id: saved.source_id, path: saved.path ?? "" }}
+          search={{
+            project_id: project.id,
+            source_id: saved.source_id,
+            path: saved.path ?? "",
+          }}
         >
           前往视频推理
         </Link>
@@ -185,10 +195,8 @@ function FolderBrowser({
                 save.reset()
               }}
             >
-              {!sources.data?.items.length && (
-                <option value="">暂无可用来源</option>
-              )}
-              {sources.data?.items.map((item) => (
+              {!sources.data?.length && <option value="">暂无可用来源</option>}
+              {sources.data?.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.label}
                   {item.available ? "" : "（不可用）"}
@@ -215,7 +223,7 @@ function FolderBrowser({
             </button>
           )}
           <ul className="space-y-2">
-            {(listing.data?.items ?? [])
+            {(listing.data ?? [])
               .filter((item) => item.type === "directory")
               .map((item) => (
                 <li key={item.path}>
@@ -236,12 +244,19 @@ function FolderBrowser({
             type="button"
             className="project-action"
             disabled={
-              !source?.available || !listing.isSuccess || save.isPending
+              !source?.available ||
+              !(listing.isSuccess || outsideSaved) ||
+              save.isPending
             }
             onClick={() => save.mutate()}
           >
             {save.isPending ? "正在保存…" : "使用此文件夹"}
           </button>
+          {saved && outsideSaved && (
+            <p className="text-sm text-muted-foreground">
+              该文件夹不在当前已保存的项目文件夹内，保存后才能浏览其中的视频；保存时会校验你对它的访问权限。
+            </p>
+          )}
           {saved && (
             <button
               type="button"
@@ -272,7 +287,7 @@ function FolderBrowser({
           </button>
         </p>
       )}
-      {!sources.isPending && !sources.error && !sources.data?.items.length && (
+      {!sources.isPending && !sources.error && !sources.data?.length && (
         <p>还没有配置视频来源。</p>
       )}
       {source && !source.available && (
@@ -282,7 +297,7 @@ function FolderBrowser({
         <p role="alert">已保存的视频来源当前不可用，请选择其他来源。</p>
       )}
       {source?.available && listing.isPending && <p>正在读取文件夹…</p>}
-      {listing.error && (
+      {listing.error && !outsideSaved && (
         <p role="alert">
           {listing.error.message}
           <button
@@ -299,7 +314,7 @@ function FolderBrowser({
           {projectErrorText(save.error, "无法保存视频文件夹，请重试。")}
         </p>
       )}
-      {listing.isSuccess && !listing.data.items.length && <p>此文件夹为空。</p>}
+      {listing.isSuccess && !listing.data.length && <p>此文件夹为空。</p>}
       {saved &&
         !editing &&
         videos.map((video) => (

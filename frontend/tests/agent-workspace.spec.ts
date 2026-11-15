@@ -134,7 +134,7 @@ for (const entry of [
       "Default mode only",
     )
     await page.route("**/api/v1/inference/**", (route) =>
-      route.fulfill({ json: { items: [] } }),
+      route.fulfill({ json: [] }),
     )
     let writes = 0
     page.on("request", (request) => {

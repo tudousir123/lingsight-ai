@@ -19,71 +19,16 @@ async function mockWorkspace(page: Page) {
       },
     }),
   )
-  stubProjectsApi(page)
-}
-
-test("预标注编辑在轮询后保留，并作为独立确认提交", async ({ page }) => {
-  const id = "11111111-1111-4111-8111-111111111111"
-  const marks = Array.from({ length: 4 }, (_, i) => ({
-    label: `mark-${i}`,
-    polygon: [
-      [1, 1],
-      [2, 1],
-      [1, 2],
-    ],
-  }))
-  let status = "waiting_for_review"
-  let confirmation: unknown = null
-  const task = () => ({
-    id,
-    video_id: "one",
-    status,
-    stage: status === "queued" ? "tracking" : "preannotation",
-    error: null,
-    review: null,
-    candidate: {
-      width: 100,
-      height: 100,
-      frame_count: 100,
-      seed: { frame: 3, x: 20, y: 25 },
-      pool: { cx: 50, cy: 50, radius: 35 },
-      marks,
-      evidence: { review_reasons: [] },
+  stubProjectsApi(page, [
+    {
+      id: "learning-memory",
+      name: "学习与记忆",
+      members: [],
+      video_folder: { source_id: "source-a", path: "", label: "根目录" },
     },
-  })
-  await mockWorkspace(page)
-  await page.route("**/api/v1/inference/**", async (route) => {
-    const url = new URL(route.request().url())
-    if (url.pathname.endsWith("/videos"))
-      return route.fulfill({
-        json: { items: [{ type: "video", name: "test.mp4", id: "one" }] },
-      })
-    if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
-      return route.fulfill({ json: { items: [task()] } })
-    if (url.pathname.endsWith("/confirm")) {
-      confirmation = route.request().postDataJSON()
-      status = "queued"
-      return route.fulfill({ json: task() })
-    }
-    if (url.pathname.endsWith("candidate.jpg"))
-      return route.fulfill({ status: 404 })
-    return route.fulfill({ json: task() })
-  })
-  await page.goto("/inference")
-  await page.getByRole("button", { name: /等待预标注确认/ }).click()
-  await page.getByLabel("小鼠 X").fill("24")
-  await page.waitForTimeout(3300)
-  await expect(page.getByLabel("小鼠 X")).toHaveValue("24")
-  await page.getByRole("button", { name: "确认并开始追踪" }).click()
-  await expect
-    .poll(() => confirmation)
-    .toMatchObject({
-      seed: { frame: 3, x: 24, y: 25 },
-      pool: { cx: 50, cy: 50, radius: 35 },
-      marks,
-    })
-  await expect(page.getByRole("heading", { name: /排队中/ })).toBeVisible()
-})
+    { id: "behavior-notes", name: "动物行为研究笔记", members: [] },
+  ])
+}
 
 test("视频目录浏览可归入项目并从项目页移出", async ({ page }) => {
   await mockWorkspace(page)
@@ -91,15 +36,13 @@ test("视频目录浏览可归入项目并从项目页移出", async ({ page }) 
     const url = new URL(route.request().url())
     if (url.pathname.endsWith("/videos"))
       return route.fulfill({
-        json: {
-          items: [{ type: "video", name: "Day5-Trial3.mp4", id: "vid-77" }],
-        },
+        json: [{ type: "video", name: "Day5-Trial3.mp4", id: "vid-77" }],
       })
     if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
-      return route.fulfill({ json: { items: [] } })
+      return route.fulfill({ json: [] })
     return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
   })
-  await page.goto("/inference")
+  await page.goto("/inference?project_id=learning-memory")
   await page
     .getByRole("button", { name: "将 Day5-Trial3.mp4 归入项目" })
     .click()
@@ -144,14 +87,15 @@ test("复核通过后出现发布动作，发布结果进项目且重放幂等",
     stage: "overlay",
     error: null,
     review: { tracking_ok: true, note: "看过叠加视频" },
-    candidate: null,
-    confirmed: null,
+    project_id: "learning-memory",
+    source_kind: "filesystem",
+    confirmation_id: null,
   }
   await mockWorkspace(page)
   await page.route("**/api/v1/inference/**", (route) => {
     const url = new URL(route.request().url())
     if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
-      return route.fulfill({ json: { items: [task] } })
+      return route.fulfill({ json: [task] })
     return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
   })
   await page.route("**/api/v1/projects/*/results", async (route) => {
@@ -164,7 +108,7 @@ test("复核通过后出现发布动作，发布结果进项目且重放幂等",
       json: { ...publishedResult(taskId), replayed: publishCount > 1 },
     })
   })
-  await page.goto("/inference")
+  await page.goto("/inference?project_id=learning-memory")
   await page.getByRole("button", { name: /推理完成/ }).click()
   await page.getByRole("button", { name: "发布到项目" }).click()
   const dialog = page.getByRole("dialog")
@@ -185,17 +129,18 @@ test("未通过复核的结果不出现发布动作", async ({ page }) => {
     stage: "overlay",
     error: null,
     review: { tracking_ok: false, note: "轨迹断了" },
-    candidate: null,
-    confirmed: null,
+    project_id: "learning-memory",
+    source_kind: "filesystem",
+    confirmation_id: null,
   }
   await mockWorkspace(page)
   await page.route("**/api/v1/inference/**", (route) => {
     const url = new URL(route.request().url())
     if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
-      return route.fulfill({ json: { items: [task] } })
+      return route.fulfill({ json: [task] })
     return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
   })
-  await page.goto("/inference")
+  await page.goto("/inference?project_id=learning-memory")
   await page.getByRole("button", { name: /推理完成/ }).click()
   await expect(page.getByText("结果已核对：需复查")).toBeVisible()
   await expect(page.getByRole("button", { name: "发布到项目" })).toHaveCount(0)
@@ -210,14 +155,15 @@ test("发布失败呈现服务端拒绝原因", async ({ page }) => {
     stage: "overlay",
     error: null,
     review: { tracking_ok: true, note: "" },
-    candidate: null,
-    confirmed: null,
+    project_id: "learning-memory",
+    source_kind: "filesystem",
+    confirmation_id: null,
   }
   await mockWorkspace(page)
   await page.route("**/api/v1/inference/**", (route) => {
     const url = new URL(route.request().url())
     if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
-      return route.fulfill({ json: { items: [task] } })
+      return route.fulfill({ json: [task] })
     return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
   })
   await page.route("**/api/v1/projects/*/results", (route) =>
@@ -226,7 +172,7 @@ test("发布失败呈现服务端拒绝原因", async ({ page }) => {
       json: { detail: "只有通过人工复核（tracking_ok）的推理任务才能发布" },
     }),
   )
-  await page.goto("/inference")
+  await page.goto("/inference?project_id=learning-memory")
   await page.getByRole("button", { name: /推理完成/ }).click()
   await page.getByRole("button", { name: "发布到项目" }).click()
   await page
@@ -247,16 +193,14 @@ test("目录 URL 保留来源并支持刷新和前进后退 (#59)", async ({ pag
       requests.push(url.search)
       const path = url.searchParams.get("path") || ""
       return route.fulfill({
-        json: {
-          items: path
-            ? [{ type: "video", name: "sample.mp4", id: "sample" }]
-            : [{ type: "directory", name: "批次 A", path: "批次 A" }],
-        },
+        json: path
+          ? [{ type: "video", name: "sample.mp4", id: "sample" }]
+          : [{ type: "directory", name: "批次 A", path: "批次 A" }],
       })
     }
-    return route.fulfill({ json: { items: [] } })
+    return route.fulfill({ json: [] })
   })
-  await page.goto("/inference?source_id=source-a")
+  await page.goto("/inference?project_id=learning-memory&source_id=source-a")
   await page.getByRole("button", { name: "打开", exact: true }).click()
   await expect
     .poll(() => new URL(page.url()).searchParams.get("path"))
@@ -288,8 +232,7 @@ test("后退后迟到的目录响应不能覆盖当前位置 (#59)", async ({ pa
   })
   await page.route("**/api/v1/inference/**", async (route) => {
     const url = new URL(route.request().url())
-    if (!url.pathname.endsWith("/videos"))
-      return route.fulfill({ json: { items: [] } })
+    if (!url.pathname.endsWith("/videos")) return route.fulfill({ json: [] })
     if (url.searchParams.get("path")) {
       await new Promise<void>((resolve) => {
         release = resolve
@@ -297,16 +240,16 @@ test("后退后迟到的目录响应不能覆盖当前位置 (#59)", async ({ pa
       // 后退使查询键变化，在途请求已被中止，fulfill 会抛错，忽略。
       return route
         .fulfill({
-          json: { items: [{ type: "video", name: "stale.mp4", id: "stale" }] },
+          json: [{ type: "video", name: "stale.mp4", id: "stale" }],
         })
         .catch(() => {})
         .finally(settled)
     }
     return route.fulfill({
-      json: { items: [{ type: "directory", name: "目录", path: "folder" }] },
+      json: [{ type: "directory", name: "目录", path: "folder" }],
     })
   })
-  await page.goto("/inference")
+  await page.goto("/inference?project_id=learning-memory")
   const pending = page.waitForRequest(
     (request) => new URL(request.url()).searchParams.get("path") === "folder",
   )
@@ -324,4 +267,72 @@ test("后退后迟到的目录响应不能覆盖当前位置 (#59)", async ({ pa
     page.getByRole("button", { name: "打开", exact: true }),
   ).toBeVisible()
   await expect(page.getByText(/stale\.mp4/)).toHaveCount(0)
+})
+
+test("库内视频若有同名试次则同时显示该试次，并标注映射未核验", async ({
+  page,
+}) => {
+  await mockWorkspace(page)
+  await page.route("**/api/v1/experiments", (route) =>
+    route.fulfill({
+      json: {
+        data: [{ id: "e1", name: "示例实验", trial_count: 1 }],
+        count: 1,
+      },
+    }),
+  )
+  await page.route("**/api/v1/experiments/e1/trials?*", (route) =>
+    route.fulfill({
+      json: {
+        data: [
+          {
+            id: "t1",
+            experiment_id: "e1",
+            video_name: "Day5-Trial3.mp4",
+            group_name: "A2",
+            mouse_id: "7",
+            phase: "training_day",
+            date_dir: "0804",
+            training_day: 5,
+            session_no: 1,
+            session_label: "第1次",
+            trial_no: "3",
+            media_available: true,
+            result_available: false,
+          },
+        ],
+        count: 1,
+      },
+    }),
+  )
+  await page.route("**/api/v1/inference/**", (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname.endsWith("/videos"))
+      return route.fulfill({
+        json: [{ type: "video", name: "Day5-Trial3.mp4", id: "vid-77" }],
+      })
+    if (url.pathname.endsWith("/tasks") && route.request().method() === "POST")
+      return route.fulfill({
+        status: 202,
+        json: {
+          id: "99999999-9999-4999-8999-999999999999",
+          project_id: "learning-memory",
+          video_id: "vid-77",
+          source_kind: "filesystem",
+          confirmation_id: null,
+          status: "queued",
+          stage: "preannotation",
+          error: null,
+          review: null,
+        },
+      })
+    return route.fulfill({ json: [] })
+  })
+  await page.goto("/inference?project_id=learning-memory")
+  await page.getByRole("button", { name: "开始推理 Day5-Trial3.mp4" }).click()
+  await expect(page.getByTestId("task-video")).toContainText(
+    "项目视频：Day5-Trial3.mp4",
+  )
+  await expect(page.getByTestId("task-trial")).toContainText("A2 · 7 · 试次 3")
+  await expect(page.getByTestId("task-trial")).toContainText("映射未核验")
 })
