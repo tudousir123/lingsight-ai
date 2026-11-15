@@ -39,6 +39,7 @@ import {
   taskKey,
   tasksKey,
 } from "./api"
+import { ExecutionStatus, useExecutionCapability } from "./Execution"
 import { useTaskEvents } from "./events"
 import { PersonalAgentStatus, usePersonalAgent } from "./PersonalAgent"
 import { ProjectConversationHome } from "./ProjectConversationHome"
@@ -100,6 +101,12 @@ function Conversation({ task, events }: { task: Task; events: TaskEvent[] }) {
               <strong>LingSight 灵视科研</strong>
               <span>{statusLabels[run.status]}</span>
             </div>
+            {run.execution && (
+              <p className="agent-execution-reference">
+                执行 {run.execution.id} · Pi Durable {run.execution.version} ·
+                会话 {run.execution.conversation_id}
+              </p>
+            )}
             {steps.length > 0 && (
               <details className="agent-steps">
                 <summary>
@@ -234,6 +241,7 @@ export function AgentWorkspace({
   projectContextId?: string
 }) {
   const personal = usePersonalAgent()
+  const execution = useExecutionCapability()
   const tasks = useTasks()
   const projects = useWorkspaceProjects()
   const addMember = useAddProjectMember()
@@ -302,7 +310,12 @@ export function AgentWorkspace({
     (!!task.data &&
       task.data.personal_agent_id === personal.data?.id &&
       task.data.environment_id === personal.data?.environment.id)
-  const executionReady = personalReady && taskBound
+  const executionReady =
+    personalReady &&
+    taskBound &&
+    !execution.isPending &&
+    !execution.error &&
+    execution.data?.enabled === true
   const blocked = run?.status === "waiting_for_input"
   const canSend =
     (!!draft.trim() || (canAttach && videos.length > 0)) &&
@@ -556,6 +569,12 @@ export function AgentWorkspace({
               loading={personal.isPending}
               error={personal.error}
               onRetry={() => void personal.refetch()}
+            />
+            <ExecutionStatus
+              loading={execution.isPending}
+              capability={execution.data}
+              error={execution.error}
+              onRetry={() => void execution.refetch()}
             />
             {!!task.data && personal.data && !taskBound && (
               <p className="agent-error" role="alert">

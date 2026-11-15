@@ -29,6 +29,13 @@ export type RunStatus =
   | "interrupted"
 export type Question = { id: string; question: string; answer: string | null }
 export type Run = {
+  execution?: {
+    id: string
+    engine: "pi-durable"
+    version: "1.5.2"
+    conversation_id: number
+    submission_id: number | null
+  } | null
   id: string
   instruction: string
   status: RunStatus

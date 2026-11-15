@@ -20,7 +20,19 @@ export const personalTaskBinding = {
   environment_id: personalAgentFixture.environment.id,
 }
 export async function stubPersonalAgent(page: Page, owner = "user") {
+  await page.route("**/api/v1/agent/capabilities", (route) =>
+    route.fulfill({ json: executionCapabilityFixture }),
+  )
   await page.route("**/api/v1/agent/personal-agent", (route) =>
     route.fulfill({ json: { ...personalAgentFixture, owner_user_id: owner } }),
   )
+}
+
+export const executionCapabilityFixture = {
+  execution: {
+    contract: "durable-run-v1",
+    engine: "pi-durable",
+    version: "1.5.2",
+    enabled: true,
+  },
 }

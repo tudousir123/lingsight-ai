@@ -97,6 +97,9 @@ export function ArtifactViewer({
         <DialogTitle>{artifact.name}</DialogTitle>
         <DialogDescription>
           已保留来源与版本 · {Math.ceil(artifact.bytes / 1024)} KB
+          <span className="agent-artifact-version">
+            内容 SHA-256：{artifact.sha256}
+          </span>
         </DialogDescription>
         <div className="agent-file-actions">
           <button

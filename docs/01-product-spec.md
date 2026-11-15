@@ -1,5 +1,13 @@
 # LingSight AI 产品与技术架构
 
+## 2026-11-15：真实 Pi Durable 正常执行切片（#75 / #77）
+
+独立 Agent 默认使用真实 Pi Durable 1.5.2 Harness，Pi SDK/AI 同步锁定 1.5.2；复用现有 Engine/Worker 与受控科研工具，不把 Durable 当作 SDK 的透明存储开关。Run 显式关联内部 execution/conversation/submission；Task、Run、事件、产物与完成状态仍由独立服务拥有。模型正常结束后，还须通过原有问答证据或科研文件完成契约；缺文件、未解决工具失败或撤销授权均不得成功。
+
+平台通过认证的 `GET /api/v1/agent/capabilities` 读取 `execution={contract:durable-run-v1,engine:pi-durable,version:1.5.2,enabled:boolean}`。服务仅在明确 provider/model、数据处理同意和服务配置文件存在时声明启用，该声明不是模型健康或语义质量验收。工作区与网关双重核验精确版本及启用状态：旧服务、能力缺失、无效响应、未配置或刷新失败时关闭 create/messages/resume/clarification 新执行，不发送可能被误执行的写请求，保留草稿、材料读取与停止。每次实际模型发送与工具边界仍核验当前 owner、项目范围、数据处理同意和取消状态，不依赖首次审批 hook。
+
+工作区显示引擎、业务执行关联及步骤进度；来源保留在报告/快照/manifest，预览与下载显示实际 SHA-256 内容版本。隔离验收包括真实 Agent/Harness/容器合成分析、真实 JWT 网关与授权回调、真实工作区到网关/Agent 的合成预览下载，以及 API 夹具的安全关闭交互。它们不代表真实模型质量或科研验收。本票不宣称跨进程请求去重与恢复（#78）、外部副作用状态机（#79）、记忆或正式部署已完成；已关联执行在恢复支持就绪前安全拒绝盲目重跑。
+
 ## 2026-11-15：个人 Agent 首版的持久身份纵向切片（#75 / #76）
 
 个人 Agent 身份、持久环境、Task、Run 和 Pi Session 是不同概念。独立 Agent 根据平台网关注入的当前用户 UUID 保存唯一的个人身份与环境身份；平台不复制其业务持久化。新任务绑定服务端身份，任务上下文、输入与产物仍分别归属 Task/Run，不把跨任务持久性实现为无限续接会话。未核验的历史任务不自动认领或迁移。

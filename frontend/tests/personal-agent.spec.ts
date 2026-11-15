@@ -1,5 +1,8 @@
 import { expect, type Page, test } from "@playwright/test"
-import { personalAgentFixture as personal } from "./utils/personalAgentApi"
+import {
+  executionCapabilityFixture,
+  personalAgentFixture as personal,
+} from "./utils/personalAgentApi"
 import { stubProjectsApi } from "./utils/projectsApi"
 
 test.use({ storageState: { cookies: [], origins: [] } })
@@ -23,6 +26,8 @@ async function fixture(page: Page) {
   await page.route("**/api/v1/agent/**", async (route) => {
     const req = route.request()
     const path = new URL(req.url()).pathname.split("/agent/")[1]
+    if (path === "capabilities")
+      return route.fulfill({ json: executionCapabilityFixture })
     if (path === "personal-agent") return route.fulfill({ json: personal })
     if (path === "tasks" && req.method() === "POST") {
       const { goal } = req.postDataJSON()

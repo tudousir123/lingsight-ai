@@ -26,6 +26,12 @@ class AgentGatewayTest(unittest.TestCase):
         self.capabilities = httpx.Response(
             200,
             json={
+                "execution": {
+                    "contract": "durable-run-v1",
+                    "engine": "pi-durable",
+                    "version": "1.5.2",
+                    "enabled": True,
+                },
                 "personal_agent": "persistent-v1",
                 "environment": "task-workspace-v1",
                 "project_scope": "immutable-v1",
@@ -62,6 +68,48 @@ class AgentGatewayTest(unittest.TestCase):
             self.addCleanup(p.stop)
         self.client = TestClient(self.app)
         self.addCleanup(self.client.close)
+
+    def test_execution_capability_fails_closed_before_any_execution_write(self) -> None:
+        supported = self.capabilities.json()
+        paths = [
+            ("/agent/tasks", {"goal": "Synthetic explanation"}),
+            (f"/agent/tasks/{TASK}/messages", {"text": "continue"}),
+            (f"/agent/runs/{TASK}/resume", {}),
+            (f"/agent/runs/{TASK}/clarifications/{TASK}/answer", {"answer": "yes"}),
+        ]
+        for execution in [
+            None,
+            {},
+            {"contract": "durable-run-v1", "enabled": True},
+            {
+                "contract": "durable-run-v1",
+                "engine": "pi-durable",
+                "version": "1.5.2",
+                "enabled": 1,
+            },
+            {
+                "contract": "durable-run-v1",
+                "engine": "pi-durable",
+                "version": "1.5.2",
+                "enabled": False,
+            },
+        ]:
+            self.capabilities = httpx.Response(
+                200, json={**supported, "execution": execution}
+            )
+            for path, body in paths:
+                with self.subTest(execution=execution, path=path):
+                    self.calls.clear()
+                    result = self.client.post(path, json=body)
+                    self.assertEqual(result.status_code, 503)
+                    self.assertEqual(
+                        [r.url.path for r in self.calls], ["/v1/capabilities"]
+                    )
+        self.calls.clear()
+        self.assertEqual(
+            self.client.post(f"/agent/runs/{TASK}/cancel", json={}).status_code, 200
+        )
+        self.assertEqual(self.calls[-1].url.path, f"/v1/runs/{TASK}/cancel")
 
     def test_personal_identity_uses_current_user_and_requires_new_capability(
         self,

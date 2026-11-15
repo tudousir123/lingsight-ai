@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test"
 import {
+  executionCapabilityFixture,
   personalAgentFixture,
   personalTaskBinding,
 } from "./utils/personalAgentApi"
@@ -52,6 +53,8 @@ test("project entry carries immutable scope and groups the created task", async 
   await page.route("**/api/v1/agent/**", async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
+    if (path.endsWith("/capabilities"))
+      return route.fulfill({ json: executionCapabilityFixture })
     if (path.endsWith("/personal-agent"))
       return route.fulfill({ json: personalAgentFixture })
     if (request.method() === "POST") {
@@ -112,6 +115,8 @@ test("unavailable project retains the question without creating an unscoped task
 }) => {
   let creates = 0
   await page.route("**/api/v1/agent/**", (route) => {
+    if (new URL(route.request().url()).pathname.endsWith("/capabilities"))
+      return route.fulfill({ json: executionCapabilityFixture })
     if (new URL(route.request().url()).pathname.endsWith("/personal-agent"))
       return route.fulfill({ json: personalAgentFixture })
     if (route.request().method() === "POST") creates++
@@ -141,6 +146,8 @@ test("unexpected upstream scope stops the new run without grouping or resending"
   await page.route("**/api/v1/agent/**", (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
+    if (path.endsWith("/capabilities"))
+      return route.fulfill({ json: executionCapabilityFixture })
     if (path.endsWith("/personal-agent"))
       return route.fulfill({ json: personalAgentFixture })
     if (request.method() !== "POST") return route.fulfill({ json: [] })
@@ -201,6 +208,8 @@ for (const sourceProject of ["66666666-6666-4666-8666-666666666666", null]) {
     }
     await page.route("**/api/v1/agent/**", (route) => {
       const path = new URL(route.request().url()).pathname
+      if (path.endsWith("/capabilities"))
+        return route.fulfill({ json: executionCapabilityFixture })
       if (path.endsWith("/personal-agent"))
         return route.fulfill({ json: personalAgentFixture })
       if (route.request().method() === "POST") {

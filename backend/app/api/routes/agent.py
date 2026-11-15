@@ -35,6 +35,7 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 OPERATIONS = OperationTable(
     operations={
         "GET": (
+            "capabilities",
             "personal-agent",
             "tasks",
             "tasks/{task_id}",
@@ -87,11 +88,14 @@ async def ensure_project_support(
     *,
     project: bool = False,
     personal: bool = False,
+    execution: bool = False,
 ) -> None:
     """Refuse old Agent versions before they can create an unscoped task."""
     unavailable = "科研 Agent 项目分析尚未就绪，请先更新服务并配置项目数据源"
     if personal:
         unavailable = "个人 Agent 持久工作环境尚未就绪，请先更新服务"
+    if execution:
+        unavailable = "Pi Durable 执行能力未配置或协议不兼容，已禁用新执行"
     probe = Request({**request.scope, "method": "GET", "query_string": b""})
     try:
         response = await forward(
@@ -106,12 +110,25 @@ async def ensure_project_support(
                 if len(payload) > 4096:
                     raise HTTPException(503, unavailable)
             capabilities = json.loads(payload)
+            runtime = (
+                capabilities.get("execution")
+                if isinstance(capabilities, dict)
+                else None
+            )
             if not capable_agent(capabilities, project=project) or (
                 personal
                 and (
                     capabilities.get("personal_agent") != "persistent-v1"
                     or capabilities.get("environment") != "task-workspace-v1"
                 )
+            ):
+                raise HTTPException(503, unavailable)
+            if execution and (
+                not isinstance(runtime, dict)
+                or runtime.get("contract") != "durable-run-v1"
+                or runtime.get("engine") != "pi-durable"
+                or runtime.get("version") != "1.5.2"
+                or runtime.get("enabled") is not True
             ):
                 raise HTTPException(503, unavailable)
         finally:
@@ -164,7 +181,7 @@ async def agent_gateway(
 ) -> Response:
     ensure_workspace_user(current_user)
     OPERATIONS.check(request.method, path, UNKNOWN_OPERATION)
-    if path == "personal-agent" and (
+    if path in {"personal-agent", "capabilities"} and (
         request.query_params
         or request.headers.get("content-length", "0") != "0"
         or request.headers.get("transfer-encoding")
@@ -173,6 +190,15 @@ async def agent_gateway(
     service = _service()
     if not service.api_token:
         raise HTTPException(503, service.unconfigured_detail)
+    if path == "capabilities":
+        return await forward(
+            request,
+            path,
+            service,
+            CAPABILITY_POLICY,
+            payload=b"",
+            trusted_user_id=str(current_user.id),
+        )
     payload = await read_payload(request, POLICY)
     project_scope = False
     if request.method in {"POST", "PATCH"} and (
@@ -244,6 +270,7 @@ async def agent_gateway(
         request,
         service,
         project=project_scope,
+        execution=request.method == "POST" and not path.endswith("/cancel"),
         personal=path == "personal-agent"
         or (path == "tasks" and request.method == "POST"),
     )

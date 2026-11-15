@@ -386,3 +386,74 @@ def test_real_personal_identity_shared_by_two_project_tasks_but_not_other_user(
         assert (
             client.get(f"{api}/agent/tasks/{task['id']}", headers=owner).json() == task
         )
+
+
+@pytest.fixture
+def durable_agent_http(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient
+) -> Iterator[str]:
+    monkeypatch.setenv("AGENT_CONTRACT_DURABLE", "1")
+    yield from agent_http.__wrapped__(monkeypatch, client)
+
+
+@pytest.mark.usefixtures("durable_agent_http")
+def test_real_durable_gateway_completion_and_sourced_output(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    """Real JWT/gateway/authorization + Agent SQLite/Harness; offline model only."""
+    api = settings.API_V1_STR
+    headers = superuser_token_headers
+    capability = client.get(f"{api}/agent/capabilities", headers=headers)
+    assert capability.status_code == 200, capability.text
+    assert capability.json()["execution"] == {
+        "contract": "durable-run-v1",
+        "engine": "pi-durable",
+        "version": "1.5.2",
+        "enabled": True,
+    }
+    created = client.post(
+        f"{api}/agent/tasks",
+        headers=headers,
+        json={"goal": "Explain synthetic orientation", "completion_mode": "qa"},
+    )
+    assert created.status_code == 202, created.text
+    task = created.json()["task"]
+    deadline = time.monotonic() + 15
+    while True:
+        detail = client.get(f"{api}/agent/tasks/{task['id']}", headers=headers)
+        assert detail.status_code == 200, detail.text
+        result = detail.json()
+        run = result["runs"][-1]
+        if run["status"] == "succeeded":
+            break
+        assert run["status"] not in {"failed", "cancelled"}, run
+        assert time.monotonic() < deadline, run
+        time.sleep(0.02)
+    assert run["execution"]["engine"] == "pi-durable"
+    assert run["execution"]["submission_id"] is not None
+    assert run["answer"]["source_refs"] == []
+    report = next(a for a in result["artifacts"] if a["kind"] == "report")
+    assert report["run_id"] == run["id"]
+    assert report["sha256"]
+    preview = client.get(f"{api}/agent/artifacts/{report['id']}", headers=headers)
+    assert preview.status_code == 200
+    assert "Source: synthetic user input" in preview.text
+    assert preview.headers["etag"] == f'"{report["sha256"]}"'
+    events = client.get(
+        f"{api}/agent/tasks/{task['id']}/events",
+        headers={**headers, "Accept": "application/json"},
+    )
+    assert events.status_code == 200
+    kinds = {e["type"] for e in events.json()}
+    assert {
+        "execution.started",
+        "step.completed",
+        "execution.finished",
+        "run.answered",
+        "run.succeeded",
+    } <= kinds
+    bundle = client.get(f"{api}/agent/tasks/{task['id']}/bundle", headers=headers)
+    assert bundle.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(bundle.content)) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        assert manifest["runs"][-1]["execution"] == run["execution"]

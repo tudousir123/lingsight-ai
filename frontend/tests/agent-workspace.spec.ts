@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test"
 import {
+  executionCapabilityFixture,
   personalAgentFixture,
   personalTaskBinding,
 } from "./utils/personalAgentApi"
@@ -55,6 +56,8 @@ async function mock(page: Page) {
   await page.route("**/api/v1/agent/**", async (r) => {
     const url = new URL(r.request().url())
     const path = url.pathname
+    if (path.endsWith("/capabilities"))
+      return r.fulfill({ json: executionCapabilityFixture })
     if (path.endsWith("/personal-agent"))
       return r.fulfill({ json: personalAgentFixture })
     if (path.endsWith("/events"))

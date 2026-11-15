@@ -699,3 +699,16 @@
 .agent-personal-status button {
   text-decoration: underline;
 }
+
+.agent-artifact-version {
+  display: block;
+  overflow-wrap: anywhere;
+  font-family: monospace;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+.agent-execution-reference {
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
