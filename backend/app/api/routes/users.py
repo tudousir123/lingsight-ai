@@ -267,10 +267,17 @@ def _library_public(session: SessionDep, user: User) -> LibraryAccessPublic:
     )
 
 
+def require_library_admin(current_user: CurrentUser) -> None:
+    if not current_user.is_superuser:
+        raise HTTPException(
+            403, {"code": "permission_denied", "message": "Administrator required"}
+        )
+
+
 @router.get(
     "/{user_id}/whole-library-access",
     response_model=LibraryAccessPublic,
-    dependencies=[Depends(get_current_active_superuser)],
+    dependencies=[Depends(require_library_admin)],
 )
 def read_library_access(user_id: uuid.UUID, session: SessionDep) -> LibraryAccessPublic:
     user = session.get(User, user_id)
@@ -284,7 +291,7 @@ def read_library_access(user_id: uuid.UUID, session: SessionDep) -> LibraryAcces
 @router.put(
     "/{user_id}/whole-library-access",
     response_model=LibraryAccessPublic,
-    dependencies=[Depends(get_current_active_superuser)],
+    dependencies=[Depends(require_library_admin)],
 )
 def update_library_access(
     user_id: uuid.UUID,
