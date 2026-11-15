@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test"
+import {
+  personalAgentFixture,
+  personalTaskBinding,
+} from "./utils/personalAgentApi"
 import { stubProjectsApi } from "./utils/projectsApi"
 
 const projectId = "44444444-4444-4444-8444-444444444444"
@@ -32,6 +36,7 @@ test("project entry carries immutable scope and groups the created task", async 
   page,
 }) => {
   const created = {
+    ...personalTaskBinding,
     id: taskId,
     project_id: projectId,
     title: "项目分析",
@@ -47,6 +52,8 @@ test("project entry carries immutable scope and groups the created task", async 
   await page.route("**/api/v1/agent/**", async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
+    if (path.endsWith("/personal-agent"))
+      return route.fulfill({ json: personalAgentFixture })
     if (request.method() === "POST") {
       requests.push({ path, body: request.postDataJSON() })
       exists = true
@@ -105,6 +112,8 @@ test("unavailable project retains the question without creating an unscoped task
 }) => {
   let creates = 0
   await page.route("**/api/v1/agent/**", (route) => {
+    if (new URL(route.request().url()).pathname.endsWith("/personal-agent"))
+      return route.fulfill({ json: personalAgentFixture })
     if (route.request().method() === "POST") creates++
     return route.fulfill({ json: [] })
   })
@@ -132,6 +141,8 @@ test("unexpected upstream scope stops the new run without grouping or resending"
   await page.route("**/api/v1/agent/**", (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
+    if (path.endsWith("/personal-agent"))
+      return route.fulfill({ json: personalAgentFixture })
     if (request.method() !== "POST") return route.fulfill({ json: [] })
     posts.push(path)
     return route.fulfill({
@@ -179,6 +190,7 @@ for (const sourceProject of ["66666666-6666-4666-8666-666666666666", null]) {
         : []),
     ])
     const task = {
+      ...personalTaskBinding,
       id: taskId,
       project_id: sourceProject,
       title: "旧项目对话",
@@ -189,6 +201,8 @@ for (const sourceProject of ["66666666-6666-4666-8666-666666666666", null]) {
     }
     await page.route("**/api/v1/agent/**", (route) => {
       const path = new URL(route.request().url()).pathname
+      if (path.endsWith("/personal-agent"))
+        return route.fulfill({ json: personalAgentFixture })
       if (route.request().method() === "POST") {
         messages.push(route.request().postDataJSON())
         return route.fulfill({ status: 202, json: { status: "queued" } })

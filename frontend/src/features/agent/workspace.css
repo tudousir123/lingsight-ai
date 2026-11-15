@@ -660,3 +660,42 @@
     grid-template-columns: 1fr;
   }
 }
+
+.agent-personal-status {
+  margin: 0 auto 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  max-width: 56rem;
+  overflow-wrap: anywhere;
+}
+.agent-personal-status > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.agent-personal-status strong {
+  color: var(--foreground);
+}
+.agent-personal-status dl {
+  margin: 0.4rem 0;
+}
+.agent-personal-status dl > div {
+  display: flex;
+  gap: 0.6rem;
+}
+.agent-personal-status dt {
+  flex-shrink: 0;
+}
+.agent-personal-status dd {
+  margin: 0;
+  font-family: monospace;
+}
+.agent-personal-status p {
+  margin: 0.3rem 0;
+}
+.agent-personal-status button {
+  text-decoration: underline;
+}

@@ -8,6 +8,17 @@
 import { authHeaders } from "@/lib/credentials"
 import { agentGatewayBase } from "@/lib/upstreamRoutes.gen"
 
+export type PersonalAgent = {
+  id: string
+  owner_user_id: string
+  created_at: string
+  environment: {
+    id: string
+    status: "ready" | "unavailable"
+    contract: "task-workspace-v1"
+    reason?: string
+  }
+}
 export type RunStatus =
   | "queued"
   | "running"
@@ -22,6 +33,7 @@ export type Run = {
   instruction: string
   status: RunStatus
   error: string | null
+  answer?: { text: string; limitations?: string[] } | null
   clarifications?: Question[]
 }
 export type Artifact = {
@@ -33,6 +45,8 @@ export type Artifact = {
   sha256: string
 }
 export type Task = {
+  personal_agent_id?: string | null
+  environment_id?: string | null
   id: string
   project_id?: string | null
   title: string

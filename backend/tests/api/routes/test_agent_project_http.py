@@ -310,3 +310,79 @@ def test_real_user_isolation_qa_and_live_scope_revocation(
         row["id"] != live_task["id"]
         for row in client.get(f"{api}/agent/tasks", headers=owner).json()
     )
+
+
+@pytest.mark.usefixtures("agent_http")
+def test_real_personal_identity_shared_by_two_project_tasks_but_not_other_user(
+    client: TestClient,
+) -> None:
+    """Real login/JWT -> gateway -> Agent SQLite -> real authorization callback."""
+    from tests.api.routes.test_platform_user_flow import signup
+
+    owner, owner_id = signup(client)
+    other, other_id = signup(client)
+    api = settings.API_V1_STR
+    identity_url = f"{api}/agent/personal-agent"
+    identity_response = client.get(identity_url, headers=owner)
+    assert identity_response.status_code == 200, identity_response.text
+    identity = identity_response.json()
+    assert identity["owner_user_id"] == owner_id
+    assert identity["environment"]["status"] == "ready"
+    forged = client.get(
+        identity_url, headers={**other, "X-LingSight-User-Id": owner_id}
+    )
+    assert forged.status_code == 200, forged.text
+    assert forged.json()["owner_user_id"] == other_id
+    assert forged.json()["id"] != identity["id"]
+    assert forged.json()["environment"]["id"] != identity["environment"]["id"]
+    project = client.post(
+        f"{api}/projects/", headers=owner, json={"name": "Synthetic identity contract"}
+    )
+    assert project.status_code == 200, project.text
+    project_id = project.json()["id"]
+    tasks = []
+    for question in ("Explain synthetic alpha", "Explain synthetic beta"):
+        response = client.post(
+            f"{api}/agent/tasks",
+            headers=owner,
+            json={
+                "goal": question,
+                "project_id": project_id,
+                "completion_mode": "qa",
+            },
+        )
+        assert response.status_code == 202, response.text
+        task = response.json()["task"]
+        assert task["personal_agent_id"] == identity["id"]
+        assert task["environment_id"] == identity["environment"]["id"]
+        assert task["goal"] == question
+        assert task["project_id"] == project_id
+        task_url = f"{api}/agent/tasks/{task['id']}"
+        deadline = time.monotonic() + 10
+        while True:
+            snapshot = client.get(task_url, headers=owner)
+            assert snapshot.status_code == 200, snapshot.text
+            run = snapshot.json()["runs"][0]
+            if run["status"] == "succeeded":
+                break
+            assert run["status"] not in {"failed", "cancelled"}, run
+            assert time.monotonic() < deadline, run
+            time.sleep(0.02)
+        assert run["instruction"] == question
+        assert run["answer"]["text"]
+        bundle = client.get(f"{task_url}/bundle", headers=owner)
+        assert bundle.status_code == 200, bundle.text
+        with zipfile.ZipFile(io.BytesIO(bundle.content)) as archive:
+            manifest = json.loads(archive.read("manifest.json"))
+            assert manifest["task_id"] == task["id"]
+            assert manifest["runs"][0]["id"] == run["id"]
+        assert client.get(task_url, headers=other).status_code == 404
+        assert client.get(f"{task_url}/bundle", headers=other).status_code == 404
+        tasks.append(snapshot.json())
+    assert tasks[0]["id"] != tasks[1]["id"]
+    assert tasks[0]["runs"][0]["id"] != tasks[1]["runs"][0]["id"]
+    assert client.get(identity_url, headers=owner).json() == identity
+    for task in tasks:
+        assert (
+            client.get(f"{api}/agent/tasks/{task['id']}", headers=owner).json() == task
+        )

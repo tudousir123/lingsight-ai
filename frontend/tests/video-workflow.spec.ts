@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import { stubPersonalAgent } from "./utils/personalAgentApi"
 import { stubProjectsApi } from "./utils/projectsApi"
 
 test.use({ storageState: { cookies: [], origins: [] } })
@@ -13,6 +14,7 @@ test.beforeEach(async ({ page }) => {
     localStorage.setItem("lingsight.onboarding-seen.v1", "1")
   })
   stubProjectsApi(page)
+  await stubPersonalAgent(page, "test-user")
   await page.route("**/api/v1/users/me", (route) =>
     route.fulfill({
       json: { id: "test-user", email: "user@example.com", is_active: true },

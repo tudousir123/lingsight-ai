@@ -40,6 +40,7 @@ import {
   tasksKey,
 } from "./api"
 import { useTaskEvents } from "./events"
+import { PersonalAgentStatus, usePersonalAgent } from "./PersonalAgent"
 import { ProjectConversationHome } from "./ProjectConversationHome"
 import {
   membersOfKind,
@@ -131,16 +132,23 @@ function Conversation({ task, events }: { task: Task; events: TaskEvent[] }) {
                 ))}
               </details>
             )}
-            {blocks.map((block) => (
-              <div
-                key={block.key}
-                className={
-                  block.kind === "user" ? "agent-user-message" : "agent-answer"
-                }
-              >
-                {block.text}
-              </div>
-            ))}
+            {blocks
+              .filter((block) => !run.answer || block.kind === "user")
+              .map((block) => (
+                <div
+                  key={block.key}
+                  className={
+                    block.kind === "user"
+                      ? "agent-user-message"
+                      : "agent-answer"
+                  }
+                >
+                  {block.text}
+                </div>
+              ))}
+            {run.status === "succeeded" && run.answer && (
+              <div className="agent-answer">{run.answer.text}</div>
+            )}
             {blocks.length === 0 && isActive(run.status) && (
               <p className="agent-wait">
                 <LoaderCircle size={14} className="animate-spin" />
@@ -166,7 +174,9 @@ function Clarification({
   question,
   run,
   onDone,
+  disabled = false,
 }: {
+  disabled?: boolean
   question: Question
   run: Run
   onDone: () => void
@@ -179,7 +189,7 @@ function Clarification({
       className="agent-question"
       onSubmit={async (e) => {
         e.preventDefault()
-        if (!answer.trim() || pending) return
+        if (!answer.trim() || pending || disabled) return
         setPending(true)
         setError("")
         try {
@@ -205,8 +215,9 @@ function Clarification({
         value={answer}
         onChange={(e) => setAnswer(e.target.value)}
         required
+        disabled={disabled}
       />
-      <button type="submit" disabled={!answer.trim() || pending}>
+      <button type="submit" disabled={!answer.trim() || pending || disabled}>
         {pending ? "正在提交…" : "确认并继续"}
       </button>
       {error && <p role="alert">{error}</p>}
@@ -222,6 +233,7 @@ export function AgentWorkspace({
   projectId?: string
   projectContextId?: string
 }) {
+  const personal = usePersonalAgent()
   const tasks = useTasks()
   const projects = useWorkspaceProjects()
   const addMember = useAddProjectMember()
@@ -281,10 +293,21 @@ export function AgentWorkspace({
     void queryClient.invalidateQueries({ queryKey: tasksKey })
     void queryClient.invalidateQueries({ queryKey: taskKey(taskId) })
   }
+  const personalReady =
+    !personal.isPending &&
+    !personal.error &&
+    personal.data?.environment.status === "ready"
+  const taskBound =
+    !taskId ||
+    (!!task.data &&
+      task.data.personal_agent_id === personal.data?.id &&
+      task.data.environment_id === personal.data?.environment.id)
+  const executionReady = personalReady && taskBound
   const blocked = run?.status === "waiting_for_input"
   const canSend =
     (!!draft.trim() || (canAttach && videos.length > 0)) &&
     !pending &&
+    executionReady &&
     !blocked &&
     !tasks.error &&
     !task.error &&
@@ -364,7 +387,7 @@ export function AgentWorkspace({
     }
   }
   const action = async (op: "cancel" | "resume") => {
-    if (!run || pending) return
+    if (!run || pending || (op === "resume" && !executionReady)) return
     setPending(true)
     setError("")
     try {
@@ -528,6 +551,17 @@ export function AgentWorkspace({
       <div className="agent-workspace">
         <div className="agent-scroll-area">
           <div className="agent-content">
+            <PersonalAgentStatus
+              identity={personal.data}
+              loading={personal.isPending}
+              error={personal.error}
+              onRetry={() => void personal.refetch()}
+            />
+            {!!task.data && personal.data && !taskBound && (
+              <p className="agent-error" role="alert">
+                此任务未绑定当前个人环境，已禁用继续执行。历史材料不会自动迁移。
+              </p>
+            )}
             {taskId && returnProjectId && (
               <div className="workspace-scope">
                 <Link
@@ -587,7 +621,7 @@ export function AgentWorkspace({
                     {run && ["failed", "interrupted"].includes(run.status) && (
                       <button
                         type="button"
-                        disabled={pending}
+                        disabled={pending || !executionReady}
                         onClick={() => void action("resume")}
                       >
                         从已保存的材料恢复
@@ -618,6 +652,7 @@ export function AgentWorkspace({
                         key={q.id}
                         question={q}
                         run={run}
+                        disabled={!executionReady}
                         onDone={refresh}
                       />
                     ))}

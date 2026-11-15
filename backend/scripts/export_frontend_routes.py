@@ -55,7 +55,9 @@ def load_services() -> tuple[ServiceRoutes, ...]:
 
 
 def _pascal(name: str) -> str:
-    return "".join(part[:1].upper() + part[1:] for part in name.split("_") if part)
+    return "".join(
+        part[:1].upper() + part[1:] for part in re.split(r"[_-]", name) if part
+    )
 
 
 def _camel(name: str) -> str:

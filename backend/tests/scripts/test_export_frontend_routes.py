@@ -14,3 +14,9 @@ def test_generated_route_module_is_current() -> None:
         "operation tables — rerun: cd backend && "
         "uv run python scripts/export_frontend_routes.py"
     )
+
+
+def test_hyphenated_identity_route_has_a_valid_typescript_builder() -> None:
+    rendered = render_module(load_services())
+    assert "personalAgent: () => `personal-agent`" in rendered
+    assert "personal-agent: ()" not in rendered
