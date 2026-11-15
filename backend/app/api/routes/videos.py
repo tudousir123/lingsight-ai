@@ -21,7 +21,8 @@ from starlette.responses import FileResponse, JSONResponse
 
 from app import crud
 from app.api.deps import CurrentUser, MediaUserDep, SessionDep, owned_project
-from app.media_settings import MAX_VIDEO_BYTES
+from app.contracts import ErrorCode
+from app.media_settings import MAX_VIDEO_BYTES, VIDEO_MIME_TYPES
 from app.models import ProjectMember
 from app.upload_models import UploadedVideo, UploadReceipt
 from app.uploads import (
@@ -46,7 +47,9 @@ class MultipartVideo:
         media_type, options = parse_options_header(content_type)
         boundary = options.get(b"boundary")
         if media_type != b"multipart/form-data" or not boundary or len(boundary) > 200:
-            raise problem(422, "invalid_input", "需要 multipart/form-data 视频文件")
+            raise problem(
+                422, ErrorCode.INVALID_INPUT, "需要 multipart/form-data 视频文件"
+            )
         self.file = destination.open("xb")
         self.filename = ""
         self.extension = ""
@@ -74,24 +77,26 @@ class MultipartVideo:
     def part_begin(self) -> None:
         self.parts += 1
         if self.parts != 1:
-            raise problem(422, "invalid_input", "必须恰好上传一个 file，不接受额外字段")
+            raise problem(
+                422, ErrorCode.INVALID_INPUT, "必须恰好上传一个 file，不接受额外字段"
+            )
 
     def header_field(self, data: bytes, start: int, end: int) -> None:
         self.header_size += end - start
         if self.header_size > 8192:
-            raise problem(413, "payload_too_large", "上传头过大")
+            raise problem(413, ErrorCode.PAYLOAD_TOO_LARGE, "上传头过大")
         self.field.extend(data[start:end])
 
     def header_value(self, data: bytes, start: int, end: int) -> None:
         self.header_size += end - start
         if self.header_size > 8192:
-            raise problem(413, "payload_too_large", "上传头过大")
+            raise problem(413, ErrorCode.PAYLOAD_TOO_LARGE, "上传头过大")
         self.value.extend(data[start:end])
 
     def header_end(self) -> None:
         name = bytes(self.field).lower()
         if name in self.headers:
-            raise problem(422, "invalid_input", "重复上传头")
+            raise problem(422, ErrorCode.INVALID_INPUT, "重复上传头")
         self.headers[name] = bytes(self.value)
         self.field.clear()
         self.value.clear()
@@ -104,7 +109,7 @@ class MultipartVideo:
         try:
             self.filename = raw.decode("utf-8")
         except UnicodeDecodeError:
-            raise problem(422, "invalid_input", "文件名必须为 UTF-8") from None
+            raise problem(422, ErrorCode.INVALID_INPUT, "文件名必须为 UTF-8") from None
         if (
             disposition != b"form-data"
             or options.get(b"name") != b"file"
@@ -113,29 +118,27 @@ class MultipartVideo:
             or any(c in self.filename for c in ("/", "\\"))
             or any(ord(c) < 32 for c in self.filename)
         ):
-            raise problem(422, "invalid_input", "无效的文件字段或文件名")
+            raise problem(422, ErrorCode.INVALID_INPUT, "无效的文件字段或文件名")
         self.extension = Path(self.filename).suffix.lower().lstrip(".")
         mime = (
             self.headers.get(b"content-type", b"application/octet-stream")
             .split(b";", 1)[0]
             .lower()
         )
-        allowed = {
-            "mp4": {b"video/mp4", b"application/octet-stream"},
-            "avi": {
-                b"video/avi",
-                b"video/x-msvideo",
-                b"video/msvideo",
-                b"application/octet-stream",
-            },
-        }
-        if self.extension not in allowed or mime not in allowed[self.extension]:
-            raise problem(415, "unsupported_media_type", "仅支持 mp4 或 avi 视频")
+        if (
+            self.extension not in VIDEO_MIME_TYPES
+            or mime not in VIDEO_MIME_TYPES[self.extension]
+        ):
+            raise problem(
+                415, ErrorCode.UNSUPPORTED_MEDIA_TYPE, "仅支持 mp4 或 avi 视频"
+            )
 
     def data(self, data: bytes, start: int, end: int) -> None:
         self.size += end - start
         if self.size > MAX_VIDEO_BYTES:
-            raise problem(413, "file_too_large", "视频不得超过 2,000,000,000 bytes")
+            raise problem(
+                413, ErrorCode.FILE_TOO_LARGE, f"视频不得超过 {MAX_VIDEO_BYTES:,} bytes"
+            )
         chunk = memoryview(data)[start:end]
         self.file.write(chunk)
         self.digest.update(chunk)
@@ -157,7 +160,9 @@ async def upload_video(
     try:
         key = str(uuid.UUID(request.headers.get("idempotency-key", "")))
     except ValueError:
-        raise problem(422, "invalid_input", "需要 UUID Idempotency-Key") from None
+        raise problem(
+            422, ErrorCode.INVALID_INPUT, "需要 UUID Idempotency-Key"
+        ) from None
     root = media_root()
     stage: Path | None = None
     consumer: MultipartVideo | None = None
@@ -179,14 +184,14 @@ async def upload_video(
         async for chunk in request.stream():
             request_bytes += len(chunk)
             if request_bytes > MAX_VIDEO_BYTES + 65536:
-                raise problem(413, "payload_too_large", "上传请求过大")
+                raise problem(413, ErrorCode.PAYLOAD_TOO_LARGE, "上传请求过大")
             await run_in_threadpool(consumer.parser.write, chunk)
         consumer.parser.finalize()
         consumer.file.flush()
         os.fsync(consumer.file.fileno())
         consumer.file.close()
         if not consumer.complete or consumer.parts != 1 or not consumer.size:
-            raise problem(422, "invalid_video", "视频为空或传输不完整")
+            raise problem(422, ErrorCode.INVALID_VIDEO, "视频为空或传输不完整")
         digest = consumer.digest.hexdigest()
         # Replays do not need a second media decode. Lock protects first insert.
         await run_in_threadpool(lock_owner, session, current_user)
@@ -201,7 +206,9 @@ async def upload_video(
         if receipt:
             video = owned_video(session, current_user, project_id, receipt.video_id)
             if video.sha256 != digest:
-                raise problem(409, "idempotency_conflict", "相同幂等键的视频内容不同")
+                raise problem(
+                    409, ErrorCode.IDEMPOTENCY_CONFLICT, "相同幂等键的视频内容不同"
+                )
             response.status_code = 200
             return video_public(video, project_id)
         original = stage / f"original.{consumer.extension}"
@@ -261,12 +268,16 @@ async def upload_video(
         response.status_code = 201
         return video_public(video, project_id)
     except ClientDisconnect:
-        raise problem(422, "invalid_video", "视频传输中断，请完整重传") from None
+        raise problem(
+            422, ErrorCode.INVALID_VIDEO, "视频传输中断，请完整重传"
+        ) from None
     except MultipartParseError:
-        raise problem(422, "invalid_input", "无效的 multipart 上传") from None
+        raise problem(422, ErrorCode.INVALID_INPUT, "无效的 multipart 上传") from None
     except OSError, SQLAlchemyError:
         session.rollback()
-        raise problem(503, "service_unavailable", "平台媒体存储暂时不可用") from None
+        raise problem(
+            503, ErrorCode.SERVICE_UNAVAILABLE, "平台媒体存储暂时不可用"
+        ) from None
     finally:
         if consumer:
             consumer.file.close()

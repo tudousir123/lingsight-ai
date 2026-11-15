@@ -1,8 +1,10 @@
 """Persisted confirmation behavior through authenticated project-video HTTP."""
 
+import base64
 import copy
 import json
 import subprocess
+import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -14,6 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import event
 from sqlalchemy.exc import OperationalError
+from sqlmodel import Session
 
 from app.core.config import settings
 from app.core.db import engine
@@ -395,3 +398,128 @@ def test_input_hash_change_after_save_returns_persisted_failure(flow):
         == response.json()["id"]
     )
     assert flow.upstream.confirm_calls == 0
+
+
+def test_rejected_replay_overlaps_replacement_without_consuming_old_geometry(flow):
+    flow.state.reject = True
+    old_key = str(uuid.uuid4())
+    first = submit(flow, key=old_key)
+    assert first.status_code == 201
+    replacement = {
+        **flow.payload,
+        "expected_confirmation_id": first.json()["id"],
+        "marks": [],
+    }
+    flow.state.reject = False
+    committed = [threading.Event(), threading.Event()]
+    resume = [threading.Event(), threading.Event()]
+    counter_lock = threading.Lock()
+    count = 0
+
+    def pause_committed_requests(_session):
+        nonlocal count
+        with counter_lock:
+            index = count
+            count += 1
+        if index < 2:
+            committed[index].set()
+            assert resume[index].wait(20), "overlapping request did not resume"
+
+    # Pause at the database boundary after durable commits have released locks.
+    # Both operations enter through HTTP, with no replacement of application code.
+    event.listen(Session, "after_commit", pause_committed_requests)
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            replay_future = pool.submit(submit, flow, None, old_key)
+            try:
+                assert committed[0].wait(20)
+                replacement_future = pool.submit(submit, flow, replacement)
+                assert committed[1].wait(20)
+                resume[0].set()
+                replay = replay_future.result(timeout=20)
+            finally:
+                for signal in resume:
+                    signal.set()
+            replaced = replacement_future.result(timeout=20)
+    finally:
+        event.remove(Session, "after_commit", pause_committed_requests)
+    assert replay.status_code == 200, replay.text
+    assert replay.json()["tracking_dispatch"]["status"] == "failed"
+    assert replaced.status_code == 201, replaced.text
+    assert replaced.json()["tracking_dispatch"]["status"] == "accepted"
+    assert flow.upstream.confirm_calls == 1
+    assert flow.upstream.tasks[flow.task["id"]]["confirmed"]["marks"] == []
+    latest = flow.client.get(
+        flow.url + "/preannotation-confirmation", headers=flow.owner
+    )
+    assert latest.json()["id"] == replaced.json()["id"]
+
+
+def test_candidate_image_url_uses_configured_api_prefix(flow, monkeypatch):
+    from fastapi import FastAPI
+
+    from app.api.main import api_router
+
+    monkeypatch.setattr(settings, "API_V1_STR", "/research/v2")
+    configured = FastAPI()
+    configured.include_router(api_router, prefix=settings.API_V1_STR)
+    with TestClient(configured) as client:
+        response = client.get(
+            flow.url.replace("/api/v1", "/research/v2") + "/preannotation",
+            params={"task_id": flow.task["id"]},
+            headers=flow.owner,
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["image_url"] == (
+            f"/research/v2/inference/tasks/{flow.task['id']}/artifacts/candidate.jpg"
+        )
+        async_client = httpx.AsyncClient
+        with patch(
+            "httpx.AsyncClient",
+            side_effect=lambda **kw: async_client(
+                transport=httpx.MockTransport(flow.upstream.handle), **kw
+            ),
+        ):
+            image = client.get(response.json()["image_url"], headers=flow.owner)
+        assert image.status_code == 200
+        assert image.content == b"synthetic-candidate"
+
+
+def test_unicode_media_source_uses_listed_identifier_for_task_input(flow, monkeypatch):
+    monkeypatch.setenv("PLATFORM_MEDIA_INFERENCE_SOURCE_ID", "平台媒体")
+    listed_ids = set()
+
+    def upstream(request):
+        result = flow.upstream.handle(request)
+        if request.url.path == "/v1/videos":
+            listing = result.json()
+            for item in listing["items"]:
+                encoded = item["id"][3:]
+                value = json.loads(
+                    base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
+                )
+                assert value["s"] == "平台媒体"
+                item["id"] = "v1." + base64.urlsafe_b64encode(
+                    json.dumps(
+                        value, ensure_ascii=False, separators=(",", ":")
+                    ).encode()
+                ).decode().rstrip("=")
+                listed_ids.add(item["id"])
+            return httpx.Response(200, json=listing)
+        if request.url.path == "/v1/tasks" and request.method == "POST":
+            assert json.loads(request.content)["video_id"] in listed_ids
+        return result
+
+    with patch(
+        "httpx.Client",
+        side_effect=lambda **kw: flow.http_client(
+            transport=httpx.MockTransport(upstream), **kw
+        ),
+    ):
+        response = flow.client.post(
+            "/api/v1/inference/tasks",
+            headers={**flow.owner, "Idempotency-Key": str(uuid.uuid4())},
+            json=flow.create_payload,
+        )
+    assert response.status_code == 202, response.text
+    assert response.json()["video_id"] == flow.create_payload["video_id"]

@@ -3,13 +3,14 @@
 import hashlib
 import json
 import uuid
-from typing import Any, Literal, TypeGuard
+from typing import Any, TypeGuard, get_args
 
 import httpx
 from fastapi import HTTPException
 from sqlmodel import Session, select
 
 from app.api.deps import owned_project
+from app.contracts import DataScope, ErrorCode
 from app.core.config import settings
 from app.models import ExperimentAccess, User
 from app.scope_models import WholeLibraryAccess
@@ -56,11 +57,8 @@ def capable_agent(capabilities: object, *, project: bool = False) -> bool:
     )
 
 
-DataScope = Literal["none", "project", "whole_library"]
-
-
 def is_data_scope(value: object) -> TypeGuard[DataScope]:
-    return isinstance(value, str) and value in {"none", "project", "whole_library"}
+    return isinstance(value, str) and value in get_args(DataScope)
 
 
 def authorize_scope(
@@ -68,13 +66,13 @@ def authorize_scope(
 ) -> dict[str, Any]:
     if not user.is_active:
         raise HTTPException(
-            403, {"code": "permission_denied", "message": "Inactive account"}
+            403, {"code": ErrorCode.PERMISSION_DENIED, "message": "Inactive account"}
         )
     publications: list[str] = []
     if data_scope == "project":
         if project_id is None:
             raise HTTPException(
-                422, {"code": "invalid_input", "message": "project_id required"}
+                422, {"code": ErrorCode.INVALID_INPUT, "message": "project_id required"}
             )
         owned_project(session, user, project_id)
         # Publication visibility includes current original-input authorization;
@@ -84,11 +82,15 @@ def authorize_scope(
         publications = sorted(visible_publication_ids(session, user, project_id))
     elif project_id is not None:
         raise HTTPException(
-            422, {"code": "invalid_input", "message": "project_id forbidden"}
+            422, {"code": ErrorCode.INVALID_INPUT, "message": "project_id forbidden"}
         )
     elif data_scope == "whole_library" and not has_whole_library_access(session, user):
         raise HTTPException(
-            403, {"code": "permission_denied", "message": "Whole-library access denied"}
+            403,
+            {
+                "code": ErrorCode.PERMISSION_DENIED,
+                "message": "Whole-library access denied",
+            },
         )
     grant = session.get(WholeLibraryAccess, user.id)
     revision_inputs = {
@@ -119,11 +121,11 @@ def ensure_agent_task_owner(session: Session, user: User, task_id: str) -> None:
         parsed_id = uuid.UUID(task_id)
     except ValueError, AttributeError:
         raise HTTPException(
-            404, {"code": "resource_not_found", "message": "Task not found"}
+            404, {"code": ErrorCode.RESOURCE_NOT_FOUND, "message": "Task not found"}
         ) from None
     if not settings.AGENT_API_TOKEN:
         raise HTTPException(
-            503, {"code": "service_unavailable", "message": "Agent unavailable"}
+            503, {"code": ErrorCode.SERVICE_UNAVAILABLE, "message": "Agent unavailable"}
         )
     headers = {
         "Authorization": f"Bearer {settings.AGENT_API_TOKEN}",
@@ -141,7 +143,7 @@ def ensure_agent_task_owner(session: Session, user: User, task_id: str) -> None:
                 raise HTTPException(
                     503,
                     {
-                        "code": "service_unavailable",
+                        "code": ErrorCode.SERVICE_UNAVAILABLE,
                         "message": "Agent capabilities unavailable",
                     },
                 )
@@ -150,20 +152,24 @@ def ensure_agent_task_owner(session: Session, user: User, task_id: str) -> None:
                 raise HTTPException(
                     response.status_code,
                     {
-                        "code": "permission_denied"
+                        "code": ErrorCode.PERMISSION_DENIED
                         if response.status_code == 403
-                        else "resource_not_found",
+                        else ErrorCode.RESOURCE_NOT_FOUND,
                         "message": "Task unavailable",
                     },
                 )
             if response.status_code != 200:
                 raise HTTPException(
-                    503, {"code": "service_unavailable", "message": "Agent unavailable"}
+                    503,
+                    {
+                        "code": ErrorCode.SERVICE_UNAVAILABLE,
+                        "message": "Agent unavailable",
+                    },
                 )
             task = response.json()
     except httpx.HTTPError, ValueError:
         raise HTTPException(
-            503, {"code": "service_unavailable", "message": "Agent unavailable"}
+            503, {"code": ErrorCode.SERVICE_UNAVAILABLE, "message": "Agent unavailable"}
         ) from None
     if (
         not isinstance(task, dict)
@@ -171,12 +177,16 @@ def ensure_agent_task_owner(session: Session, user: User, task_id: str) -> None:
         or task.get("id") != str(parsed_id)
     ):
         raise HTTPException(
-            404, {"code": "resource_not_found", "message": "Task not found"}
+            404, {"code": ErrorCode.RESOURCE_NOT_FOUND, "message": "Task not found"}
         )
     data_scope = task.get("data_scope")
     if not is_data_scope(data_scope):
         raise HTTPException(
-            503, {"code": "service_unavailable", "message": "Invalid Agent task scope"}
+            503,
+            {
+                "code": ErrorCode.SERVICE_UNAVAILABLE,
+                "message": "Invalid Agent task scope",
+            },
         )
     try:
         project_id = (
@@ -186,6 +196,7 @@ def ensure_agent_task_owner(session: Session, user: User, task_id: str) -> None:
         )
     except ValueError, TypeError, AttributeError:
         raise HTTPException(
-            503, {"code": "service_unavailable", "message": "Invalid Agent project"}
+            503,
+            {"code": ErrorCode.SERVICE_UNAVAILABLE, "message": "Invalid Agent project"},
         ) from None
     authorize_scope(session, user, data_scope, project_id)

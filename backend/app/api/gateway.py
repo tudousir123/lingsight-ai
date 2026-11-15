@@ -34,6 +34,8 @@ from fastapi import HTTPException, Request
 from starlette.background import BackgroundTask
 from starlette.responses import StreamingResponse
 
+from app.contracts import ErrorCode
+
 CONNECT_TIMEOUT_S = 30
 MAX_CURSOR = 9007199254740991  # 2**53 - 1, the SSE event-cursor ceiling
 UUID_PATTERN = r"[0-9a-fA-F-]{36}"
@@ -224,7 +226,7 @@ async def forward(
                 not isinstance(error, dict)
                 or not isinstance(error.get("code"), str)
                 or not isinstance(error.get("message"), str)
-                or error["code"] == "authentication_required"
+                or error["code"] == ErrorCode.AUTHENTICATION_REQUIRED
             ):
                 raise ValueError("invalid upstream error")
             detail = {

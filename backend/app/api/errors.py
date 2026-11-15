@@ -7,6 +7,7 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from starlette.responses import JSONResponse
 
+from app.contracts import ErrorCode
 from app.core.config import settings
 
 _RESOURCE_ROUTES = re.compile(
@@ -33,7 +34,9 @@ async def resource_validation_error(request: Request, exc: Exception) -> JSONRes
         status_code=422,
         content={
             "detail": {
-                "code": "invalid_geometry" if geometry else "invalid_input",
+                "code": ErrorCode.INVALID_GEOMETRY
+                if geometry
+                else ErrorCode.INVALID_INPUT,
                 "message": "请求字段无效",
                 "fields": fields,
             }

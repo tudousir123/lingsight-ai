@@ -3,6 +3,15 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 MAX_VIDEO_BYTES = 2_000_000_000
+VIDEO_MIME_TYPES = {
+    "mp4": {b"video/mp4", b"application/octet-stream"},
+    "avi": {
+        b"video/avi",
+        b"video/x-msvideo",
+        b"video/msvideo",
+        b"application/octet-stream",
+    },
+}
 
 
 class MediaSettings(BaseSettings):

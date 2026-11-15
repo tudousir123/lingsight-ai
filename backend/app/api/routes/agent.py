@@ -2,7 +2,6 @@
 
 import json
 import uuid
-from typing import Literal
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -24,6 +23,7 @@ from app.api.gateway import (
     forward,
     read_payload,
 )
+from app.contracts import CompletionMode, DataScope, ErrorCode
 from app.core.config import settings
 from app.scope import capable_agent, has_whole_library_access
 
@@ -112,8 +112,8 @@ class TaskInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     goal: str = Field(min_length=1, max_length=12000)
     project_id: uuid.UUID | None = None
-    data_scope: Literal["none", "project", "whole_library"] | None = None
-    completion_mode: Literal["auto", "qa", "research"] = "auto"
+    data_scope: DataScope | None = None
+    completion_mode: CompletionMode = "auto"
 
     @field_validator("goal", mode="before")
     @classmethod
@@ -137,7 +137,7 @@ class TaskInput(BaseModel):
 class MessageInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     text: str = Field(min_length=1, max_length=12000)
-    completion_mode: Literal["auto", "qa", "research"] = "auto"
+    completion_mode: CompletionMode = "auto"
 
     @field_validator("text", mode="before")
     @classmethod
@@ -166,7 +166,7 @@ async def agent_gateway(
             raise HTTPException(
                 415,
                 {
-                    "code": "unsupported_media_type",
+                    "code": ErrorCode.UNSUPPORTED_MEDIA_TYPE,
                     "message": "Expected application/json",
                 },
             )
@@ -175,7 +175,7 @@ async def agent_gateway(
             body = json.loads(payload)
         except ValueError, UnicodeDecodeError:
             raise HTTPException(
-                400, {"code": "invalid_input", "message": "Invalid JSON"}
+                400, {"code": ErrorCode.INVALID_INPUT, "message": "Invalid JSON"}
             ) from None
         try:
             parsed = (
@@ -187,7 +187,7 @@ async def agent_gateway(
             raise HTTPException(
                 422,
                 {
-                    "code": "invalid_input",
+                    "code": ErrorCode.INVALID_INPUT,
                     "message": "Invalid task input",
                     "fields": {
                         ".".join(map(str, item["loc"])) or "body": item["msg"]
@@ -205,7 +205,7 @@ async def agent_gateway(
                 raise HTTPException(
                     403,
                     {
-                        "code": "permission_denied",
+                        "code": ErrorCode.PERMISSION_DENIED,
                         "message": "Whole-library access denied",
                     },
                 )

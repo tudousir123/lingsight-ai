@@ -1,9 +1,9 @@
 """Owned upload authorization and bounded, verified media storage."""
 
-import base64
 import fcntl
 import hashlib
 import json
+import logging
 import math
 import os
 import re
@@ -12,9 +12,11 @@ import subprocess
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
+from dataclasses import dataclass
 from datetime import UTC
 from fractions import Fraction
 from pathlib import Path
+from threading import Thread
 from typing import Any, BinaryIO
 
 from fastapi import FastAPI, HTTPException
@@ -23,6 +25,8 @@ from sqlmodel import Session, select
 from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import owned_project
+from app.contracts import ErrorCode
+from app.inference_access import encode_video
 from app.inference_client import (
     InferenceArtifactTooLarge,
     InferenceClient,
@@ -64,7 +68,7 @@ def get_owned_upload(session: Session, user: User, video_id: str) -> UploadedVid
         or video.owner_user_id != user.id
         or not owned_references(session, user, video_id)
     ):
-        raise problem(404, "resource_not_found", "视频不存在")
+        raise problem(404, ErrorCode.RESOURCE_NOT_FOUND, "视频不存在")
     return video
 
 
@@ -76,7 +80,7 @@ def owned_video(
     if not any(
         m.project_id == project_id for m in owned_references(session, user, video_id)
     ):
-        raise problem(404, "resource_not_found", "视频不存在")
+        raise problem(404, ErrorCode.RESOURCE_NOT_FOUND, "视频不存在")
     return video
 
 
@@ -99,13 +103,15 @@ def protect_last_references(
         if any(r.project_id == project.id for r in refs) and not any(
             r.project_id != project.id for r in refs
         ):
-            raise problem(409, "last_project_reference", "请先将视频归组到另一个项目")
+            raise problem(
+                409, ErrorCode.LAST_PROJECT_REFERENCE, "请先将视频归组到另一个项目"
+            )
 
 
 def media_root() -> Path:
     configured = MediaSettings().PLATFORM_MEDIA_ROOT
     if not configured:
-        raise problem(503, "service_unavailable", "平台媒体存储尚未配置")
+        raise problem(503, ErrorCode.SERVICE_UNAVAILABLE, "平台媒体存储尚未配置")
     root = Path(configured)
     repo = Path(__file__).resolve().parents[2]
     if (
@@ -113,7 +119,7 @@ def media_root() -> Path:
         or root == Path("/")
         or any(p.is_symlink() for p in (root, *root.parents))
     ):
-        raise problem(503, "service_unavailable", "平台媒体存储配置无效")
+        raise problem(503, ErrorCode.SERVICE_UNAVAILABLE, "平台媒体存储配置无效")
     root = root.resolve()
     if (
         root.is_relative_to(repo)
@@ -124,13 +130,15 @@ def media_root() -> Path:
             for part in root.parts
         )
     ):
-        raise problem(503, "service_unavailable", "请配置专用平台媒体目录")
+        raise problem(503, ErrorCode.SERVICE_UNAVAILABLE, "请配置专用平台媒体目录")
     if not root.is_dir():
-        raise problem(503, "service_unavailable", "平台媒体存储不可用")
+        raise problem(503, ErrorCode.SERVICE_UNAVAILABLE, "平台媒体存储不可用")
     marker = root / ".lingsight-media-root"
     try:
         if not marker.exists() and any(root.iterdir()):
-            raise problem(503, "service_unavailable", "平台媒体目录必须为空的专用目录")
+            raise problem(
+                503, ErrorCode.SERVICE_UNAVAILABLE, "平台媒体目录必须为空的专用目录"
+            )
         fd = os.open(marker, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
         with os.fdopen(fd, "r+b") as handle:
             fcntl.flock(handle, fcntl.LOCK_EX)
@@ -138,15 +146,21 @@ def media_root() -> Path:
             if not identity:
                 if any(child != marker for child in root.iterdir()):
                     raise problem(
-                        503, "service_unavailable", "平台媒体目录必须为空的专用目录"
+                        503,
+                        ErrorCode.SERVICE_UNAVAILABLE,
+                        "平台媒体目录必须为空的专用目录",
                     )
                 handle.write(b"lingsight-platform-media-v1\n")
                 handle.flush()
                 os.fsync(handle.fileno())
             elif identity != b"lingsight-platform-media-v1\n":
-                raise problem(503, "service_unavailable", "平台媒体目录标识无效")
+                raise problem(
+                    503, ErrorCode.SERVICE_UNAVAILABLE, "平台媒体目录标识无效"
+                )
     except OSError:
-        raise problem(503, "service_unavailable", "平台媒体存储不可用") from None
+        raise problem(
+            503, ErrorCode.SERVICE_UNAVAILABLE, "平台媒体存储不可用"
+        ) from None
     return root
 
 
@@ -160,7 +174,7 @@ def media_path(key: str) -> Path:
         or not path.is_file()
         or not path.resolve().is_relative_to(root)
     ):
-        raise problem(503, "service_unavailable", "平台媒体文件不可用")
+        raise problem(503, ErrorCode.SERVICE_UNAVAILABLE, "平台媒体文件不可用")
     return path
 
 
@@ -184,7 +198,7 @@ def cleanup_abandoned(session: Session, root: Path) -> None:
     for bucket in ("staging", "objects"):
         directory = root / bucket
         if directory.is_symlink():
-            raise problem(503, "service_unavailable", "平台媒体存储配置无效")
+            raise problem(503, ErrorCode.SERVICE_UNAVAILABLE, "平台媒体存储配置无效")
         directory.mkdir(mode=0o700, exist_ok=True)
         for item in directory.iterdir():
             if (
@@ -216,8 +230,6 @@ def recover_media_storage() -> None:
             cleanup_abandoned(session, root)
     except HTTPException, OSError, SQLAlchemyError:
         # Never log credentials, research filenames or configured host paths.
-        import logging
-
         logging.getLogger(__name__).warning("Platform media recovery unavailable")
 
 
@@ -232,21 +244,67 @@ def file_hash(path: Path) -> str:
         return hashlib.file_digest(file, "sha256").hexdigest()
 
 
+@dataclass
+class MediaDiagnostics:
+    # Keep bounded evidence internally; raw tool output includes private paths
+    # and must never be returned to the browser or written to application logs.
+    tail: bytes = b""
+    storage_failure: bool = False
+
+    def read(self, reader: BinaryIO) -> None:
+        while chunk := reader.read(4096):
+            evidence = (self.tail + chunk).lower()
+            self.storage_failure |= any(
+                marker in evidence
+                for marker in (
+                    b"no space left on device",
+                    b"disk quota exceeded",
+                    b"read-only file system",
+                    b"input/output error",
+                )
+            )
+            self.tail = (self.tail + chunk)[-8192:]
+
+
+@contextmanager
+def media_diagnostics() -> Iterator[tuple[BinaryIO, MediaDiagnostics]]:
+    read_fd, write_fd = os.pipe()
+    diagnostics = MediaDiagnostics()
+    with os.fdopen(read_fd, "rb") as reader, os.fdopen(write_fd, "wb") as writer:
+        worker = Thread(target=diagnostics.read, args=(reader,), daemon=True)
+        worker.start()
+        try:
+            yield writer, diagnostics
+        finally:
+            writer.close()
+            worker.join()
+
+
 def run_media(args: list[str], output: BinaryIO | int = subprocess.PIPE) -> bytes:
     try:
-        result = subprocess.run(
-            args,
-            stdout=output,
-            stderr=subprocess.DEVNULL,
-            timeout=MediaSettings().PLATFORM_MEDIA_TOOL_TIMEOUT,
-            check=False,
-        )
+        with media_diagnostics() as (stderr, diagnostics):
+            result = subprocess.run(
+                args,
+                stdout=output,
+                stderr=stderr,
+                timeout=MediaSettings().PLATFORM_MEDIA_TOOL_TIMEOUT,
+                check=False,
+            )
     except FileNotFoundError:
-        raise problem(503, "service_unavailable", "媒体校验工具尚未安装") from None
+        raise problem(
+            503, ErrorCode.SERVICE_UNAVAILABLE, "媒体校验工具尚未安装"
+        ) from None
     except subprocess.TimeoutExpired:
-        raise problem(422, "invalid_video", "视频校验超时") from None
+        raise problem(422, ErrorCode.INVALID_VIDEO, "视频校验超时") from None
     if result.returncode:
-        raise problem(422, "invalid_video", "视频不可解码或无法无损适配")
+        logging.getLogger(__name__).warning(
+            "Media tool failed: exit=%s category=%s",
+            result.returncode,
+            "storage" if diagnostics.storage_failure else "invalid_media",
+        )
+        if diagnostics.storage_failure:
+            raise problem(503, ErrorCode.SERVICE_UNAVAILABLE, "平台媒体存储不可用")
+        raise problem(422, ErrorCode.INVALID_VIDEO, "视频不可解码或无法无损适配")
     return result.stdout or b""
 
 
@@ -268,7 +326,7 @@ def probe(path: Path) -> dict[str, Any]:
     )
     streams = [s for s in payload["streams"] if s["codec_type"] == "video"]
     if len(streams) != 1:
-        raise problem(422, "invalid_video", "需要恰好一个视频流")
+        raise problem(422, ErrorCode.INVALID_VIDEO, "需要恰好一个视频流")
     stream = streams[0]
     try:
         fps = float(Fraction(stream["avg_frame_rate"]))
@@ -281,7 +339,7 @@ def probe(path: Path) -> dict[str, Any]:
         ):
             raise ValueError
     except ValueError, KeyError, ZeroDivisionError:
-        raise problem(422, "invalid_video", "视频帧信息无效") from None
+        raise problem(422, ErrorCode.INVALID_VIDEO, "视频帧信息无效") from None
     return {
         **stream,
         "frame_count": count,
@@ -351,15 +409,17 @@ def prepare_media(original: Path, extension: str) -> dict[str, Any]:
                 b"M4V ",
             }
         ):
-            raise problem(415, "unsupported_media_type", "实际容器不是支持的 MP4")
+            raise problem(
+                415, ErrorCode.UNSUPPORTED_MEDIA_TYPE, "实际容器不是支持的 MP4"
+            )
     elif header[:4] != b"RIFF" or header[8:12] != b"AVI ":
-        raise problem(415, "unsupported_media_type", "实际容器不是 AVI")
+        raise problem(415, ErrorCode.UNSUPPORTED_MEDIA_TYPE, "实际容器不是 AVI")
     info = probe(original)
     containers = info["container"].split(",")
     if (extension == "mp4" and "mp4" not in containers) or (
         extension == "avi" and containers != ["avi"]
     ):
-        raise problem(415, "unsupported_media_type", "视频容器与扩展名不符")
+        raise problem(415, ErrorCode.UNSUPPORTED_MEDIA_TYPE, "视频容器与扩展名不符")
     evidence, time_base = frame_evidence(original, original.parent / "original.frames")
     inference = original
     conversion = "original"
@@ -389,7 +449,7 @@ def prepare_media(original: Path, extension: str) -> dict[str, Any]:
                 frame_evidence(inference, original.parent / "derived.frames")[0]
                 != evidence
             ):
-                raise problem(422, "invalid_video", "无损重封装验证失败")
+                raise problem(422, ErrorCode.INVALID_VIDEO, "无损重封装验证失败")
         except HTTPException as exc:
             if exc.status_code != 422:
                 raise
@@ -425,7 +485,9 @@ def prepare_media(original: Path, extension: str) -> dict[str, Any]:
             or frame_evidence(inference, original.parent / "derived.frames")[0]
             != evidence
         ):
-            raise problem(422, "invalid_video", "无法保持解码像素、帧序和时间依据")
+            raise problem(
+                422, ErrorCode.INVALID_VIDEO, "无法保持解码像素、帧序和时间依据"
+            )
     preview = inference
     compatible = probe(inference)
     if compatible["codec_name"] != "h264" or compatible["pix_fmt"] != "yuv420p":
@@ -471,9 +533,11 @@ def inference_input(video: UploadedVideo) -> tuple[str, str]:
     config = MediaSettings()
     source = config.PLATFORM_MEDIA_INFERENCE_SOURCE_ID
     if not config.PLATFORM_MEDIA_READONLY_READY or not source:
-        raise problem(503, "service_unavailable", "推理服务只读媒体挂载尚未就绪")
+        raise problem(
+            503, ErrorCode.SERVICE_UNAVAILABLE, "推理服务只读媒体挂载尚未就绪"
+        )
     if file_hash(media_path(video.inference_storage_key)) != video.inference_sha256:
-        raise problem(409, "state_conflict", "推理输入内容已变化")
+        raise problem(409, ErrorCode.STATE_CONFLICT, "推理输入内容已变化")
     directory = str(Path(video.inference_storage_key).parent)
     try:
         listing = InferenceClient().fetch_directory(source, directory)
@@ -485,20 +549,16 @@ def inference_input(video: UploadedVideo) -> tuple[str, str]:
         InferenceArtifactTooLarge,
     ):
         raise problem(
-            503, "service_unavailable", "推理服务无法读取平台媒体来源"
+            503, ErrorCode.SERVICE_UNAVAILABLE, "推理服务无法读取平台媒体来源"
         ) from None
     # The directory must expose the exact server-mapped input, not merely exist.
-    encoded = "v1." + base64.urlsafe_b64encode(
-        json.dumps(
-            {"s": source, "p": video.inference_storage_key}, separators=(",", ":")
-        ).encode()
-    ).decode().rstrip("=")
+    encoded = encode_video(source, video.inference_storage_key)
     if not any(
         item.get("type") == "video" and item.get("id") == encoded
         for item in listing["items"]
         if isinstance(item, dict)
     ):
-        raise problem(503, "service_unavailable", "推理服务读取映射尚未核验")
+        raise problem(503, ErrorCode.SERVICE_UNAVAILABLE, "推理服务读取映射尚未核验")
     return source, video.inference_storage_key
 
 

@@ -9,9 +9,10 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import SessionDep
+from app.contracts import DataScope, ErrorCode
 from app.core.config import settings
 from app.models import User
-from app.scope import DataScope, authorize_scope
+from app.scope import authorize_scope
 
 router = APIRouter(prefix="/internal/agent", tags=["internal-agent"])
 
@@ -22,7 +23,7 @@ def authorize_service(authorization: Annotated[str | None, Header()] = None) -> 
         raise HTTPException(
             503,
             {
-                "code": "service_unavailable",
+                "code": ErrorCode.SERVICE_UNAVAILABLE,
                 "message": "Authorization callback not configured",
             },
         )
@@ -32,7 +33,7 @@ def authorize_service(authorization: Annotated[str | None, Header()] = None) -> 
         raise HTTPException(
             401,
             {
-                "code": "authentication_required",
+                "code": ErrorCode.AUTHENTICATION_REQUIRED,
                 "message": "Service authentication required",
             },
         )
@@ -57,20 +58,22 @@ def authorize(body: AuthorizationInput, session: SessionDep) -> dict[str, Any]:
         user = session.get(User, body.user_id)
         if user is None or not user.is_active:
             raise HTTPException(
-                403, {"code": "permission_denied", "message": "Account unavailable"}
+                403,
+                {"code": ErrorCode.PERMISSION_DENIED, "message": "Account unavailable"},
             )
         return authorize_scope(session, user, body.data_scope, body.project_id)
     except HTTPException as error:
         if error.status_code == 404:
             raise HTTPException(
-                404, {"code": "resource_not_found", "message": "Project not found"}
+                404,
+                {"code": ErrorCode.RESOURCE_NOT_FOUND, "message": "Project not found"},
             ) from None
         raise
     except SQLAlchemyError:
         raise HTTPException(
             503,
             {
-                "code": "service_unavailable",
+                "code": ErrorCode.SERVICE_UNAVAILABLE,
                 "message": "Authorization temporarily unavailable",
             },
         ) from None
