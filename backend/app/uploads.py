@@ -11,6 +11,7 @@ import subprocess
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
+from datetime import UTC
 from fractions import Fraction
 from pathlib import Path
 from typing import Any, BinaryIO
@@ -498,6 +499,9 @@ def video_public(video: UploadedVideo, project_id: uuid.UUID) -> dict[str, Any]:
             "created_at",
         )
     } | {
+        "created_at": video.created_at.replace(tzinfo=UTC)
+        if video.created_at.tzinfo is None
+        else video.created_at,
         "project_id": project_id,
         "source_kind": "user_upload",
         "media_url": url + "/media",
