@@ -23,7 +23,13 @@ from app.api.gateway import (
     forward,
     read_payload,
 )
-from app.contracts import CompletionMode, DataScope, ErrorCode
+from app.contracts import (
+    AGENT_BROWSER_CONTRACT,
+    AGENT_BROWSER_PROFILE,
+    CompletionMode,
+    DataScope,
+    ErrorCode,
+)
 from app.core.config import settings
 from app.scope import capable_agent, has_whole_library_access
 
@@ -162,9 +168,9 @@ async def ensure_project_support(
                 controlled = capabilities.get("browser")
                 if (
                     not isinstance(controlled, dict)
-                    or controlled.get("contract") != "controlled-browser-v1"
+                    or controlled.get("contract") != AGENT_BROWSER_CONTRACT
                     or controlled.get("enabled") is not True
-                    or controlled.get("profile") != "owner-storage-state-v1"
+                    or controlled.get("profile") != AGENT_BROWSER_PROFILE
                     or controlled.get("javascript") is not False
                     or controlled.get("downloads") is not False
                 ):

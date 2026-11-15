@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test"
+import { agentBrowserContract } from "../src/lib/upstreamRoutes.gen"
 import {
   executionCapabilityFixture,
   personalAgentFixture,
@@ -9,7 +10,13 @@ import { stubProjectsApi } from "./utils/projectsApi"
 const taskId = "11111111-1111-4111-8111-111111111111",
   runId = "22222222-2222-4222-8222-222222222222"
 test.use({ storageState: { cookies: [], origins: [] } })
-async function fixture(page: Page, status = "running", lose = false) {
+async function fixture(
+  page: Page,
+  status = "running",
+  lose = false,
+  browserOverride: Record<string, unknown> = {},
+  openPanel = true,
+) {
   await page.addInitScript(() => {
     localStorage.setItem("access_token", "synthetic-token")
     localStorage.setItem("lingsight.onboarding-seen.v1", "1")
@@ -58,11 +65,11 @@ async function fixture(page: Page, status = "running", lose = false) {
             files: "controlled-files-v1",
             personal_memory: "personal-memory-v1",
             browser: {
-              contract: "controlled-browser-v1",
+              ...agentBrowserContract,
               enabled: true,
-              profile: "owner-storage-state-v1",
               javascript: false,
               downloads: false,
+              ...browserOverride,
             },
           }
         : path === "personal-agent"
@@ -88,9 +95,10 @@ async function fixture(page: Page, status = "running", lose = false) {
     return r.fulfill({ json })
   })
   await page.goto(`/tasks/${taskId}`)
-  await page
-    .getByText("受控浏览器 · 独立个人会话与单次授权", { exact: true })
-    .click()
+  if (openPanel)
+    await page
+      .getByText("受控浏览器 · 独立个人会话与单次授权", { exact: true })
+      .click()
   return writes
 }
 async function fill(page: Page) {
@@ -179,3 +187,39 @@ test("unknown browser result cannot be turned into fresh authorization by page c
   ).toHaveCount(0)
   expect(writes).toHaveLength(0)
 })
+
+for (const [field, value] of [
+  ["contract", "unsupported-browser-contract"],
+  ["profile", "unsupported-owner-profile"],
+  ["enabled", false],
+  ["enabled", 1],
+  ["javascript", true],
+  ["javascript", 0],
+  ["downloads", true],
+  ["downloads", 0],
+] as const) {
+  test(`incompatible browser ${field}=${value} exposes no authorization`, async ({
+    page,
+  }) => {
+    const writes = await fixture(
+      page,
+      "running",
+      false,
+      { [field]: value },
+      false,
+    )
+    await expect(
+      page.getByText("Pi Durable · 1.5.2", { exact: true }),
+    ).toBeVisible()
+    await expect(
+      page.getByText("受控浏览器 · 独立个人会话与单次授权", { exact: true }),
+    ).toHaveCount(0)
+    await expect(page.getByLabel("审核页面 URL", { exact: true })).toHaveCount(
+      0,
+    )
+    await expect(
+      page.getByRole("button", { name: "授权一次提交", exact: true }),
+    ).toHaveCount(0)
+    expect(writes).toHaveLength(0)
+  })
+}

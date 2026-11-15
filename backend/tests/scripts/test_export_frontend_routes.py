@@ -20,3 +20,8 @@ def test_hyphenated_identity_route_has_a_valid_typescript_builder() -> None:
     rendered = render_module(load_services())
     assert "personalAgent: () => `personal-agent`" in rendered
     assert "personal-agent: ()" not in rendered
+
+
+def test_browser_compatibility_contract_is_exported_for_typescript_consumers() -> None:
+    rendered = render_module(load_services())
+    assert "export const agentBrowserContract = {" in rendered

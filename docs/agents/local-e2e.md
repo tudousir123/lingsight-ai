@@ -72,3 +72,17 @@ python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
 拼写配置仅用根 `pyproject.toml` 的 `[tool.typos]`；根 `_typos.toml`、`.typos.toml`、`typos.toml` 即使未跟踪也会被配置护栏拒绝。现有固定版本 typos hook 环境执行 wrapper，不依赖宿主全局 typos。全局配置变更触发 Git 跟踪文件扫描，NUL-safe 保留特殊文件名并继续使用 `--force-exclude`；不递归读取私密未跟踪 `.env`，也不跟随 symlink。普通变更仅扫描传入的跟踪文件。
 
 SDK hook 同时覆盖后端 Schema/依赖、生成器配置，以及根 `package.json`、`bun.lock`、`frontend/package.json`。CI 的冻结依赖安装和 SDK drift 检查继续保留。
+
+## 5. 网关路由与浏览器兼容版本的单源导出
+
+平台支持的浏览器协议/profile 版本只在 `backend/app/contracts.py` 声明；网关直接 import，工作区及其 API 夹具 import 既有生成模块 `frontend/src/lib/upstreamRoutes.gen.ts`。Agent 自身是独立部署的版本广告来源；不能用「共享常量」替代双方各自的 fail-closed 版本/能力核验。
+
+修改声明后沿用现有命令，不需安装新生成工具：
+
+```bash
+cd backend
+uv run python scripts/export_frontend_routes.py
+uv run pytest tests/scripts/test_export_frontend_routes.py tests/api/routes/test_agent_gateway.py -q
+```
+
+前一测试逐字比较整个生成物，路由和浏览器版本任一漂移都会失败。浏览器兼容拒绝另由网关 HTTP 用例与 `frontend/tests/browser-agent.spec.ts` 锁住；夹具 UI 不替代真实 JWT/gateway/Chromium 的 `tests/api/routes/test_agent_browser_http.py`。

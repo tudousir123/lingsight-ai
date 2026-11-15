@@ -1,7 +1,12 @@
 // AUTO-GENERATED FILE — DO NOT EDIT.
 // Regenerate with: cd backend && uv run python scripts/export_frontend_routes.py
-// Source of truth: the operation tables in backend/app/api/routes/*.py;
+// Sources: backend/app/api/routes/*.py tables and backend/app/contracts.py versions;
 // backend/tests/scripts/test_export_frontend_routes.py fails on drift.
+
+export const agentBrowserContract = {
+  contract: "controlled-browser-v1",
+  profile: "owner-storage-state-v1",
+} as const
 
 export const agentGatewayBase = "/api/v1/agent"
 export const inferenceGatewayBase = "/api/v1/inference"

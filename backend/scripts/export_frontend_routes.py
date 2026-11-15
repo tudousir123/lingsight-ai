@@ -1,4 +1,4 @@
-"""Render the gateway adapters' operation tables into frontend route templates.
+"""Export gateway routes and supported browser versions to TypeScript.
 
 The operation tables in app/api/routes/agent.py and inference.py are the
 single declaration of each upstream service's operation surface: the backend
@@ -10,7 +10,8 @@ frontend/src/lib/upstreamRoutes.gen.ts; rerun after changing a table:
     cd backend && uv run python scripts/export_frontend_routes.py
 
 tests/scripts/test_export_frontend_routes.py fails when the checked-in module
-drifts from the declarations.
+drifts from the declarations. Browser compatibility versions are declared in
+app/contracts.py and exported here too, so UI and gateway gates cannot drift.
 """
 
 import re
@@ -19,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.api.gateway import LiteralSet, OperationTable
+from app.contracts import AGENT_BROWSER_CONTRACT, AGENT_BROWSER_PROFILE
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TARGET_PATH = REPO_ROOT / "frontend" / "src" / "lib" / "upstreamRoutes.gen.ts"
@@ -131,10 +133,19 @@ def render_module(services: Sequence[ServiceRoutes]) -> str:
     lines = [
         "// AUTO-GENERATED FILE — DO NOT EDIT.",
         "// Regenerate with: cd backend && uv run python scripts/export_frontend_routes.py",
-        "// Source of truth: the operation tables in backend/app/api/routes/*.py;",
+        "// Sources: backend/app/api/routes/*.py tables and backend/app/contracts.py versions;",
         "// backend/tests/scripts/test_export_frontend_routes.py fails on drift.",
         "",
     ]
+    lines.extend(
+        [
+            "export const agentBrowserContract = {",
+            f'  contract: "{AGENT_BROWSER_CONTRACT}",',
+            f'  profile: "{AGENT_BROWSER_PROFILE}",',
+            "} as const",
+            "",
+        ]
+    )
     for service in services:
         lines.append(
             f'export const {_camel(service.name)}GatewayBase = "{service.base_path}"'

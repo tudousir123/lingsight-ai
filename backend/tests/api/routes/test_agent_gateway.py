@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.api.deps import get_current_user
 from app.api.routes.agent import router
+from app.contracts import AGENT_BROWSER_CONTRACT, AGENT_BROWSER_PROFILE
 from app.core.config import settings
 from app.models import User
 
@@ -121,6 +122,56 @@ class AgentGatewayTest(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 503, response.text)
         self.assertEqual([r.url.path for r in self.calls], ["/v1/capabilities"])
+
+    def test_browser_capability_rejects_incompatible_versions_before_forwarding(
+        self,
+    ) -> None:
+        supported = {
+            "contract": AGENT_BROWSER_CONTRACT,
+            "enabled": True,
+            "profile": AGENT_BROWSER_PROFILE,
+            "javascript": False,
+            "downloads": False,
+        }
+        payload = self.capabilities.json()
+        path = f"/agent/runs/{TASK}/browser-grants"
+        for browser in [
+            supported,
+            None,
+            {},
+            *[
+                {**supported, key: value}
+                for key, value in [
+                    ("contract", "unsupported-browser-contract"),
+                    ("profile", "unsupported-owner-profile"),
+                    ("enabled", False),
+                    ("enabled", 1),
+                    ("javascript", True),
+                    ("javascript", 0),
+                    ("downloads", True),
+                    ("downloads", 0),
+                ]
+            ],
+        ]:
+            with self.subTest(browser=browser):
+                self.capabilities = httpx.Response(
+                    200, json={**payload, "browser": browser}
+                )
+                self.calls.clear()
+                response = self.client.get(path)
+                if browser is supported:
+                    self.assertEqual(response.status_code, 200, response.text)
+                    self.assertEqual(
+                        self.calls[-1].url.path, f"/v1/runs/{TASK}/browser-grants"
+                    )
+                else:
+                    self.assertEqual(response.status_code, 503, response.text)
+                    self.assertEqual(
+                        response.json()["detail"], "受控浏览器未配置或授权协议不兼容"
+                    )
+                    self.assertEqual(
+                        [r.url.path for r in self.calls], ["/v1/capabilities"]
+                    )
 
     def test_stable_request_identity_is_forwarded_and_malformed_identity_rejected(
         self,

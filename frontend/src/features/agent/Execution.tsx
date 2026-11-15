@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import useAuth from "@/hooks/useAuth"
-import { agentRoutes } from "@/lib/upstreamRoutes.gen"
+import { agentBrowserContract, agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { agentJson } from "./api"
 
 export type ExecutionCapability = {
@@ -51,9 +51,9 @@ export function useExecutionCapability() {
         ...capability,
         files: response.files === "controlled-files-v1",
         browser:
-          response.browser?.contract === "controlled-browser-v1" &&
+          response.browser?.contract === agentBrowserContract.contract &&
           response.browser.enabled === true &&
-          response.browser.profile === "owner-storage-state-v1" &&
+          response.browser.profile === agentBrowserContract.profile &&
           response.browser.javascript === false &&
           response.browser.downloads === false,
       }
