@@ -12,7 +12,7 @@ from tests.api.routes.test_platform_user_flow import signup
 
 @pytest.mark.parametrize("agent_http", ["memory-contract-fixture.ts"], indirect=True)
 def test_personal_preference_real_gateway_source_recall_and_user_isolation(
-    client: TestClient
+    client: TestClient,
 ) -> None:
     api = settings.API_V1_STR
     owner, owner_id = signup(client)
