@@ -4,10 +4,11 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Two radius tiers (plus pill via rounded-full): control and card. */
+  --radius-sm: var(--radius-control);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-card);
+  --radius-xl: var(--radius-card);
   --color-brand: var(--brand);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -44,6 +45,13 @@
 
 :root {
   --radius: 0.75rem;
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+  /* Shared page skeleton: h1 tier, hero tier and content width. */
+  --page-max-width: 1200px;
+  --hero-title-size: 28px;
+  --hero-title-weight: 500;
   color-scheme: light;
   --brand: #c2410c;
   --background: oklch(1 0 0);

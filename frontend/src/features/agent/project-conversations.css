@@ -16,8 +16,8 @@
   align-items: center;
   gap: 10px;
   color: #f4f4f4;
-  font-size: clamp(22px, 2.6vw, 30px);
-  font-weight: 500;
+  font-size: var(--hero-title-size);
+  font-weight: var(--hero-title-weight);
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
@@ -30,7 +30,7 @@
 .project-materials-link {
   padding: 6px 10px;
   border: 1px solid #383838;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   color: #c6c6c6;
   font-size: 13px;
 }
@@ -60,7 +60,7 @@
   gap: 11px;
   min-height: 52px;
   padding: 10px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   color: #e6e6e6;
   font-size: 14px;
 }
@@ -110,15 +110,13 @@
   min-height: 58px;
 }
 
-.project-details-scroll {
-  height: 100%;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 0 24px 32px;
-}
-
 .project-details-header {
   margin-bottom: 20px;
+}
+
+.project-details-header > .project-action {
+  margin-top: 0;
+  margin-bottom: 16px;
 }
 
 .project-details-actions {
@@ -133,9 +131,5 @@
   .agent-project-chat .agent-content,
   .agent-project-chat .agent-composer-wrap {
     width: calc(100% - 28px);
-  }
-
-  .project-details-scroll {
-    padding-inline: 14px;
   }
 }

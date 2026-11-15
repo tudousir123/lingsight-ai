@@ -64,7 +64,7 @@ function ResultFrames({
       )}
       {payload && (
         <>
-          <div className="max-h-72 overflow-auto rounded border border-border">
+          <div className="max-h-72 overflow-auto rounded-md border border-border">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-background">
                 <tr>

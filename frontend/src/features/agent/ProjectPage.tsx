@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Pencil, Plus, Settings2, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { PageHeader } from "@/components/Common/PageHeader"
 import {
   Dialog,
   DialogContent,
@@ -59,8 +60,8 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     setNameError("")
   }
   return (
-    <div className="agent-results-page project-materials" lang="zh-CN">
-      <header className="project-details-header">
+    <div className="project-materials" lang="zh-CN">
+      <div className="project-details-header">
         <Link
           to="/projects/$projectId"
           params={{ projectId }}
@@ -68,55 +69,55 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         >
           <ArrowLeft size={15} /> 返回项目对话
         </Link>
-        <div className="materials-heading">
-          <div>
-            <h1>项目资料</h1>
-            <p>{project.name}</p>
-          </div>
-          <details className="materials-settings">
-            <summary>
-              <Settings2 size={16} /> 项目设置
-            </summary>
-            <div className="project-details-actions">
-              <button
-                type="button"
-                aria-label="重命名项目"
-                className="project-action"
-                onClick={() => {
-                  setNameDraft(project.name)
-                  setNameError("")
-                  setEditingName(true)
-                }}
-              >
-                <Pencil size={15} /> 重命名
-              </button>
-              <button
-                type="button"
-                className="project-action"
-                disabled={!tasks.data || !!tasks.error}
-                onClick={() => {
-                  setSelected(taskMemberIds)
-                  setError("")
-                  setEditing(true)
-                }}
-              >
-                <Plus size={15} /> 整理对话
-              </button>
-              <button
-                type="button"
-                className="project-action"
-                onClick={() => {
-                  setDeleteError("")
-                  setConfirmingDelete(true)
-                }}
-              >
-                <Trash2 size={15} /> 删除项目
-              </button>
-              {tasks.error && <p role="alert">无法加载对话。</p>}
-            </div>
-          </details>
-        </div>
-      </header>
+        <PageHeader
+          title="项目资料"
+          description={project.name}
+          actions={
+            <details className="materials-settings">
+              <summary>
+                <Settings2 size={16} /> 项目设置
+              </summary>
+              <div className="project-details-actions">
+                <button
+                  type="button"
+                  aria-label="重命名项目"
+                  className="project-action"
+                  onClick={() => {
+                    setNameDraft(project.name)
+                    setNameError("")
+                    setEditingName(true)
+                  }}
+                >
+                  <Pencil size={15} /> 重命名
+                </button>
+                <button
+                  type="button"
+                  className="project-action"
+                  disabled={!tasks.data || !!tasks.error}
+                  onClick={() => {
+                    setSelected(taskMemberIds)
+                    setError("")
+                    setEditing(true)
+                  }}
+                >
+                  <Plus size={15} /> 整理对话
+                </button>
+                <button
+                  type="button"
+                  className="project-action"
+                  onClick={() => {
+                    setDeleteError("")
+                    setConfirmingDelete(true)
+                  }}
+                >
+                  <Trash2 size={15} /> 删除项目
+                </button>
+                {tasks.error && <p role="alert">无法加载对话。</p>}
+              </div>
+            </details>
+          }
+        />
+      </div>
       <ProjectMaterials project={project} tasks={tasks.data ?? []} />
       <Dialog
         open={editing}

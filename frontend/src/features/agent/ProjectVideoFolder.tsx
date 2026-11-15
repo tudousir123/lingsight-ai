@@ -186,7 +186,7 @@ function FolderBrowser({
             <span>视频来源</span>
             <select
               aria-label="视频来源"
-              className="block w-full rounded border border-border bg-background p-2"
+              className="block w-full rounded-md border border-border bg-background p-2"
               value={currentSource}
               disabled={sources.isPending || save.isPending}
               onChange={(event) => {

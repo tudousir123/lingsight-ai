@@ -58,7 +58,7 @@ export function Main({ items }: MainProps) {
                     <item.icon className="size-[17px]" strokeWidth={1.65} />
                     <span className="flex-1">{item.title}</span>
                     {item.preview && (
-                      <span className="rounded border border-border px-1 text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden">
+                      <span className="rounded-md border border-border px-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
                         Preview
                       </span>
                     )}

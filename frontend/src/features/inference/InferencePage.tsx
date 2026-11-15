@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { useRef, useState } from "react"
+import { PageHeader } from "@/components/Common/PageHeader"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -217,18 +219,17 @@ export function InferencePage({
     }
   }
   const inputClass =
-    "w-full rounded border border-border bg-background px-2 py-1"
+    "w-full rounded-md border border-border bg-background px-2 py-1"
   return (
     <div className="agent-results-page space-y-6">
-      <div>
-        <span className="agent-eyebrow">VIDEO INFERENCE</span>
-        <h1>视频推理</h1>
-        <p>选择项目内的视频，确认场景后生成小鼠轨迹和 v9 头尾结果。</p>
-      </div>
+      <PageHeader
+        title="视频推理"
+        description="选择项目内的视频，确认场景后生成小鼠轨迹和 v9 头尾结果。"
+      />
       {shownError && (
         <p
           role="alert"
-          className="rounded border border-red-300 p-3 text-red-700"
+          className="rounded-md border border-red-300 p-3 text-red-700"
         >
           {shownError}
         </p>
@@ -238,7 +239,7 @@ export function InferencePage({
           <span className="text-xl font-medium">项目</span>
           <select
             aria-label="选择项目"
-            className="rounded border border-border bg-background px-2 py-1"
+            className="rounded-md border border-border bg-background px-2 py-1"
             value={project?.id ?? ""}
             disabled={projects.isPending || !projects.data?.length}
             onChange={(event) => {
@@ -283,15 +284,17 @@ export function InferencePage({
                         {formatBytes(video.bytes)}
                       </small>
                     </span>
-                    <button
+                    <Button
                       type="button"
                       disabled={busy}
-                      className="shrink-0 rounded border px-3 py-1"
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
                       aria-label={`开始推理 ${video.filename}`}
                       onClick={() => void act(() => start(video.video_id))}
                     >
                       开始
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -318,7 +321,7 @@ export function InferencePage({
               <li key={task.id}>
                 <button
                   type="button"
-                  className="w-full rounded border p-3 text-left"
+                  className="w-full rounded-md border p-3 text-left"
                   onClick={() => setCurrent(task)}
                 >
                   <span className="font-medium">
@@ -345,9 +348,11 @@ export function InferencePage({
           {folder &&
             folderDirectory !== (folder.path ?? "") &&
             folderDirectory.startsWith(folder.path ?? "") && (
-              <button
+              <Button
                 type="button"
-                className="mb-3 underline"
+                variant="outline"
+                size="sm"
+                className="mb-3"
                 onClick={() =>
                   onDirectoryChange(
                     folderDirectory.split("/").slice(0, -1).join("/"),
@@ -355,7 +360,7 @@ export function InferencePage({
                 }
               >
                 返回上一级
-              </button>
+              </Button>
             )}
           <ul className="max-h-80 space-y-2 overflow-auto">
             {entries.map((entry) => (
@@ -368,19 +373,21 @@ export function InferencePage({
                   {entry.name}
                 </span>
                 {entry.type === "directory" ? (
-                  <button
+                  <Button
                     type="button"
-                    className="underline"
+                    variant="outline"
+                    size="sm"
                     onClick={() => onDirectoryChange(entry.path ?? "")}
                   >
                     打开
-                  </button>
+                  </Button>
                 ) : (
                   <span className="flex shrink-0 items-center gap-2">
                     {entry.id && (
-                      <button
+                      <Button
                         type="button"
-                        className="rounded border px-3 py-1"
+                        variant="outline"
+                        size="sm"
                         aria-label={`将 ${entry.name} 归入项目`}
                         onClick={() => {
                           setGroupError("")
@@ -389,19 +396,20 @@ export function InferencePage({
                         }}
                       >
                         加入项目
-                      </button>
+                      </Button>
                     )}
-                    <button
+                    <Button
                       type="button"
                       disabled={busy || !entry.id}
-                      className="rounded border px-3 py-1"
+                      variant="outline"
+                      size="sm"
                       aria-label={`开始推理 ${entry.name}`}
                       onClick={() =>
                         entry.id && void act(() => start(entry.id as string))
                       }
                     >
                       开始
-                    </button>
+                    </Button>
                   </span>
                 )}
               </li>
@@ -435,9 +443,9 @@ export function InferencePage({
             "failed",
             "interrupted",
           ].includes(live.status) && (
-            <button
+            <Button
               type="button"
-              className="rounded border px-3 py-2"
+              variant="outline"
               disabled={busy}
               onClick={() =>
                 void act(() =>
@@ -446,12 +454,13 @@ export function InferencePage({
               }
             >
               取消任务
-            </button>
+            </Button>
           )}
           {["failed", "interrupted", "cancelled"].includes(live.status) && (
-            <button
+            <Button
               type="button"
-              className="ml-2 rounded border px-3 py-2"
+              variant="outline"
+              className="ml-2"
               disabled={busy}
               onClick={() =>
                 void act(() =>
@@ -460,7 +469,7 @@ export function InferencePage({
               }
             >
               重试当前阶段
-            </button>
+            </Button>
           )}
           {(live.status === "waiting_for_review" || live.confirmation_id) && (
             <PreannotationConfirm key={live.id} task={live} />
@@ -505,9 +514,8 @@ export function InferencePage({
                     {live.review.note}
                   </p>
                   {live.review.tracking_ok && (
-                    <button
+                    <Button
                       type="button"
-                      className="rounded bg-primary px-4 py-2 text-primary-foreground"
                       disabled={busy}
                       onClick={() => {
                         setPublishError("")
@@ -516,7 +524,7 @@ export function InferencePage({
                       }}
                     >
                       发布到项目
-                    </button>
+                    </Button>
                   )}
                 </div>
               ) : (
@@ -529,10 +537,11 @@ export function InferencePage({
                       onChange={(e) => setNote(e.target.value)}
                     />
                   </label>
-                  <button
+                  <Button
                     type="button"
                     disabled={busy}
-                    className="mt-2 rounded border px-3 py-2"
+                    variant="outline"
+                    className="mt-2"
                     onClick={() =>
                       void act(() =>
                         submit(inferenceRoutes.tasksByTaskIdReview(live.id), {
@@ -543,11 +552,12 @@ export function InferencePage({
                     }
                   >
                     确认追踪结果
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     disabled={busy}
-                    className="ml-2 rounded border px-3 py-2"
+                    variant="outline"
+                    className="ml-2"
                     onClick={() =>
                       void act(() =>
                         submit(inferenceRoutes.tasksByTaskIdReview(live.id), {
@@ -558,7 +568,7 @@ export function InferencePage({
                     }
                   >
                     标记需复查
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

@@ -10,7 +10,7 @@
 .agent-shell [data-slot="sidebar-inset"] {
   background: var(--background);
   border: 1px solid #2c2c2c;
-  border-radius: 20px;
+  border-radius: var(--radius-card);
   margin: 4px 4px 4px 0;
   height: calc(100dvh - 8px);
 }
@@ -35,7 +35,7 @@
 .agent-shell-header > .agent-guide-link {
   margin-left: auto;
   padding: 6px 9px;
-  border-radius: 7px;
+  border-radius: var(--radius-control);
 }
 .agent-guide-link:hover,
 .agent-shell-path a:hover {
@@ -85,7 +85,7 @@
 }
 .agent-eyebrow {
   font:
-    10px ui-monospace,
+    12px ui-monospace,
     monospace;
   color: #858585;
   letter-spacing: 1.4px;
@@ -152,7 +152,7 @@
 }
 .agent-composer {
   border: 1px solid #383838;
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   background: #262626;
   overflow: hidden;
 }
@@ -165,7 +165,7 @@
   gap: 8px;
   padding: 13px 18px 0;
   color: #909090;
-  font-size: 11px;
+  font-size: 12px;
 }
 .agent-background-note {
   margin-left: auto;
@@ -194,7 +194,7 @@
   padding: 6px 13px 12px 18px;
   gap: 18px;
   color: #999;
-  font-size: 11px;
+  font-size: 12px;
 }
 .agent-composer-toolbar > a,
 .agent-model-label {
@@ -209,8 +209,8 @@
   margin-left: auto;
 }
 .agent-send {
-  width: 33px;
-  height: 33px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -226,7 +226,7 @@
   gap: 5px;
   align-items: center;
   padding: 6px 10px;
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   border: 1px solid #555;
 }
 .agent-task-heading {
@@ -244,7 +244,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .agent-task-heading button {
   display: flex;
@@ -256,7 +256,7 @@
   color: #ababab;
   padding: 3px 8px;
   background: var(--card);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
 }
 .status-succeeded {
   color: #c5c5c5;
@@ -274,7 +274,7 @@
   max-width: 88%;
   background: var(--card);
   padding: 14px 18px;
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   font-size: 14px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -293,7 +293,7 @@
 .agent-response-heading > span {
   margin-left: auto;
   color: #858585;
-  font-size: 11px;
+  font-size: 12px;
 }
 .agent-answer {
   font-size: 14px;
@@ -348,18 +348,19 @@
   border: 1px solid #4c3c31;
   background: var(--card);
   color: #d2b292;
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   padding: 12px 16px;
 }
 .agent-connection-error button {
   flex-shrink: 0;
+  min-height: 32px;
   text-decoration: underline;
 }
 .agent-question {
   padding: 20px;
   background: var(--card);
   border: 1px solid #554b38;
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   font-size: 13px;
   margin: 24px 0;
 }
@@ -372,14 +373,14 @@
   width: 100%;
   background: var(--card);
   border: 1px solid #454038;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   padding: 12px;
   min-height: 80px;
 }
 .agent-question button {
   padding: 9px 14px;
   margin-top: 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: #ddd;
   color: #222;
 }
@@ -396,7 +397,7 @@
 .agent-deliverables small {
   color: #888;
   margin-left: 8px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .agent-artifacts {
   display: grid;
@@ -410,7 +411,7 @@
   text-align: left;
   border: 1px solid #333;
   background: var(--card);
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   padding: 15px;
 }
 .agent-artifacts svg {
@@ -428,7 +429,7 @@
 }
 .agent-artifacts small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: #888;
   margin: 5px 0 0;
 }
@@ -454,7 +455,7 @@
   font-size: 12px;
   padding: 7px 12px;
   border: 1px solid #444;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
 }
 .agent-file-body {
   overflow: auto;
@@ -521,14 +522,6 @@
   text-decoration: underline;
   overflow-wrap: anywhere;
 }
-.agent-results-page {
-  max-width: 1000px;
-  margin: 36px auto;
-}
-.agent-results-page > h1 {
-  font-size: 28px;
-  margin: 10px 0;
-}
 .agent-results-page > p {
   font-size: 14px;
   line-height: 1.8;
@@ -546,7 +539,7 @@
   gap: 15px;
   padding: 20px;
   border: 1px solid #333;
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   background: var(--card);
 }
 .agent-task-list :where(a) > span {
@@ -563,7 +556,7 @@
 }
 .agent-task-list small {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   color: #888;
   margin-top: 5px;
 }
@@ -594,20 +587,20 @@
   align-items: center;
   gap: 8px;
   background: #ddd;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   padding: 9px 18px;
   color: #222;
   font-size: 12px;
 }
 .agent-inference-state {
   border: 1px solid #333;
-  border-radius: 20px;
+  border-radius: var(--radius-card);
   margin-top: 35px;
   background: var(--card);
 }
 .agent-sidebar-heading {
   margin: 25px 14px 10px;
-  font-size: 11px;
+  font-size: 12px;
   color: #858585;
 }
 .agent-history-link {
@@ -616,7 +609,7 @@
   gap: 9px;
   padding: 9px 12px;
   margin: 2px 0;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   color: #9a9a9a;
   font-size: 12px;
 }
@@ -636,10 +629,10 @@
 .agent-history-note {
   padding: 0 14px;
   color: #777;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.8;
 }
-@media (max-width: 760px) {
+@media (max-width: 768px) {
   .agent-shell [data-slot="sidebar-inset"] {
     margin: 0;
     height: 100dvh;
@@ -661,12 +654,9 @@
     gap: 12px;
   }
   .agent-model-label {
-    font-size: 10px;
+    font-size: 12px;
   }
   .agent-artifacts {
     grid-template-columns: 1fr;
-  }
-  .agent-results-page {
-    margin-top: 15px;
   }
 }
