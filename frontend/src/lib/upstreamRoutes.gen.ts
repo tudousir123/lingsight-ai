@@ -8,6 +8,7 @@ export const inferenceGatewayBase = "/api/v1/inference"
 
 export const agentRoutes = {
   artifactsByArtifactId: (artifactId: string) => `artifacts/${artifactId}`,
+  memories: () => `memories`,
   personalAgent: () => `personal-agent`,
   runsByRunId: (runId: string) => `runs/${runId}`,
   runsByRunIdCancel: (runId: string) => `runs/${runId}/cancel`,
@@ -17,6 +18,7 @@ export const agentRoutes = {
   tasksByTaskId: (taskId: string) => `tasks/${taskId}`,
   tasksByTaskIdBundle: (taskId: string) => `tasks/${taskId}/bundle`,
   tasksByTaskIdEvents: (taskId: string) => `tasks/${taskId}/events`,
+  tasksByTaskIdMemories: (taskId: string) => `tasks/${taskId}/memories`,
   tasksByTaskIdMessages: (taskId: string) => `tasks/${taskId}/messages`,
 } as const
 

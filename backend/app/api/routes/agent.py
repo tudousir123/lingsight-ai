@@ -36,6 +36,8 @@ OPERATIONS = OperationTable(
     operations={
         "GET": (
             "personal-agent",
+            "memories",
+            "tasks/{task_id}/memories",
             "tasks",
             "tasks/{task_id}",
             "tasks/{task_id}/events",
@@ -87,9 +89,12 @@ async def ensure_project_support(
     *,
     project: bool = False,
     personal: bool = False,
+    memory: bool = False,
 ) -> None:
     """Refuse old Agent versions before they can create an unscoped task."""
     unavailable = "科研 Agent 项目分析尚未就绪，请先更新服务并配置项目数据源"
+    if memory:
+        unavailable = "个人偏好记忆尚未就绪，请先更新科研 Agent 服务"
     if personal:
         unavailable = "个人 Agent 持久工作环境尚未就绪，请先更新服务"
     probe = Request({**request.scope, "method": "GET", "query_string": b""})
@@ -106,11 +111,18 @@ async def ensure_project_support(
                 if len(payload) > 4096:
                     raise HTTPException(503, unavailable)
             capabilities = json.loads(payload)
-            if not capable_agent(capabilities, project=project) or (
-                personal
-                and (
-                    capabilities.get("personal_agent") != "persistent-v1"
-                    or capabilities.get("environment") != "task-workspace-v1"
+            if (
+                not capable_agent(capabilities, project=project)
+                or (
+                    personal
+                    and (
+                        capabilities.get("personal_agent") != "persistent-v1"
+                        or capabilities.get("environment") != "task-workspace-v1"
+                    )
+                )
+                or (
+                    memory
+                    and capabilities.get("personal_memory") != "personal-memory-v1"
                 )
             ):
                 raise HTTPException(503, unavailable)
@@ -164,12 +176,17 @@ async def agent_gateway(
 ) -> Response:
     ensure_workspace_user(current_user)
     OPERATIONS.check(request.method, path, UNKNOWN_OPERATION)
-    if path == "personal-agent" and (
+    memory_read = request.method == "GET" and (
+        path == "memories" or path.endswith("/memories")
+    )
+    if (path == "personal-agent" or memory_read) and (
         request.query_params
         or request.headers.get("content-length", "0") != "0"
         or request.headers.get("transfer-encoding")
     ):
-        raise HTTPException(422, "Personal identity accepts no selectors or body")
+        raise HTTPException(
+            422, "Personal identity and memory reads accept no selectors or body"
+        )
     service = _service()
     if not service.api_token:
         raise HTTPException(503, service.unconfigured_detail)
@@ -244,6 +261,7 @@ async def agent_gateway(
         request,
         service,
         project=project_scope,
+        memory=memory_read,
         personal=path == "personal-agent"
         or (path == "tasks" and request.method == "POST"),
     )

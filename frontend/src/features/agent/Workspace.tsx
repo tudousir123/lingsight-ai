@@ -40,6 +40,7 @@ import {
   tasksKey,
 } from "./api"
 import { useTaskEvents } from "./events"
+import { MemoryPanel } from "./MemoryPanel"
 import { PersonalAgentStatus, usePersonalAgent } from "./PersonalAgent"
 import { ProjectConversationHome } from "./ProjectConversationHome"
 import {
@@ -557,6 +558,7 @@ export function AgentWorkspace({
               error={personal.error}
               onRetry={() => void personal.refetch()}
             />
+            <MemoryPanel taskId={taskId} />
             {!!task.data && personal.data && !taskBound && (
               <p className="agent-error" role="alert">
                 此任务未绑定当前个人环境，已禁用继续执行。历史材料不会自动迁移。
