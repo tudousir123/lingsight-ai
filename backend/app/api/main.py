@@ -5,6 +5,7 @@ from app.api.routes import (
     inference,
     login,
     private,
+    preannotations,
     projects,
     results,
     trials,
@@ -22,6 +23,7 @@ api_router.include_router(projects.router)
 api_router.include_router(results.router)
 api_router.include_router(agent.router)
 api_router.include_router(inference.router)
+api_router.include_router(preannotations.router)
 
 
 if settings.FASTAPI_ENV == "development":
