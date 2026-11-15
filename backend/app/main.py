@@ -9,6 +9,7 @@ from starlette.middleware.cors import CORSMiddleware
 from app.api.errors import resource_validation_error
 from app.api.main import api_router
 from app.core.config import settings
+from app.uploads import media_lifespan
 
 FRONTEND_DIR = Path(__file__).parent / "frontend"
 
@@ -24,6 +25,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=custom_generate_unique_id,
+    lifespan=media_lifespan,
 )
 
 app.add_exception_handler(RequestValidationError, resource_validation_error)
