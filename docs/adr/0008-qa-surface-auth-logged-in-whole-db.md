@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: partially superseded by ADR-0019
 ---
 
 # 科研问答面 v1 权限：登录用户全库只读，不套实验授权
