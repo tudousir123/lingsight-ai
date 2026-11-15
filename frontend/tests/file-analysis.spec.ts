@@ -101,3 +101,84 @@ test("workspace uploads small authorized content and sends only opaque server re
     "Create a synthetic report",
   )
 })
+
+test("legacy file capability blocks file-task continuation and recovery but preserves material preview", async ({
+  page,
+}) => {
+  const id = "11111111-1111-4111-8111-111111111111"
+  await page.addInitScript(() => {
+    localStorage.setItem("access_token", "synthetic-token")
+    localStorage.setItem("lingsight.onboarding-seen.v1", "1")
+  })
+  stubProjectsApi(page)
+  await page.route("**/api/v1/users/me", (route) =>
+    route.fulfill({
+      json: {
+        id: "user",
+        email: "synthetic@example.com",
+        is_active: true,
+        is_superuser: false,
+      },
+    }),
+  )
+  const task = {
+    id,
+    title: "Synthetic file task",
+    goal: "Synthetic file task",
+    personal_agent_id: personalAgentFixture.id,
+    environment_id: personalAgentFixture.environment.id,
+    runs: [
+      {
+        id,
+        instruction: "Create synthetic report",
+        status: "failed",
+        error: "Synthetic failure",
+      },
+    ],
+    artifacts: [
+      {
+        id,
+        run_id: id,
+        name: "material.csv",
+        kind: "input",
+        sha256: "a".repeat(64),
+        bytes: 4,
+      },
+    ],
+  }
+  await page.route("**/api/v1/agent/**", (route) => {
+    const path = new URL(route.request().url()).pathname.split("/agent/")[1]
+    if (path === "capabilities")
+      return route.fulfill({
+        json: {
+          execution: {
+            contract: "durable-run-v1",
+            engine: "pi-durable",
+            version: "1.5.2",
+            requests: "persistent-v1",
+            recovery: "safe-v1",
+            enabled: true,
+          },
+        },
+      })
+    if (path === "personal-agent")
+      return route.fulfill({ json: personalAgentFixture })
+    if (path === `tasks/${id}`) return route.fulfill({ json: task })
+    if (path === `artifacts/${id}`)
+      return route.fulfill({ body: "x\n1\n", contentType: "text/csv" })
+    return route.fulfill({ json: [] })
+  })
+  await page.goto(`/tasks/${id}`)
+  await page
+    .getByRole("textbox", { name: "研究问题" })
+    .fill("Revise synthetic report")
+  await expect(
+    page.getByRole("button", { name: "发送研究问题", exact: true }),
+  ).toBeDisabled()
+  await expect(
+    page.getByRole("button", { name: "从已保存的材料恢复" }),
+  ).toBeDisabled()
+  await page.getByRole("button", { name: /material.csv/ }).click()
+  await expect(page.getByRole("dialog")).toContainText("材料仅供核查")
+  await expect(page.getByRole("dialog").locator("pre")).toHaveText("x\n1\n")
+})

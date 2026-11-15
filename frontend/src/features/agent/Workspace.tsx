@@ -385,7 +385,11 @@ export function AgentWorkspace({
     (!!task.data &&
       task.data.personal_agent_id === personal.data?.id &&
       task.data.environment_id === personal.data?.environment.id)
+  const taskHasFiles =
+    task.data?.artifacts?.some((item) => item.kind === "input") === true
+  const taskFilesReady = !taskHasFiles || execution.data?.files === true
   const executionReady =
+    taskFilesReady &&
     personalReady &&
     taskBound &&
     !execution.isPending &&
@@ -678,6 +682,11 @@ export function AgentWorkspace({
               onRetry={() => void execution.refetch()}
             />
             <MemoryPanel taskId={taskId} />
+            {taskHasFiles && !taskFilesReady && !execution.isPending && (
+              <p className="agent-error" role="alert">
+                此任务包含受控文件；当前服务不支持文件协议，已禁用继续分析与恢复。历史材料仍可读取。
+              </p>
+            )}
             {!!task.data && personal.data && !taskBound && (
               <p className="agent-error" role="alert">
                 此任务未绑定当前个人环境，已禁用继续执行。历史材料不会自动迁移。
