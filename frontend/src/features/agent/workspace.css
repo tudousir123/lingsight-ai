@@ -720,14 +720,40 @@
   border-radius: 12px;
   background: var(--background);
 }
-.agent-operation { padding: .75rem 0; font-size: .85rem; }
-.agent-operation p { margin: .5rem 0; overflow-wrap: anywhere; }
-.agent-operation-id { font-family: monospace; }
-.agent-operation label { display: block; margin: .75rem 0; }
-.agent-operation textarea { display: block; width: 100%; min-height: 5rem; padding: .5rem; border: 1px solid var(--border); border-radius: 6px; }
-.agent-operation select { margin-left: .5rem; }
-.agent-operation button { border: 1px solid var(--border); border-radius: 6px; padding: .4rem .65rem; }
-.agent-operation button:disabled { opacity: .5; }
+.agent-operation {
+  padding: 0.75rem 0;
+  font-size: 0.85rem;
+}
+.agent-operation p {
+  margin: 0.5rem 0;
+  overflow-wrap: anywhere;
+}
+.agent-operation-id {
+  font-family: monospace;
+}
+.agent-operation label {
+  display: block;
+  margin: 0.75rem 0;
+}
+.agent-operation textarea {
+  display: block;
+  width: 100%;
+  min-height: 5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.agent-operation select {
+  margin-left: 0.5rem;
+}
+.agent-operation button {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.65rem;
+}
+.agent-operation button:disabled {
+  opacity: 0.5;
+}
 
 .agent-file-inputs {
   padding: 10px 14px;
