@@ -201,6 +201,52 @@ class AgentGatewayTest(unittest.TestCase):
         )
         self.assertFalse(self.calls)
 
+    def test_personal_memory_reads_use_current_user_and_fail_closed_without_capability(
+        self,
+    ) -> None:
+        self.capabilities = httpx.Response(
+            200,
+            json={**self.capabilities.json(), "personal_memory": "personal-memory-v1"},
+        )
+        self.response = httpx.Response(
+            200, json={"contract": "personal-memory-v1", "items": []}
+        )
+        for path in ["memories", f"tasks/{TASK}/memories"]:
+            with self.subTest(path=path):
+                result = self.client.get(
+                    f"/agent/{path}", headers={"X-LingSight-User-Id": TASK}
+                )
+                self.assertEqual(result.status_code, 200)
+                self.assertEqual(self.calls[-1].url.path, f"/v1/{path}")
+                self.assertEqual(
+                    self.calls[-1].headers["x-lingsight-user-id"], str(self.user.id)
+                )
+                self.calls.clear()
+                self.assertEqual(
+                    self.client.get(f"/agent/{path}?owner_user_id={TASK}").status_code,
+                    422,
+                )
+                self.assertFalse(self.calls)
+                self.assertEqual(
+                    self.client.request(
+                        "GET", f"/agent/{path}", json={"project_id": TASK}
+                    ).status_code,
+                    422,
+                )
+                self.assertFalse(self.calls)
+        self.capabilities = httpx.Response(
+            200,
+            json={
+                k: v
+                for k, v in self.capabilities.json().items()
+                if k != "personal_memory"
+            },
+        )
+        for path in ["memories", f"tasks/{TASK}/memories"]:
+            self.calls.clear()
+            self.assertEqual(self.client.get(f"/agent/{path}").status_code, 503)
+            self.assertEqual([r.url.path for r in self.calls], ["/v1/capabilities"])
+
     def test_login_required(self) -> None:
         self.app.dependency_overrides.clear()
         self.assertEqual(self.client.get("/agent/tasks").status_code, 401)
