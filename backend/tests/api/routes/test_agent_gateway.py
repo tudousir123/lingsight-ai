@@ -30,6 +30,8 @@ class AgentGatewayTest(unittest.TestCase):
                     "contract": "durable-run-v1",
                     "requests": "persistent-v1",
                     "recovery": "safe-v1",
+                    "operations": "ledger-v1",
+                    "cancellation": "verified-v1",
                     "engine": "pi-durable",
                     "version": "1.5.2",
                     "enabled": True,
@@ -70,6 +72,55 @@ class AgentGatewayTest(unittest.TestCase):
             self.addCleanup(p.stop)
         self.client = TestClient(self.app)
         self.addCleanup(self.client.close)
+
+    def test_operation_review_routes_preserve_identity_without_requiring_new_model_authorization(
+        self,
+    ) -> None:
+        capabilities = self.capabilities.json()
+        capabilities["execution"].update(
+            operations="ledger-v1", cancellation="verified-v1", enabled=False
+        )
+        self.capabilities = httpx.Response(200, json=capabilities)
+        for method, path, body in [
+            ("GET", f"runs/{TASK}/operations", None),
+            (
+                "POST",
+                f"runs/{TASK}/operations/{TASK}/verify",
+                {"request_id": TASK, "expected_version": 2},
+            ),
+            (
+                "POST",
+                f"runs/{TASK}/operations/{TASK}/resolve",
+                {
+                    "request_id": TASK,
+                    "expected_version": 2,
+                    "decision": "confirm_effect",
+                    "evidence": "Synthetic receipt checked",
+                },
+            ),
+        ]:
+            with self.subTest(path=path):
+                self.calls.clear()
+                response = self.client.request(
+                    method,
+                    f"/agent/{path}",
+                    json=body,
+                    headers={"X-LingSight-User-Id": TASK},
+                )
+                self.assertEqual(response.status_code, 200, response.text)
+                self.assertEqual(self.calls[-1].url.path, f"/v1/{path}")
+                self.assertEqual(
+                    self.calls[-1].headers["x-lingsight-user-id"], str(self.user.id)
+                )
+        capabilities["execution"].pop("operations")
+        self.capabilities = httpx.Response(200, json=capabilities)
+        self.calls.clear()
+        response = self.client.post(
+            f"/agent/runs/{TASK}/operations/{TASK}/verify",
+            json={"request_id": TASK, "expected_version": 2},
+        )
+        self.assertEqual(response.status_code, 503, response.text)
+        self.assertEqual([r.url.path for r in self.calls], ["/v1/capabilities"])
 
     def test_stable_request_identity_is_forwarded_and_malformed_identity_rejected(
         self,

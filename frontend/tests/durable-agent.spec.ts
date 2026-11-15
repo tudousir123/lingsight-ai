@@ -10,6 +10,8 @@ const supported = {
     contract: "durable-run-v1",
     requests: "persistent-v1",
     recovery: "safe-v1",
+    operations: "ledger-v1",
+    cancellation: "verified-v1",
     engine: "pi-durable",
     version: "1.5.2",
     enabled: true,

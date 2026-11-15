@@ -48,3 +48,9 @@ export async function agentRequest<T = unknown>(
     throw error
   }
 }
+
+// Only for an explicit user decision to abandon a local retry. This never
+// changes Agent state or authorizes a tool operation.
+export function discardPendingRequest(owner: string, path: string) {
+  localStorage.removeItem(key(owner, path))
+}

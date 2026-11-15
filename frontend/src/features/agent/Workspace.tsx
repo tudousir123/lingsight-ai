@@ -42,6 +42,7 @@ import {
 import { ExecutionStatus, useExecutionCapability } from "./Execution"
 import { useTaskEvents } from "./events"
 import { MemoryPanel } from "./MemoryPanel"
+import { OperationReview } from "./Operations"
 import { PersonalAgentStatus, usePersonalAgent } from "./PersonalAgent"
 import { ProjectConversationHome } from "./ProjectConversationHome"
 import {
@@ -73,7 +74,19 @@ const toolLabels: Record<string, string> = {
   read_artifact: "读取研究材料",
   save_artifact: "保存研究成果",
 }
-function Conversation({ task, events }: { task: Task; events: TaskEvent[] }) {
+function Conversation({
+  task,
+  events,
+  owner,
+  operationsSupported,
+  onReview,
+}: {
+  task: Task
+  events: TaskEvent[]
+  owner: string
+  operationsSupported: boolean
+  onReview: () => void
+}) {
   return (
     <div className="agent-conversation">
       {task.runs.map((run) => {
@@ -113,6 +126,15 @@ function Conversation({ task, events }: { task: Task; events: TaskEvent[] }) {
               <p role="status">
                 已从持久检查点恢复，继续同一执行；不安全的工具不会自动重放。
               </p>
+            )}
+            <OperationReview
+              run={run}
+              owner={owner}
+              supported={operationsSupported}
+              onDone={onReview}
+            />
+            {run.recovery_blocked && (
+              <p role="status">{run.recovery_blocked}</p>
             )}
             {steps.length > 0 && (
               <details className="agent-steps">
@@ -353,7 +375,11 @@ export function AgentWorkspace({
     !execution.isPending &&
     !execution.error &&
     execution.data?.enabled === true
-  const blocked = run?.status === "waiting_for_input"
+  const blocked =
+    !!run &&
+    ["waiting_for_input", "result_unknown", "cancel_unconfirmed"].includes(
+      run.status,
+    )
   const canSend =
     (!!draft.trim() || (canAttach && videos.length > 0)) &&
     !pending &&
@@ -518,7 +544,9 @@ export function AgentWorkspace({
           aria-label="研究问题"
           placeholder={
             blocked
-              ? "请先回答上方科研口径问题后继续"
+              ? run?.status === "waiting_for_input"
+                ? "请先回答上方科研口径问题后继续"
+                : "请先核验上方未知结果或停止状态"
               : taskId
                 ? "继续追问，或补充分析要求…"
                 : canAttach
@@ -561,17 +589,20 @@ export function AgentWorkspace({
             灵视科研助手
           </span>
           <div className="agent-send-actions">
-            {run && (isActive(run.status) || run.status === "interrupted") && (
-              <button
-                type="button"
-                disabled={pending}
-                className="agent-stop"
-                onClick={() => void action("cancel")}
-              >
-                <Square size={11} />
-                停止
-              </button>
-            )}
+            {run &&
+              (isActive(run.status) ||
+                run.status === "interrupted" ||
+                run.status === "result_unknown") && (
+                <button
+                  type="button"
+                  disabled={pending}
+                  className="agent-stop"
+                  onClick={() => void action("cancel")}
+                >
+                  <Square size={11} />
+                  停止
+                </button>
+              )}
             <button
               type="submit"
               className="agent-send"
@@ -676,15 +707,17 @@ export function AgentWorkspace({
                         {statusLabels[run.status]}
                       </span>
                     )}
-                    {run && ["failed", "interrupted"].includes(run.status) && (
-                      <button
-                        type="button"
-                        disabled={pending || !executionReady}
-                        onClick={() => void action("resume")}
-                      >
-                        从已保存的材料恢复
-                      </button>
-                    )}
+                    {run &&
+                      !run.recovery_blocked &&
+                      ["failed", "interrupted"].includes(run.status) && (
+                        <button
+                          type="button"
+                          disabled={pending || !executionReady}
+                          onClick={() => void action("resume")}
+                        >
+                          从已保存的材料恢复
+                        </button>
+                      )}
                     {!!task.data.artifacts?.length && (
                       <button
                         type="button"
@@ -701,7 +734,16 @@ export function AgentWorkspace({
                     )}
                   </div>
                 </div>
-                <Conversation task={task.data} events={stream.events} />
+                <Conversation
+                  task={task.data}
+                  events={stream.events}
+                  owner={requestOwner}
+                  operationsSupported={
+                    !execution.error &&
+                    execution.data?.operations === "ledger-v1"
+                  }
+                  onReview={refresh}
+                />
                 {run?.status === "waiting_for_input" &&
                   run.clarifications
                     ?.filter((q) => !q.answer)

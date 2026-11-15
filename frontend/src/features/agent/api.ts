@@ -27,8 +27,16 @@ export type RunStatus =
   | "failed"
   | "cancelled"
   | "interrupted"
+  | "result_unknown"
+  | "cancel_unconfirmed"
 export type Question = { id: string; question: string; answer: string | null }
 export type Run = {
+  recovery_blocked?: string | null
+  cancellation?: {
+    requested_at: string
+    confirmed_at: string | null
+    reason: string
+  } | null
   execution?: {
     id: string
     engine: "pi-durable"
@@ -74,7 +82,9 @@ export const statusLabels: Record<RunStatus, string> = {
   waiting_for_input: "等待确认",
   succeeded: "已完成",
   failed: "失败",
-  cancelled: "已取消",
+  cancelled: "已确认停止",
+  result_unknown: "结果未知",
+  cancel_unconfirmed: "停止未确认",
   interrupted: "已中断",
 }
 

@@ -9,6 +9,8 @@ export type ExecutionCapability = {
   version: "1.5.2"
   requests: "persistent-v1"
   recovery: "safe-v1"
+  operations: "ledger-v1"
+  cancellation: "verified-v1"
   enabled: boolean
 }
 
@@ -31,6 +33,8 @@ export function useExecutionCapability() {
         capability.version !== "1.5.2" ||
         capability.requests !== "persistent-v1" ||
         capability.recovery !== "safe-v1" ||
+        capability.operations !== "ledger-v1" ||
+        capability.cancellation !== "verified-v1" ||
         typeof capability.enabled !== "boolean"
       )
         throw new Error(

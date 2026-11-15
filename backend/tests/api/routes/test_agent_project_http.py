@@ -36,7 +36,11 @@ def agent_http(
     if isinstance(fixture_name, tuple):
         fixture_name, durable = fixture_name
         monkeypatch.setenv("AGENT_CONTRACT_DURABLE", "1" if durable else "0")
-    if fixture_name not in {"contract-fixture.ts", "memory-contract-fixture.ts"}:
+    if fixture_name not in {
+        "contract-fixture.ts",
+        "memory-contract-fixture.ts",
+        "operations-contract-fixture.ts",
+    }:
         pytest.fail("Unknown isolated Agent contract fixture")
     script = Path(repository) / "scripts" / fixture_name
     if not script.is_file():
@@ -417,6 +421,8 @@ def test_real_durable_gateway_completion_and_sourced_output(
         "contract": "durable-run-v1",
         "requests": "persistent-v1",
         "recovery": "safe-v1",
+        "operations": "ledger-v1",
+        "cancellation": "verified-v1",
         "engine": "pi-durable",
         "version": "1.5.2",
         "enabled": True,

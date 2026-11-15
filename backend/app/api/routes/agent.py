@@ -44,6 +44,7 @@ OPERATIONS = OperationTable(
             "tasks/{task_id}/events",
             "tasks/{task_id}/bundle",
             "runs/{run_id}",
+            "runs/{run_id}/operations",
             "artifacts/{artifact_id}",
         ),
         "POST": (
@@ -51,6 +52,8 @@ OPERATIONS = OperationTable(
             "tasks/{task_id}/messages",
             "runs/{run_id}/cancel",
             "runs/{run_id}/resume",
+            "runs/{run_id}/operations/{operation_id}/verify",
+            "runs/{run_id}/operations/{operation_id}/resolve",
             "runs/{run_id}/clarifications/{clarification_id}/answer",
         ),
         "PATCH": ("artifacts/{artifact_id}",),
@@ -60,6 +63,7 @@ OPERATIONS = OperationTable(
         "run_id": UUID_PATTERN,
         "artifact_id": UUID_PATTERN,
         "clarification_id": UUID_PATTERN,
+        "operation_id": UUID_PATTERN,
     },
 )
 
@@ -92,6 +96,7 @@ async def ensure_project_support(
     personal: bool = False,
     execution: bool = False,
     memory: bool = False,
+    operations: bool = False,
 ) -> None:
     """Refuse old Agent versions before they can create an unscoped task."""
     unavailable = "科研 Agent 项目分析尚未就绪，请先更新服务并配置项目数据源"
@@ -101,6 +106,8 @@ async def ensure_project_support(
         unavailable = "个人 Agent 持久工作环境尚未就绪，请先更新服务"
     if execution:
         unavailable = "Pi Durable 执行能力未配置或协议不兼容，已禁用新执行"
+    if operations:
+        unavailable = "工具操作核验协议不兼容，请更新科研 Agent 服务"
     probe = Request({**request.scope, "method": "GET", "query_string": b""})
     try:
         response = await forward(
@@ -135,6 +142,12 @@ async def ensure_project_support(
                 )
             ):
                 raise HTTPException(503, unavailable)
+            if operations and (
+                not isinstance(runtime, dict)
+                or runtime.get("operations") != "ledger-v1"
+                or runtime.get("cancellation") != "verified-v1"
+            ):
+                raise HTTPException(503, unavailable)
             if execution and (
                 not isinstance(runtime, dict)
                 or runtime.get("contract") != "durable-run-v1"
@@ -142,6 +155,8 @@ async def ensure_project_support(
                 or runtime.get("version") != "1.5.2"
                 or runtime.get("requests") != "persistent-v1"
                 or runtime.get("recovery") != "safe-v1"
+                or runtime.get("operations") != "ledger-v1"
+                or runtime.get("cancellation") != "verified-v1"
                 or runtime.get("enabled") is not True
             ):
                 raise HTTPException(503, unavailable)
@@ -206,10 +221,15 @@ async def agent_gateway(
 ) -> Response:
     ensure_workspace_user(current_user)
     OPERATIONS.check(request.method, path, UNKNOWN_OPERATION)
+    operation_review = "/operations" in path
     memory_read = request.method == "GET" and (
         path == "memories" or path.endswith("/memories")
     )
-    if (path in {"personal-agent", "capabilities"} or memory_read) and (
+    if (
+        path in {"personal-agent", "capabilities"}
+        or memory_read
+        or (operation_review and request.method == "GET")
+    ) and (
         request.query_params
         or request.headers.get("content-length", "0") != "0"
         or request.headers.get("transfer-encoding")
@@ -300,7 +320,10 @@ async def agent_gateway(
         request,
         service,
         project=project_scope,
-        execution=request.method == "POST" and not path.endswith("/cancel"),
+        execution=request.method == "POST"
+        and not path.endswith("/cancel")
+        and not operation_review,
+        operations=operation_review,
         memory=memory_read,
         personal=path == "personal-agent"
         or (path == "tasks" and request.method == "POST"),
