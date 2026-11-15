@@ -1,14 +1,14 @@
 """Verified inference bindings and immutable preannotations.
 
 Revision ID: 69c
-Revises: d9f0a1b2c3e4
+Revises: f69b00000002
 """
 from alembic import op
 import sqlalchemy as sa
 from app.inference_models import InferenceBinding, PreannotationConfirmation
 
 revision = "69c"
-down_revision = "d9f0a1b2c3e4"
+down_revision = "f69b00000002"
 branch_labels = None
 depends_on = None
 

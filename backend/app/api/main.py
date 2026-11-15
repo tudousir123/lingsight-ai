@@ -12,6 +12,7 @@ from app.api.routes import (
     trials,
     users,
     utils,
+    videos,
 )
 from app.core.config import settings
 
@@ -26,6 +27,7 @@ api_router.include_router(agent.router)
 api_router.include_router(agent_authorization.router)
 api_router.include_router(inference.router)
 api_router.include_router(preannotations.router)
+api_router.include_router(videos.router)
 
 
 if settings.FASTAPI_ENV == "development":

@@ -39,6 +39,26 @@ from app.models import (
     ProjectVideoFolderPublic,
     get_datetime_utc,
 )
+from app.upload_models import UploadedVideo
+from app.uploads import get_owned_upload, lock_owner, protect_last_references
+
+
+def _authorize_member(
+    session: SessionDep, user: CurrentUser, project: Project, kind: str, member_id: str
+) -> None:
+    if kind == "agent_task":
+        from app.scope import ensure_agent_task_owner
+
+        ensure_agent_task_owner(session, user, member_id)
+    elif session.get(UploadedVideo, member_id) is not None or member_id.startswith(
+        "upl_"
+    ):
+        get_owned_upload(session, user, member_id)
+    else:
+        from app.inference_access import ensure_library_video_member
+
+        ensure_library_video_member(session, user, project, member_id)
+
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -128,6 +148,9 @@ def select_project_video_folder(
     """Persist one readable source-relative directory, without starting inference."""
     project = owned_project(session, current_user, project_id)
     ensure_workspace_user(current_user)
+    from app.inference_access import ensure_video_folder_access
+
+    ensure_video_folder_access(session, current_user, folder.source_id, folder.path)
     try:
         InferenceClient().fetch_directory(folder.source_id, folder.path)
     except InferenceUnconfigured:
@@ -160,6 +183,7 @@ def delete_project(
 ) -> Any:
     """Delete one of the current user's projects; member references cascade."""
     project = owned_project(session, current_user, project_id)
+    protect_last_references(session, current_user, project)
     crud.delete_project(session=session, project=project)
     return Message(message="项目已删除")
 
@@ -174,6 +198,8 @@ def add_project_member(
 ) -> Any:
     """Add (or refresh the label of) one member reference; idempotent."""
     project = owned_project(session, current_user, project_id)
+    lock_owner(session, current_user)
+    _authorize_member(session, current_user, project, member_in.kind, member_in.id)
     member, created = crud.add_project_member(
         session=session,
         project=project,
@@ -199,6 +225,8 @@ def remove_project_member(
 ) -> None:
     """Remove one member reference; the referenced item itself is untouched."""
     project = owned_project(session, current_user, project_id)
+    if member_kind == "video":
+        protect_last_references(session, current_user, project, member_id)
     removed = crud.remove_project_member(
         session=session,
         project=project,
@@ -220,6 +248,11 @@ def import_projects(
     Replaying the same payload creates nothing new and never overwrites the
     projects and memberships the user has reorganized server-side.
     """
+    from app.scope import ensure_agent_task_owner
+
+    for item in import_in.projects:
+        for task_id in item.task_ids:
+            ensure_agent_task_owner(session, current_user, task_id)
     return crud.import_local_projects(
         session=session,
         user_id=current_user.id,
