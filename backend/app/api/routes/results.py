@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from app import crud, publishing
 from app.api.deps import CurrentUser, SessionDep, ensure_workspace_user, owned_project
+from app.inference_access import visible_publication_ids
 from app.inference_client import InferenceClient
 from app.models import (
     PublishedFrame,
@@ -78,7 +79,12 @@ def list_results(
     """List this project's published inference results (task summaries)."""
     project = owned_project(session, current_user, project_id)
     results = crud.list_published_results(session, project_id=project.id)
-    data = [publishing.result_public(result) for result in results]
+    visible = set(visible_publication_ids(session, current_user, project.id))
+    data = [
+        publishing.result_public(result)
+        for result in results
+        if result.task_id in visible
+    ]
     return PublishedResultsPublic(data=data, count=len(data))
 
 
@@ -98,7 +104,9 @@ def list_result_frames(
     result: PublishedResult | None = crud.get_published_result(
         session, project_id=project.id, task_id=task_id
     )
-    if not result:
+    if not result or task_id not in visible_publication_ids(
+        session, current_user, project.id
+    ):
         raise HTTPException(status_code=404, detail="该项目没有该任务的已发布结果")
     frames = crud.list_published_frames(
         session, task_id=task_id, offset=offset, limit=limit

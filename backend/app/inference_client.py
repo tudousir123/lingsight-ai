@@ -135,6 +135,42 @@ class InferenceClient:
 
         return self._send(handle)
 
+    def request_json(
+        self,
+        method: str,
+        path: str,
+        payload: dict[str, Any] | None = None,
+        *,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Bounded service request; callers own durable mutation reservations."""
+
+        def handle(client: httpx.Client) -> dict[str, Any]:
+            headers = {"Authorization": f"Bearer {self._token}"}
+            if idempotency_key:
+                headers["Idempotency-Key"] = idempotency_key
+            with client.stream(
+                method, f"{self._base_url}/v1/{path}", headers=headers, json=payload
+            ) as response:
+                if response.status_code == 404:
+                    raise InferenceNotFound("推理任务或产物不存在")
+                if response.status_code >= 300:
+                    raise InferenceUpstreamError(response.status_code)
+                body = bytearray()
+                for chunk in response.iter_bytes(STREAM_CHUNK_BYTES):
+                    body.extend(chunk)
+                    if len(body) > JSON_ARTIFACT_CAP_BYTES:
+                        raise InferenceArtifactTooLarge("response")
+            try:
+                value = json.loads(body)
+            except ValueError, UnicodeError:
+                raise InferenceUpstreamError(502) from None
+            if not isinstance(value, dict):
+                raise InferenceUpstreamError(502)
+            return value
+
+        return self._send(handle)
+
     def fetch_task(self, task_id: str) -> dict[str, Any]:
         """One task record (status, candidate, review) as the service shapes it."""
         return self._fetch_json(f"tasks/{task_id}", "task")
