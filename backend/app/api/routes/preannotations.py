@@ -152,6 +152,8 @@ def save_confirmation(
                 "idempotency_conflict",
                 "Idempotency key has different confirmation",
             )
+        if binding.confirmation_id != row.id:
+            return confirmation_public(row, binding)
         session.commit()
         dispatch_confirmation(session, client, row, binding)
         session.refresh(row)

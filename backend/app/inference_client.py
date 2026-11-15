@@ -99,7 +99,7 @@ class InferenceClient:
         ) as response:
             if response.status_code == 404:
                 raise InferenceNotFound("推理任务或产物不存在")
-            if response.status_code >= 400:
+            if response.status_code >= 300:
                 raise InferenceUpstreamError(response.status_code)
             yield response
 

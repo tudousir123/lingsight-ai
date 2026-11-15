@@ -137,9 +137,9 @@ async def bounded_json(request: Request) -> Any:
 
     body = bytearray()
     async for chunk in request.stream():
-        body.extend(chunk)
-        if len(body) > POLICY.body_cap_bytes:
+        if len(body) + len(chunk) > POLICY.body_cap_bytes:
             raise failure(413, "payload_too_large", "Request body too large")
+        body.extend(chunk)
     try:
         return json.loads(body)
     except ValueError, UnicodeError:
