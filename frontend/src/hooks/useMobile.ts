@@ -1,6 +1,7 @@
 import * as React from "react"
 
-const MOBILE_BREAKPOINT = 768
+// Viewports up to and including 768px use the drawer sidebar.
+const MOBILE_BREAKPOINT = 769
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)

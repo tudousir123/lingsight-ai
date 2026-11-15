@@ -8,7 +8,7 @@
   gap: 9px;
   width: 100%;
   min-height: 32px;
-  border-radius: 7px;
+  border-radius: var(--radius-control);
   color: #f3f3f3;
   text-align: left;
 }
@@ -25,7 +25,7 @@
   border-radius: 4px;
   background: #d3d3d3;
   padding: 2px 4px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.25px;
   line-height: 1.4;
@@ -40,11 +40,23 @@
   padding: 0 12px;
   scrollbar-width: thin;
 }
+/* Short viewports: recent tasks and projects share the space left under the
+   nav and each scrolls inside its own section, so the heading and the
+   new-project button of "项目" never leave the viewport. */
+.research-sidebar-content > nav {
+  flex-shrink: 0;
+}
+.research-sidebar-sections {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
 .research-nav-link {
-  height: 41px;
+  height: 36px;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   color: #e6e6e6;
   font-size: 14px;
   font-weight: 400;
@@ -58,9 +70,21 @@
   color: #fafafa;
 }
 .research-sidebar-history {
-  margin-top: 30px;
+  flex: 0 1 auto;
+  min-height: 96px;
+  margin-top: 16px;
+}
+/* The open section scrolls as a whole; the summary stays pinned. */
+.research-sidebar-history {
+  overflow-y: auto;
+  max-height: 252px;
+  scrollbar-width: thin;
 }
 .research-sidebar-history > summary {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--sidebar);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -78,16 +102,13 @@
   display: grid;
   gap: 4px;
   margin-top: 4px;
-  max-height: 210px;
-  overflow-y: auto;
-  scrollbar-width: thin;
 }
 .research-task-link {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   min-width: 0;
-  border-radius: 11px;
+  border-radius: var(--radius-control);
   padding: 10px 12px;
   color: #e2e2e2;
   transition: background-color 0.15s;
@@ -123,7 +144,7 @@
 }
 .research-history-note {
   padding: 8px 12px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.9;
   color: #777;
 }
@@ -134,7 +155,7 @@
   margin: 16px 0 0;
   padding: 8px 10px;
   border: 1px solid #3a3a3a;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   color: #999;
   background: #222;
 }
@@ -178,13 +199,23 @@
 }
 
 .research-sidebar-projects {
-  margin-top: 30px;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 132px;
+  margin-top: 16px;
+}
+.research-project-list {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 .research-projects-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 0 0 0 12px;
   color: #bdbdbd;
   font-size: 12px;
 }
@@ -195,9 +226,9 @@
 .research-projects-heading button {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-control);
 }
 .research-projects-heading button:hover {
   background: #222;
@@ -208,7 +239,7 @@
   align-items: center;
   gap: 12px;
   padding: 11px 12px;
-  border-radius: 9px;
+  border-radius: var(--radius-control);
   color: #e3e3e3;
   font-size: 14px;
   line-height: 1.6;
@@ -239,7 +270,7 @@
   display: block;
   width: 100%;
   border: 1px solid #444;
-  border-radius: 9px;
+  border-radius: var(--radius-control);
   background: #222;
   padding: 12px;
   margin-top: 10px;
@@ -250,8 +281,9 @@
   align-items: center;
   gap: 8px;
   margin-top: 20px;
-  padding: 10px 16px;
-  border-radius: 20px;
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
   background: #ddd;
   color: #191919;
   font-size: 12px;

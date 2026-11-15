@@ -75,7 +75,11 @@ function TrialRow({ trial }: { trial: TrialSummary }) {
   )
 }
 
-export function TrialDirectoryPage() {
+export function TrialDirectoryPage({
+  embedded = false,
+}: {
+  embedded?: boolean
+}) {
   const [experimentId, setExperimentId] = useState<string | null>(null)
   const [groupName, setGroupName] = useState("")
   const [mouseId, setMouseId] = useState("")
@@ -133,17 +137,18 @@ export function TrialDirectoryPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="EXPERIMENT LIBRARY"
-        title="实验与视频管理"
-        description="从实验到单次行为记录，查看视频、复核素材与离线分析结果。"
-        actions={
-          <Badge variant="outline" className="gap-2 px-3 py-1.5 font-normal">
-            <span className="size-1.5 rounded-full bg-brand" />
-            水迷宫研究
-          </Badge>
-        }
-      />
+      {!embedded && (
+        <PageHeader
+          title="实验与视频管理"
+          description="从实验到单次行为记录，查看视频、复核素材与离线分析结果。"
+          actions={
+            <Badge variant="outline" className="gap-2 px-3 py-1.5 font-normal">
+              <span className="size-1.5 rounded-full bg-brand" />
+              水迷宫研究
+            </Badge>
+          }
+        />
+      )}
 
       {experiments.isPending ? (
         <Card>

@@ -13,9 +13,7 @@ function ProjectRoute() {
   const { projectId } = Route.useParams()
   const { view } = Route.useSearch()
   return view === "details" ? (
-    <div className="project-details-scroll">
-      <ProjectPage key={projectId} projectId={projectId} />
-    </div>
+    <ProjectPage key={projectId} projectId={projectId} />
   ) : (
     <AgentWorkspace projectId={projectId} />
   )

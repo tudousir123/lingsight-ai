@@ -551,7 +551,13 @@ test("侧栏与首页使用中文，示例问题只填入草稿", async ({ page 
   ).toBeVisible()
   await expect(
     page.getByRole("navigation", { name: "科研工作区导航" }).getByRole("link"),
-  ).toHaveText(["新建科研任务", "实验与数据", "视频与标注", "分析与报告"])
+  ).toHaveText([
+    "新建科研任务",
+    "实验与数据",
+    "视频与标注",
+    "视频推理",
+    "分析与报告",
+  ])
   await expect(
     page.getByRole("link", { name: "学习与记忆", exact: true }),
   ).toBeVisible()

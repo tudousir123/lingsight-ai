@@ -127,50 +127,6 @@ export function AnnotationViewport({
 
   return (
     <>
-      <div
-        ref={stage}
-        className="annotation-stage"
-        data-pan={
-          dragging
-            ? "dragging"
-            : panMode && view.scale > 1
-              ? "ready"
-              : undefined
-        }
-        onPointerDownCapture={startPan}
-        onPointerMove={(event) => {
-          const current = drag.current
-          if (current?.pointer !== event.pointerId) return
-          setView(
-            bounded(view.scale, {
-              x: current.position.x + event.clientX - current.start.x,
-              y: current.position.y + event.clientY - current.start.y,
-            }),
-          )
-        }}
-        onPointerUp={finishPan}
-        onPointerCancel={finishPan}
-        onLostPointerCapture={finishPan}
-        onAuxClick={(event) => {
-          if (event.button === 1) event.preventDefault()
-        }}
-      >
-        <div
-          ref={frame}
-          className="annotation-frame"
-          style={
-            enabled
-              ? {
-                  aspectRatio: width / height,
-                  width: `min(100%, ${(58 * width) / height}dvh)`,
-                  transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
-                }
-              : undefined
-          }
-        >
-          {children(panMode && view.scale > 1, view.scale)}
-        </div>
-      </div>
       {enabled && (
         <fieldset className="annotation-view-tools" aria-label="画布视图">
           <Button
@@ -225,6 +181,52 @@ export function AnnotationViewport({
           </Button>
         </fieldset>
       )}
+      <div
+        ref={stage}
+        className="annotation-stage"
+        data-pan={
+          dragging
+            ? "dragging"
+            : panMode && view.scale > 1
+              ? "ready"
+              : undefined
+        }
+        onPointerDownCapture={startPan}
+        onPointerMove={(event) => {
+          const current = drag.current
+          if (current?.pointer !== event.pointerId) return
+          setView(
+            bounded(view.scale, {
+              x: current.position.x + event.clientX - current.start.x,
+              y: current.position.y + event.clientY - current.start.y,
+            }),
+          )
+        }}
+        onPointerUp={finishPan}
+        onPointerCancel={finishPan}
+        onLostPointerCapture={finishPan}
+        onAuxClick={(event) => {
+          if (event.button === 1) event.preventDefault()
+        }}
+      >
+        <div
+          ref={frame}
+          className="annotation-frame"
+          style={
+            enabled
+              ? {
+                  aspectRatio: width / height,
+                  // Height follows the viewport so the transport bar below the
+                  // canvas stays on the first screen (see manual-annotation.css).
+                  width: `min(100%, calc(max(240px, 100dvh - var(--annotation-chrome)) * ${width / height}))`,
+                  transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
+                }
+              : undefined
+          }
+        >
+          {children(panMode && view.scale > 1, view.scale)}
+        </div>
+      </div>
     </>
   )
 }
