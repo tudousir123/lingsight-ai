@@ -242,6 +242,9 @@ class PublishedResult(SQLModel, table=True):
     frames_with_heading: int = Field(nullable=False)
     proposal_frames: int = Field(nullable=False)
     video_sha256: str = Field(nullable=False, max_length=64)
+    source_kind: str = Field(default="filesystem", max_length=32)
+    original_video_sha256: str | None = Field(default=None, max_length=64)
+    confirmation_id: uuid.UUID | None = Field(default=None, sa_type=Char36UUID)
     first_frame_model_sha256: str = Field(nullable=False, max_length=64)
     mark_model_sha256: str = Field(nullable=False, max_length=64)
     tracking_model_sha256: str = Field(nullable=False, max_length=64)
@@ -450,6 +453,9 @@ class PublishedResultPublic(SQLModel):
     heading_algorithm: str
     keypoint_protocol: str
     video_sha256: str
+    source_kind: str = "filesystem"
+    original_video_sha256: str | None = None
+    confirmation_id: uuid.UUID | None = None
     content_fingerprint: str
     review_note: str | None = None
     published_at: datetime | None = None

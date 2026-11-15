@@ -6,6 +6,7 @@ from app.api.routes import (
     inference,
     login,
     private,
+    preannotations,
     projects,
     results,
     trials,
@@ -25,6 +26,7 @@ api_router.include_router(results.router)
 api_router.include_router(agent.router)
 api_router.include_router(agent_authorization.router)
 api_router.include_router(inference.router)
+api_router.include_router(preannotations.router)
 api_router.include_router(videos.router)
 
 
