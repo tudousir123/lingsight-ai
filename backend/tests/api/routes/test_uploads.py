@@ -154,10 +154,22 @@ def test_upload_reference_cannot_be_stolen_or_orphaned(
 
 
 @pytest.mark.usefixtures("media_root")
+# Chromium's File.type for .avi is video/vnd.avi; the others are legacy aliases.
+@pytest.mark.parametrize(
+    "mime",
+    [
+        "video/vnd.avi",
+        "video/x-msvideo",
+        "video/avi",
+        "video/msvideo",
+        "application/octet-stream",
+    ],
+)
 def test_avi_original_and_lossless_preview_preserve_all_frames(
     client: TestClient,
     normal_user_token_headers: dict[str, str],
     tmp_path: Path,
+    mime: str,
 ) -> None:
     source = tmp_path / "input.avi"
     subprocess.run(
@@ -184,7 +196,7 @@ def test_avi_original_and_lossless_preview_preserve_all_frames(
     response = client.post(
         f"/api/v1/projects/{project['id']}/videos",
         headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
-        files={"file": ("mouse.AVI", source.read_bytes(), "application/octet-stream")},
+        files={"file": ("mouse.AVI", source.read_bytes(), mime)},
     )
     assert response.status_code == 201, response.text
     video = response.json()
@@ -244,11 +256,23 @@ def test_upload_replay_conflict_and_rejection_leave_no_extra_files(
         url, headers=headers, files={"file": ("a.mp4", mp4 + b"changed", "video/mp4")}
     )
     assert conflict.status_code == 409
+    # Accepting the browser MIME must not skip the actual container check.
+    disguised = client.post(
+        url,
+        headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        files={"file": ("a.avi", mp4, "video/vnd.avi")},
+    )
+    assert disguised.status_code == 415, disguised.text
+    assert disguised.json()["detail"] == {
+        "code": "unsupported_media_type",
+        "message": "实际容器不是 AVI",
+    }
     for filename, content, mime, status in [
         ("a.mp4", b"", "video/mp4", 422),
         ("../a.mp4", mp4, "video/mp4", 422),
         ("a.avi", mp4, "video/x-msvideo", 415),
         ("a.mp4", mp4, "text/plain", 415),
+        ("a.avi", mp4, "text/plain", 415),
         ("a.mp4", mp4[:64], "video/mp4", 422),
     ]:
         result = client.post(
