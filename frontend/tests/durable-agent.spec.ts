@@ -8,6 +8,8 @@ import { stubProjectsApi } from "./utils/projectsApi"
 const supported = {
   execution: {
     contract: "durable-run-v1",
+    requests: "persistent-v1",
+    recovery: "safe-v1",
     engine: "pi-durable",
     version: "1.5.2",
     enabled: true,
@@ -113,6 +115,17 @@ async function fixture(
 
 for (const [name, capability] of [
   ["legacy", {}],
+  [
+    "legacy-requests",
+    {
+      execution: {
+        contract: "durable-run-v1",
+        engine: "pi-durable",
+        version: "1.5.2",
+        enabled: true,
+      },
+    },
+  ],
   ["missing", { execution: null }],
   ["invalid", { execution: { ...supported.execution, enabled: "true" } }],
   ["disabled", { execution: { ...supported.execution, enabled: false } }],

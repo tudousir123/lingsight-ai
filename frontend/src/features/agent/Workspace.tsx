@@ -49,6 +49,7 @@ import {
   useWorkspaceProjects,
 } from "./projects"
 import { useTasks } from "./queries"
+import { agentRequest, pendingRequest } from "./requests"
 import { VideoAttachment, VideoAttachmentList } from "./VideoAttachment"
 import {
   createVideoWorkflow,
@@ -105,6 +106,11 @@ function Conversation({ task, events }: { task: Task; events: TaskEvent[] }) {
               <p className="agent-execution-reference">
                 执行 {run.execution.id} · Pi Durable {run.execution.version} ·
                 会话 {run.execution.conversation_id}
+              </p>
+            )}
+            {entries.some((e) => e.type === "execution.recovered") && (
+              <p role="status">
+                已从持久检查点恢复，继续同一执行；不安全的工具不会自动重放。
               </p>
             )}
             {steps.length > 0 && (
@@ -182,13 +188,27 @@ function Clarification({
   run,
   onDone,
   disabled = false,
+  owner,
 }: {
+  owner: string
   disabled?: boolean
   question: Question
   run: Run
   onDone: () => void
 }) {
+  const path = agentRoutes.runsByRunIdClarificationsByClarificationIdAnswer(
+    run.id,
+    question.id,
+  )
   const [answer, setAnswer] = useState("")
+  useEffect(() => {
+    try {
+      const saved = pendingRequest(owner, path)
+      if (typeof saved?.body.answer === "string") setAnswer(saved.body.answer)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "未确认请求不可用。")
+    }
+  }, [owner, path])
   const [pending, setPending] = useState(false)
   const [error, setError] = useState("")
   return (
@@ -200,13 +220,7 @@ function Clarification({
         setPending(true)
         setError("")
         try {
-          await agentJson(
-            agentRoutes.runsByRunIdClarificationsByClarificationIdAnswer(
-              run.id,
-              question.id,
-            ),
-            { answer },
-          )
+          await agentRequest(owner, path, { answer })
           onDone()
         } catch (e) {
           setError(e instanceof Error ? e.message : "提交失败。")
@@ -275,7 +289,10 @@ export function AgentWorkspace({
     retry: false,
   })
   const missing = isTaskNotFound(task.error)
-  const stream = useTaskEvents(task.data && !missing ? taskId : "")
+  const stream = useTaskEvents(
+    task.data && !missing ? taskId : "",
+    personal.data?.owner_user_id ?? "",
+  )
   const run = task.data?.runs[task.data.runs.length - 1]
   const scopeId = projectId ?? task.data?.project_id
   const isProjectHome = !!projectId && !taskId
@@ -297,6 +314,25 @@ export function AgentWorkspace({
     setAttachmentOpen(false)
     setAttachmentSource("local")
   }, [taskId, projectId])
+  const requestOwner = personal.data?.owner_user_id ?? ""
+  const inputPath = taskId
+    ? agentRoutes.tasksByTaskIdMessages(taskId)
+    : agentRoutes.tasks()
+  useEffect(() => {
+    if (!requestOwner) return
+    try {
+      const saved = pendingRequest(requestOwner, inputPath)
+      const text = saved?.body.text ?? saved?.body.goal
+      if (typeof text === "string") {
+        setDraft(text)
+        setError(
+          "上次请求接收状态未确认。重试将复用同一请求标识，不会重复注入。",
+        )
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "未确认请求不可用。")
+    }
+  }, [requestOwner, inputPath])
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: tasksKey })
     void queryClient.invalidateQueries({ queryKey: taskKey(taskId) })
@@ -344,11 +380,11 @@ export function AgentWorkspace({
           search: { project: projectId },
         })
         setVideos([])
-      } else if (taskId)
-        await agentJson(agentRoutes.tasksByTaskIdMessages(taskId), { text })
+      } else if (taskId) await agentRequest(requestOwner, inputPath, { text })
       else {
-        const created = await agentJson<{ task: Task; run?: Run }>(
-          agentRoutes.tasks(),
+        const created = await agentRequest<{ task: Task; run?: Run }>(
+          requestOwner,
+          inputPath,
           {
             goal: text,
             ...(projectId ? { project_id: projectId } : {}),
@@ -408,7 +444,8 @@ export function AgentWorkspace({
         op === "cancel"
           ? agentRoutes.runsByRunIdCancel(run.id)
           : agentRoutes.runsByRunIdResume(run.id)
-      await agentJson(path, {})
+      if (op === "resume") await agentRequest(requestOwner, path, {})
+      else await agentJson(path, {})
       refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : "操作未完成，请重试。")
@@ -668,6 +705,7 @@ export function AgentWorkspace({
                     ?.filter((q) => !q.answer)
                     .map((q) => (
                       <Clarification
+                        owner={requestOwner}
                         key={q.id}
                         question={q}
                         run={run}

@@ -7,6 +7,8 @@ export type ExecutionCapability = {
   contract: "durable-run-v1"
   engine: "pi-durable"
   version: "1.5.2"
+  requests: "persistent-v1"
+  recovery: "safe-v1"
   enabled: boolean
 }
 
@@ -27,6 +29,8 @@ export function useExecutionCapability() {
         capability?.contract !== "durable-run-v1" ||
         capability.engine !== "pi-durable" ||
         capability.version !== "1.5.2" ||
+        capability.requests !== "persistent-v1" ||
+        capability.recovery !== "safe-v1" ||
         typeof capability.enabled !== "boolean"
       )
         throw new Error(
