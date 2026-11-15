@@ -224,6 +224,7 @@ async def forward(
                 not isinstance(error, dict)
                 or not isinstance(error.get("code"), str)
                 or not isinstance(error.get("message"), str)
+                or error["code"] == "authentication_required"
             ):
                 raise ValueError("invalid upstream error")
             detail = {

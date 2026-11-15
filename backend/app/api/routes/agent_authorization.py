@@ -27,7 +27,7 @@ def authorize_service(authorization: Annotated[str | None, Header()] = None) -> 
             },
         )
     if authorization is None or not secrets.compare_digest(
-        authorization, f"Bearer {token}"
+        authorization.encode(), f"Bearer {token}".encode()
     ):
         raise HTTPException(
             401,

@@ -287,18 +287,19 @@ class AgentGatewayTest(unittest.TestCase):
                     }
                 },
             )
-        self.response = httpx.Response(
-            401,
-            json={
-                "error": {
-                    "code": "authentication_required",
-                    "message": "private credential",
-                }
-            },
-        )
-        result = self.client.get("/agent/tasks")
-        self.assertEqual(result.status_code, 502)
-        self.assertNotIn("private credential", result.text)
+        for status in (401, 403):
+            self.response = httpx.Response(
+                status,
+                json={
+                    "error": {
+                        "code": "authentication_required",
+                        "message": "private credential",
+                    }
+                },
+            )
+            result = self.client.get("/agent/tasks")
+            self.assertEqual(result.status_code, 502)
+            self.assertNotIn("private credential", result.text)
 
     def test_json_parse_and_media_type_errors(self) -> None:
         self.assertEqual(

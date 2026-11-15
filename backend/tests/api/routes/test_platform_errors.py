@@ -1,5 +1,7 @@
 """Stable validation errors for new platform APIs, without changing legacy APIs."""
 
+import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
@@ -25,3 +27,25 @@ def test_existing_signup_keeps_validation_contract(client: TestClient) -> None:
     )
     assert response.status_code == 422
     assert isinstance(response.json()["detail"], list)
+
+
+def test_internal_credential_rejects_non_ascii_header(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.api.routes.agent_authorization import router
+
+    monkeypatch.setattr(settings, "AGENT_AUTHORIZATION_TOKEN", "synthetic-callback")
+    application = FastAPI()
+    application.include_router(router, prefix=settings.API_V1_STR)
+    with TestClient(application, raise_server_exceptions=False) as service:
+        response = service.post(
+            f"{settings.API_V1_STR}/internal/agent/authorize",
+            headers=[(b"authorization", b"Bearer \xff")],
+            json={
+                "user_id": "11111111-1111-4111-8111-111111111111",
+                "data_scope": "none",
+                "project_id": None,
+            },
+        )
+    assert response.status_code == 401
+    assert response.json()["detail"]["code"] == "authentication_required"
