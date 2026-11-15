@@ -65,18 +65,9 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
 
 
 def ensure_workspace_user(user: User) -> User:
-    """Personal-workspace gate for the upstream service gateways.
-
-    This is one personal workspace, not per-user isolation: superusers and the
-    one configured workspace account pass; unrelated registered accounts must
-    not see its data. The gateway adapters call this in their historical
-    order relative to the operation-whitelist check.
-    """
-    if not user.is_superuser and (
-        not settings.AGENT_WORKSPACE_EMAIL
-        or user.email.casefold() != settings.AGENT_WORKSPACE_EMAIL.casefold()
-    ):
-        raise HTTPException(403, "此账号尚未开通个人科研工作区")
+    """Every active platform account has its own workspace."""
+    if not user.is_active:
+        raise HTTPException(403, "Inactive user")
     return user
 
 

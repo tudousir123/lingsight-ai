@@ -21,6 +21,7 @@ fileConfig(config.config_file_name)
 
 from app import inference_models  # noqa
 from app.models import SQLModel  # noqa
+from app import scope_models  # noqa: F401
 from app.core.config import settings # noqa
 
 target_metadata = SQLModel.metadata
