@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,6 +14,7 @@ from app.api.deps import (
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.models import (
+    ExperimentAccess,
     Message,
     UpdatePassword,
     User,
@@ -22,6 +24,13 @@ from app.models import (
     UsersPublic,
     UserUpdate,
     UserUpdateMe,
+)
+from app.scope import has_whole_library_access
+from app.scope_models import (
+    LibraryAccessAudit,
+    LibraryAccessPublic,
+    LibraryAccessUpdate,
+    WholeLibraryAccess,
 )
 from app.utils import generate_new_account_email, send_email
 
@@ -128,6 +137,23 @@ def read_user_me(current_user: CurrentUser) -> Any:
     return current_user
 
 
+@router.get("/me/workspace")
+def read_workspace(session: SessionDep, current_user: CurrentUser) -> dict[str, Any]:
+    return {
+        "user_id": str(current_user.id),
+        "workspace_enabled": True,
+        "whole_library_access": has_whole_library_access(session, current_user),
+        "allowed_experiment_ids": sorted(
+            session.exec(
+                select(ExperimentAccess.experiment_id).where(
+                    ExperimentAccess.user_id == current_user.id
+                )
+            ).all()
+        ),
+        "upload": {"max_bytes": 2_000_000_000, "extensions": ["mp4", "avi"]},
+    }
+
+
 @router.delete("/me", response_model=Message)
 def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     """
@@ -227,3 +253,74 @@ def delete_user(
     session.delete(user)
     session.commit()
     return Message(message="User deleted successfully")
+
+
+def _library_public(session: SessionDep, user: User) -> LibraryAccessPublic:
+    grant = session.get(WholeLibraryAccess, user.id)
+    return LibraryAccessPublic(
+        user_id=user.id,
+        granted=bool(grant and grant.granted),
+        effective=has_whole_library_access(session, user),
+        reason=grant.reason if grant else None,
+        updated_at=grant.updated_at.replace(tzinfo=UTC) if grant else None,
+        updated_by=grant.updated_by if grant else None,
+    )
+
+
+@router.get(
+    "/{user_id}/whole-library-access",
+    response_model=LibraryAccessPublic,
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def read_library_access(user_id: uuid.UUID, session: SessionDep) -> LibraryAccessPublic:
+    user = session.get(User, user_id)
+    if user is None:
+        raise HTTPException(
+            404, {"code": "resource_not_found", "message": "User not found"}
+        )
+    return _library_public(session, user)
+
+
+@router.put(
+    "/{user_id}/whole-library-access",
+    response_model=LibraryAccessPublic,
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def update_library_access(
+    user_id: uuid.UUID,
+    body: LibraryAccessUpdate,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> LibraryAccessPublic:
+    # Serialize even the first grant on its existing user row; concurrent admin
+    # writes cannot lose the previous state or produce duplicate audit entries.
+    user = session.exec(
+        select(User).where(User.id == user_id).with_for_update()
+    ).first()
+    if user is None:
+        raise HTTPException(
+            404, {"code": "resource_not_found", "message": "User not found"}
+        )
+    grant = session.get(WholeLibraryAccess, user_id)
+    if grant and grant.granted == body.granted and grant.reason == body.reason:
+        return _library_public(session, user)
+    audit = LibraryAccessAudit(
+        user_id=user_id,
+        actor_user_id=current_user.id,
+        previous_granted=bool(grant and grant.granted),
+        granted=body.granted,
+        reason=body.reason,
+    )
+    if grant is None:
+        grant = WholeLibraryAccess(
+            user_id=user_id, reason=body.reason, updated_by=current_user.id
+        )
+    grant.granted = body.granted
+    grant.reason = body.reason
+    grant.updated_by = current_user.id
+    grant.updated_at = audit.created_at
+    grant.revision = audit.id
+    session.add(grant)
+    session.add(audit)
+    session.commit()
+    return _library_public(session, user)
