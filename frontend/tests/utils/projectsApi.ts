@@ -281,6 +281,11 @@ export function stubProjectsApi(
   void page.route("**/api/v1/users/me/workspace", (route) =>
     route.fulfill({ json: workspaceInfo({ whole_library_access: true }) }),
   )
+  // The inference page looks trials up for library videos; keep it off the real
+  // backend (a fake token there would 401 and log the page out mid-test).
+  void page.route("**/api/v1/experiments", (route) =>
+    route.fulfill({ json: { data: [], count: 0 } }),
+  )
   void page.route("**/api/v1/projects", handle)
   void page.route("**/api/v1/projects/", handle)
   void page.route("**/api/v1/projects/**", handle)
