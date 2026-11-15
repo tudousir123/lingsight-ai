@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { type PointerEvent, useRef, useState } from "react"
+import { Button } from "@/components/ui/button"
 import {
   type Confirmation,
   type ConfirmationInput,
@@ -48,10 +49,63 @@ const dispatchText: Record<string, string> = {
 type Attempt = { payload: string; key: string; confirmationId?: string }
 // The browser keeps only the request in flight, so a reload can still replay it.
 const attemptKey = (taskId: string) => `lingsight.confirm-attempt.${taskId}`
+const isNumber = (value: unknown) => typeof value === "number"
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null
+// Session storage is outside our control; anything not shaped like a request
+// we sent is treated as no attempt instead of throwing during render.
+function parseInput(payload: string): ConfirmationInput | null {
+  try {
+    const value: unknown = JSON.parse(payload)
+    if (!isRecord(value)) return null
+    const { seed, pool, marks } = value
+    const valid =
+      typeof value.task_id === "string" &&
+      typeof value.candidate_version === "string" &&
+      (value.expected_confirmation_id === null ||
+        typeof value.expected_confirmation_id === "string") &&
+      isRecord(seed) &&
+      [seed.frame, seed.x, seed.y].every(isNumber) &&
+      isRecord(pool) &&
+      [pool.cx, pool.cy, pool.radius].every(isNumber) &&
+      Array.isArray(marks) &&
+      marks.every(
+        (mark) =>
+          isRecord(mark) &&
+          typeof mark.label === "string" &&
+          Array.isArray(mark.polygon) &&
+          mark.polygon.every(
+            (point) =>
+              Array.isArray(point) &&
+              point.length === 2 &&
+              point.every(isNumber),
+          ),
+      )
+    return valid ? (value as ConfirmationInput) : null
+  } catch {
+    return null
+  }
+}
 function readAttempt(taskId: string): Attempt | null {
   try {
     const raw = sessionStorage.getItem(attemptKey(taskId))
-    return raw ? (JSON.parse(raw) as Attempt) : null
+    const value: unknown = raw ? JSON.parse(raw) : null
+    if (
+      !isRecord(value) ||
+      typeof value.payload !== "string" ||
+      typeof value.key !== "string" ||
+      !(
+        value.confirmationId === undefined ||
+        typeof value.confirmationId === "string"
+      ) ||
+      !parseInput(value.payload)
+    )
+      return null
+    return {
+      payload: value.payload,
+      key: value.key,
+      ...(value.confirmationId ? { confirmationId: value.confirmationId } : {}),
+    }
   } catch {
     return null
   }
@@ -81,8 +135,9 @@ function replayable(attempt: Attempt | null, confirmed: Confirmation) {
   if (!attempt) return false
   if (attempt.confirmationId) return attempt.confirmationId === confirmed.id
   // Saved before the response arrived (e.g. a reload mid-request).
-  const sent = JSON.parse(attempt.payload) as ConfirmationInput
+  const sent = parseInput(attempt.payload)
   return (
+    !!sent &&
     sent.task_id === confirmed.task_id &&
     sent.candidate_version === confirmed.candidate_version &&
     geometryOf(sent) === geometryOf(confirmed)
@@ -239,6 +294,9 @@ function ConfirmEditor({
   const locked = task.status !== "waiting_for_review"
   const dispatch = confirmed?.tracking_dispatch
   const canReplay = !!confirmed && replayable(attempt.current, confirmed)
+  // The server refuses a new version while this task's saved one is still
+  // being dispatched, whatever the draft says; only a replay may proceed.
+  const dispatchPending = dispatch?.status === "pending"
 
   function post(next: Attempt) {
     attempt.current = next
@@ -360,10 +418,9 @@ function ConfirmEditor({
         </p>
       )}
       {!locked && (
-        <button
+        <Button
           type="button"
-          className="rounded bg-primary px-4 py-2 text-primary-foreground"
-          disabled={confirm.isPending || errors.length > 0}
+          disabled={confirm.isPending || errors.length > 0 || dispatchPending}
           onClick={submit}
         >
           {confirm.isPending
@@ -371,7 +428,12 @@ function ConfirmEditor({
             : dispatch?.status === "failed" && confirm.data === undefined
               ? "再次确认并开始追踪"
               : "确认并开始追踪"}
-        </button>
+        </Button>
+      )}
+      {!locked && dispatchPending && (
+        <p className="text-sm text-amber-700">
+          已保存的确认版本仍在等待下发结果，服务器在此期间不接受新的确认版本；请等待任务状态更新。
+        </p>
       )}
       {confirmed && (
         <div className="preannotation-confirmed" role="status">
@@ -388,14 +450,16 @@ function ConfirmEditor({
           {confirmed.tracking_dispatch.status !== "accepted" &&
             !locked &&
             (canReplay ? (
-              <button
+              <Button
                 type="button"
-                className="rounded border px-3 py-1"
+                variant="outline"
+                size="sm"
+                className="justify-self-start"
                 disabled={confirm.isPending}
                 onClick={retryDispatch}
               >
                 重试下发
-              </button>
+              </Button>
             ) : (
               <p className="text-amber-700">
                 本浏览器会话没有该版本的原始提交记录，无法在此重试下发；需在最初提交确认的浏览器会话中恢复下发。重新确认会创建新的版本，不会恢复这一版本。
@@ -686,7 +750,7 @@ function Controls({
         <div className="preannotation-actions">
           <button
             type="button"
-            className="rounded border px-2 py-1"
+            className="rounded-md border px-2 py-1"
             aria-pressed={mode.type === "draw-pool"}
             onClick={() =>
               onMode(
@@ -700,7 +764,7 @@ function Controls({
           </button>
           <button
             type="button"
-            className="rounded border px-2 py-1"
+            className="rounded-md border px-2 py-1"
             aria-pressed={mode.type === "place-seed"}
             onClick={() =>
               onMode(
@@ -786,7 +850,7 @@ function Controls({
               {drawing === i ? (
                 <button
                   type="button"
-                  className="rounded border px-2 py-1"
+                  className="rounded-md border px-2 py-1"
                   onClick={() => onMode({ type: "idle" })}
                 >
                   完成轮廓
@@ -794,7 +858,7 @@ function Controls({
               ) : (
                 <button
                   type="button"
-                  className="rounded border px-2 py-1"
+                  className="rounded-md border px-2 py-1"
                   aria-label={`重画 ${mark.label}`}
                   onClick={() => {
                     onChange({
@@ -812,7 +876,7 @@ function Controls({
               )}
               <button
                 type="button"
-                className="rounded border px-2 py-1"
+                className="rounded-md border px-2 py-1"
                 aria-label={`删除 ${mark.label}`}
                 onClick={() => {
                   onChange({
@@ -835,7 +899,7 @@ function Controls({
         )}
         <button
           type="button"
-          className="rounded border px-2 py-1"
+          className="rounded-md border px-2 py-1"
           disabled={draft.marks.length >= 64}
           onClick={() => {
             const label = nextMarkLabel(draft.marks)
@@ -852,7 +916,7 @@ function Controls({
       </fieldset>
       <button
         type="button"
-        className="rounded border px-2 py-1"
+        className="rounded-md border px-2 py-1"
         disabled={disabled}
         onClick={onReset}
       >

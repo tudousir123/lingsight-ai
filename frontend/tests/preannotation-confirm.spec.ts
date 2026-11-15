@@ -79,6 +79,8 @@ async function mockPlatform(
     tasks?: MockTask[]
     confirmations?: Confirmation[]
     confirmationReadError?: number
+    // 模拟任务轮询尚未反映下发：确认后任务仍停在 waiting_for_review。
+    staysWaiting?: boolean
   } = {},
 ) {
   await page.addInitScript(() => {
@@ -243,7 +245,10 @@ async function mockPlatform(
       saved,
     ]
     task.confirmation_id = id
-    task.status = dispatch.status === "failed" ? "waiting_for_review" : "queued"
+    task.status =
+      dispatch.status === "failed" || options.staysWaiting
+        ? "waiting_for_review"
+        : "queued"
     return route.fulfill({ status: replay ? 200 : 201, json: saved })
   })
   return state
@@ -545,4 +550,89 @@ test("同一会话保存了原始请求时，重试下发原样重放原键与�
   expect(state.posts[1]).toEqual(state.posts[0])
   await expect(page.getByText(/并不代表追踪完成/)).toBeVisible()
   await expect(page.getByText(CONFIRMED_ID)).toBeVisible()
+})
+
+// 会话存储不受本页控制：任何不像本页发出的请求都当作没有原始请求，不能让渲染崩溃。
+for (const [name, stored] of [
+  ["非 JSON", "{not json"],
+  ["payload 不是字符串", JSON.stringify({ payload: 1, key: "k" })],
+  ["payload 结构不对", JSON.stringify({ payload: '{"seed":null}', key: "k" })],
+  [
+    "payload 内 JSON 损坏",
+    JSON.stringify({ payload: "{oops", key: "k", confirmationId: undefined }),
+  ],
+] as const) {
+  test(`本地保存的原始请求损坏（${name}）时安全降级，不崩溃也不伪装重试`, async ({
+    page,
+  }) => {
+    const state = await mockPlatform(page, {
+      tasks: [
+        {
+          id: TASK,
+          status: "waiting_for_review",
+          confirmation_id: CONFIRMED_ID,
+        },
+      ],
+      confirmations: [
+        confirmationFor(CONFIRMED_ID, TASK, {
+          status: "failed",
+          error_code: "upstream_error",
+        }),
+      ],
+    })
+    await page.addInitScript(
+      ([key, value]) => sessionStorage.setItem(key, value),
+      [`lingsight.confirm-attempt.${TASK}`, stored] as const,
+    )
+    await openTask(page, TASK)
+    await expect(page.getByText(CONFIRMED_ID)).toBeVisible()
+    await expect(
+      page.getByText(/需在最初提交确认的浏览器会话中恢复下发/),
+    ).toBeVisible()
+    await expect(page.getByRole("button", { name: "重试下发" })).toHaveCount(0)
+    expect(state.posts).toHaveLength(0)
+  })
+}
+
+test("已保存确认仍在等待下发时，不能再发起新确认（服务器必拒），并说明原因", async ({
+  page,
+}) => {
+  const state = await mockPlatform(page, {
+    tasks: [
+      { id: TASK, status: "waiting_for_review", confirmation_id: CONFIRMED_ID },
+    ],
+    confirmations: [
+      confirmationFor(CONFIRMED_ID, TASK, {
+        status: "pending",
+        error_code: "dispatch_outcome_unknown",
+      }),
+    ],
+  })
+  await openTask(page, TASK)
+  await expect(page.getByText(CONFIRMED_ID)).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "确认并开始追踪" }),
+  ).toBeDisabled()
+  await expect(page.getByText(/服务器在此期间不接受新的确认版本/)).toBeVisible()
+  expect(state.posts).toHaveLength(0)
+})
+
+test("同一会话确认后下发仍 pending：新确认被禁用，但原键原载荷的重试下发仍可用", async ({
+  page,
+}) => {
+  const state = await mockPlatform(page, {
+    dispatch: "pending",
+    staysWaiting: true,
+  })
+  await openTask(page)
+  await page.getByRole("button", { name: "确认并开始追踪" }).click()
+  await expect(page.getByText(CONFIRMED_ID)).toBeVisible()
+  await expect(page.getByText("追踪尚未下发")).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "确认并开始追踪" }),
+  ).toBeDisabled()
+  await page.getByRole("button", { name: "重试下发" }).click()
+  await expect.poll(() => state.posts.length).toBe(2)
+  expect(state.posts[1]).toEqual(state.posts[0])
+  await expect(page.getByText(/并不代表追踪完成/)).toBeVisible()
 })

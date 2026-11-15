@@ -1,3 +1,9 @@
+.preannotation {
+  /* AnnotationViewport clamps the canvas to 100dvh minus this. The canvas
+     sits below the page content, so only the shell header (48px), the view
+     tool bar and some margin must fit beside it once scrolled into view. */
+  --annotation-chrome: 200px;
+}
 .preannotation-layout {
   display: grid;
   gap: 16px;
