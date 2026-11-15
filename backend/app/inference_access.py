@@ -39,9 +39,16 @@ def within(path: str, directory: str) -> bool:
 def ensure_video_folder_access(
     session: Session, user: User, source_id: str, path: str
 ) -> None:
+    from app.media_settings import MediaSettings
     from app.scope import allowed_experiment_ids
 
     path = relative_path(path)
+    if source_id == MediaSettings().PLATFORM_MEDIA_INFERENCE_SOURCE_ID:
+        raise failure(
+            403,
+            "permission_denied",
+            "Platform media is accessible only through owned uploads",
+        )
     if source_id.startswith("upload-"):
         raise failure(
             422, "invalid_input", "Use the project videos API for user uploads"
@@ -107,7 +114,22 @@ def ensure_library_video_member(
     ):
         raise failure(404, "resource_not_found", "Video is not in the project folder")
     ensure_video_folder_access(session, user, source, directory)
-    listing = InferenceClient().fetch_directory(source, directory)
+    from app.inference_client import (
+        InferenceArtifactTooLarge,
+        InferenceNotFound,
+        InferenceUnconfigured,
+        InferenceUnreachable,
+        InferenceUpstreamError,
+    )
+
+    try:
+        listing = InferenceClient().fetch_directory(source, directory)
+    except InferenceUnconfigured, InferenceUnreachable:
+        raise failure(503, "service_unavailable", "Video source unavailable") from None
+    except InferenceNotFound:
+        raise failure(404, "resource_not_found", "Video not found") from None
+    except InferenceUpstreamError, InferenceArtifactTooLarge:
+        raise failure(502, "upstream_error", "Video source failed") from None
     if not any(
         item.get("type") == "video" and item.get("id") == video_id
         for item in listing["items"]
@@ -173,6 +195,7 @@ def visible_publication_ids(
                 binding.project_id == project_id
                 and binding.video_id == result.video_id
                 and binding.video_sha256 == result.video_sha256
+                and binding.confirmation_id == result.confirmation_id
             ):
                 visible.append(result.task_id)
         except HTTPException as exc:

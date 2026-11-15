@@ -5,6 +5,7 @@ import json
 import math
 import re
 import uuid
+from datetime import UTC
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
@@ -89,6 +90,14 @@ def candidate_snapshot(
             409,
             "state_conflict",
             "Candidate image frame, dimensions or input hash unavailable",
+        )
+    if binding.source_kind == "user_upload" and (width, height, count) != (
+        binding.input_width,
+        binding.input_height,
+        binding.input_frame_count,
+    ):
+        raise failure(
+            409, "state_conflict", "Candidate dimensions do not match uploaded input"
         )
     if binding.video_sha256 is not None and binding.video_sha256 != sha:
         raise failure(409, "stale_version", "Inference input hash changed")
@@ -213,7 +222,9 @@ def confirmation_public(
         "frame_count": row.frame_count,
         **row.geometry,
         "confirmed_by": str(row.owner_user_id),
-        "confirmed_at": row.confirmed_at,
+        "confirmed_at": row.confirmed_at.replace(tzinfo=UTC)
+        if row.confirmed_at.tzinfo is None
+        else row.confirmed_at,
         "tracking_dispatch": {
             "status": row.dispatch_status,
             "error_code": row.dispatch_error,
@@ -250,6 +261,8 @@ def verify_consumed_confirmation(
         row is None
         or row.binding_id != binding.id
         or row.video_sha256 != candidate["video_sha256"]
+        or row.candidate_version != candidate["candidate_version"]
+        or row.owner_user_id != binding.owner_user_id
         or row.geometry != task.get("confirmed")
     ):
         raise failure(
