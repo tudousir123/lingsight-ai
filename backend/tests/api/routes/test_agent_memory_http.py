@@ -10,6 +10,7 @@ from tests.api.routes.test_agent_project_http import agent_http  # noqa: F401
 from tests.api.routes.test_platform_user_flow import signup
 
 
+@pytest.mark.usefixtures("agent_http")
 @pytest.mark.parametrize("agent_http", ["memory-contract-fixture.ts"], indirect=True)
 def test_personal_preference_real_gateway_source_recall_and_user_isolation(
     client: TestClient,
