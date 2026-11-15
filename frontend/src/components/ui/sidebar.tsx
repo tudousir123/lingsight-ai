@@ -268,8 +268,8 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar, open } = useSidebar()
-  const sidebarCopy = open ? "收起侧栏" : "展开侧栏"
+  const { toggleSidebar, open, openMobile, isMobile } = useSidebar()
+  const sidebarCopy = (isMobile ? openMobile : open) ? "收起侧栏" : "展开侧栏"
 
   return (
     <Button
@@ -277,7 +277,7 @@ function SidebarTrigger({
       data-slot="sidebar-trigger"
       variant="ghost"
       size="icon"
-      className={cn("size-7", className)}
+      className={cn("size-8", className)}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()

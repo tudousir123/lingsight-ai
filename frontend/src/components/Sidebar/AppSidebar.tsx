@@ -3,6 +3,7 @@ import {
   ArrowUpRight,
   ChartNoAxesCombined,
   ChevronDown,
+  Cpu,
   Database,
   FolderOpen,
   MessageSquare,
@@ -56,6 +57,7 @@ const baseItems: Item[] = [
   { icon: Plus, title: "新建科研任务", path: "/" },
   { icon: Database, title: "实验与数据", path: "/experiments" },
   { icon: ScanLine, title: "视频与标注", path: "/annotations" },
+  { icon: Cpu, title: "视频推理", path: "/inference" },
   { icon: ChartNoAxesCombined, title: "分析与报告", path: "/analysis" },
 ]
 export function AppSidebar() {
@@ -170,7 +172,7 @@ export function AppSidebar() {
             </SidebarMenuItem>
           </SidebarMenu>
         </nav>
-        <div className="group-data-[collapsible=icon]:hidden">
+        <div className="research-sidebar-sections group-data-[collapsible=icon]:hidden">
           {searchOpen && (
             <div id="research-task-search" className="research-sidebar-search">
               <Search size={14} aria-hidden="true" />
@@ -264,31 +266,35 @@ export function AppSidebar() {
                 <Plus size={14} />
               </button>
             </div>
-            {(projects.data ?? []).map((project) => (
-              <Link
-                to="/projects/$projectId"
-                params={{ projectId: project.id }}
-                key={project.id}
-                className="research-project-link"
-                aria-current={
-                  pathname === `/projects/${project.id}` ? "page" : undefined
-                }
-                onClick={close}
-              >
-                <FolderOpen size={17} strokeWidth={1.5} />
-                <span>{project.name}</span>
-              </Link>
-            ))}
-            {projects.error && (
-              <p className="research-history-note" role="alert">
-                无法加载项目，请稍后重试。
-              </p>
-            )}
-            {!projects.error &&
-              !projects.isPending &&
-              !(projects.data ?? []).length && (
-                <p className="research-history-note">你的项目将显示在这里。</p>
+            <div className="research-project-list">
+              {(projects.data ?? []).map((project) => (
+                <Link
+                  to="/projects/$projectId"
+                  params={{ projectId: project.id }}
+                  key={project.id}
+                  className="research-project-link"
+                  aria-current={
+                    pathname === `/projects/${project.id}` ? "page" : undefined
+                  }
+                  onClick={close}
+                >
+                  <FolderOpen size={17} strokeWidth={1.5} />
+                  <span>{project.name}</span>
+                </Link>
+              ))}
+              {projects.error && (
+                <p className="research-history-note" role="alert">
+                  无法加载项目，请稍后重试。
+                </p>
               )}
+              {!projects.error &&
+                !projects.isPending &&
+                !(projects.data ?? []).length && (
+                  <p className="research-history-note">
+                    你的项目将显示在这里。
+                  </p>
+                )}
+            </div>
           </section>
         </div>
       </SidebarContent>

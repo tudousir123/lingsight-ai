@@ -38,14 +38,21 @@ const sectionTitles: Record<string, string> = {
 }
 
 function Layout() {
-  const pathname = useLocation().pathname
+  const location = useLocation()
+  const pathname = location.pathname
   const section = pathname.split("/")[1]
   const title = sectionTitles[section]
+  const isProjectDetails =
+    section === "projects" &&
+    new URLSearchParams(location.searchStr).get("view") === "details"
+  // Conversation layouts own their scroll area; every other route is a page
+  // that shares the padded, width-limited skeleton below.
   const isAgentWorkspace =
-    !section ||
-    section === "tasks" ||
-    section === "projects" ||
-    section === "project-research"
+    !isProjectDetails &&
+    (!section ||
+      section === "tasks" ||
+      section === "projects" ||
+      section === "project-research")
 
   return (
     <SidebarProvider
@@ -77,7 +84,7 @@ function Layout() {
           </div>
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background px-4 py-4 lg:px-6 lg:py-5">
-            <div className="mx-auto w-full max-w-[1600px]">
+            <div className="mx-auto w-full max-w-(--page-max-width)">
               <Outlet />
             </div>
           </div>

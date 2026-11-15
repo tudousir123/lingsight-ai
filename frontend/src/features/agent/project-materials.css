@@ -1,4 +1,3 @@
-.materials-heading,
 .materials-panel-heading {
   display: flex;
   flex-wrap: wrap;
@@ -7,17 +6,6 @@
   gap: 10px;
 }
 
-.materials-heading {
-  margin: 18px 0 22px;
-}
-
-.materials-heading h1 {
-  color: #f4f4f4;
-  font-size: clamp(23px, 2.6vw, 30px);
-  font-weight: 500;
-}
-
-.materials-heading p,
 .materials-note {
   color: #aaa;
   font-size: 13px;
@@ -33,9 +21,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  min-height: 32px;
+  padding: 0 10px;
   border: 1px solid #3a3a3a;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   color: #d6d6d6;
   font-size: 13px;
   cursor: pointer;
@@ -60,13 +49,13 @@
   min-width: 145px;
   padding: 6px;
   border: 1px solid #3a3a3a;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: #252525;
 }
 
 .materials-settings .project-action {
   justify-content: flex-start;
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: transparent;
   color: #e4e4e4;
 }
@@ -93,7 +82,7 @@
 
 .materials-tabs [data-slot="tabs-trigger"] {
   flex: 0 1 auto;
-  min-height: 38px;
+  min-height: 36px;
   padding-inline: 13px;
   color: #b6b6b6;
 }
@@ -108,7 +97,7 @@
   margin-top: 8px;
   padding: 18px;
   border: 1px solid #333;
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   background: #1e1e1e;
 }
 
@@ -166,7 +155,7 @@
 .materials-record {
   padding: 12px;
   border: 1px solid #353535;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
 }
 
 .materials-file-group {
@@ -189,7 +178,7 @@
 .materials-player {
   width: 100%;
   max-height: 62dvh;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: #111;
 }
 

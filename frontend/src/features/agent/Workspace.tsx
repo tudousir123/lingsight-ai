@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
+import { PageHeader } from "@/components/Common/PageHeader"
 import { WorkspaceIntro } from "@/features/research/copilot/WorkspaceIntro"
 import { consumeBrief, pendingBriefPrompt } from "@/features/research/entry"
 import { flagshipVisionModel } from "@/features/research/vision-model"
@@ -693,8 +694,10 @@ export function AnalysisPage() {
   const tasks = useTasks()
   return (
     <div className="agent-results-page">
-      <h1>分析与报告</h1>
-      <p>查看研究进度、图表与报告，或回到任务继续分析。</p>
+      <PageHeader
+        title="分析与报告"
+        description="查看研究进度、图表与报告，或回到任务继续分析。"
+      />
       {tasks.isPending ? (
         <p>正在加载科研任务…</p>
       ) : tasks.error ? (

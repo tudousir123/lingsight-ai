@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/Common/PageHeader"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TrialDirectoryPage } from "@/features/trials/directory"
 import { ManualAnnotation } from "./ManualAnnotation"
@@ -11,17 +12,21 @@ export function AnnotationsPage({
 }) {
   return (
     <div className="annotation-page">
-      <h1>视频与标注</h1>
       <Tabs
         value={tab}
         onValueChange={(value) =>
           onTabChange(value === "directory" ? "directory" : "manual")
         }
       >
-        <TabsList aria-label="视频工作区">
-          <TabsTrigger value="manual">手动标注</TabsTrigger>
-          <TabsTrigger value="directory">试次目录</TabsTrigger>
-        </TabsList>
+        <PageHeader
+          title="视频与标注"
+          actions={
+            <TabsList aria-label="视频工作区">
+              <TabsTrigger value="manual">手动标注</TabsTrigger>
+              <TabsTrigger value="directory">试次目录</TabsTrigger>
+            </TabsList>
+          }
+        />
         <TabsContent
           value="manual"
           forceMount
@@ -30,7 +35,7 @@ export function AnnotationsPage({
           <ManualAnnotation active={tab === "manual"} />
         </TabsContent>
         <TabsContent value="directory">
-          <TrialDirectoryPage />
+          <TrialDirectoryPage embedded />
         </TabsContent>
       </Tabs>
     </div>
