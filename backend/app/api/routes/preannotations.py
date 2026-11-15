@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request, Response
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import col, select
+from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import CurrentUser, SessionDep, owned_project
 from app.api.routes.inference import (
@@ -109,6 +110,27 @@ async def confirm_preannotation(
     except ValidationError:
         raise failure(422, "invalid_geometry", "Invalid confirmation fields") from None
     key = idempotency_key(request)
+    return await run_in_threadpool(
+        save_confirmation,
+        project_id,
+        video_id,
+        data,
+        key,
+        response,
+        session,
+        current_user,
+    )
+
+
+def save_confirmation(
+    project_id: uuid.UUID,
+    video_id: str,
+    data: ConfirmationInput,
+    key: uuid.UUID,
+    response: Response,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
     session.exec(
         select(Project).where(Project.id == project_id).with_for_update()
     ).one()

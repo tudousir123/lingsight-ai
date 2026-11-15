@@ -160,3 +160,45 @@ Once you are done, regenerate the templates used by the application:
 ```console
 $ bun run email:export
 ```
+
+## Inference isolation and preannotation configuration
+
+The platform now stores verified `owner/project/video/task` bindings and immutable
+preannotation confirmations. Existing shared tasks without a verified binding stay
+hidden; project references are not ownership evidence. The migration does not adopt
+historical tasks automatically. Confirmations and publication provenance require the
+`69a -> f69b00000002 -> 69c` migrations.
+
+Set `INFERENCE_EXPERIMENT_DIRECTORIES` in the backend process environment to a JSON
+mapping of source ID to experiment ID to source-relative directory, for example
+`{"lab-videos":{"experiment-1":"batch-1"}}`. Configure only verified mappings.
+Unmapped sources fail closed, including for administrators. Single-experiment users
+can browse only within their mapped directory, never the source root. The physical
+`PLATFORM_MEDIA_INFERENCE_SOURCE_ID` is always excluded from library browsing;
+user uploads use only their owner's virtual source and project video APIs.
+
+User-upload inference requires the configured platform media directory to be mounted
+read-only at the inference service and registered as its dedicated video source.
+`PLATFORM_MEDIA_READONLY_READY=true` is an operator attestation, not a mount operation;
+the platform also verifies that the server-mapped relative input appears in that
+source. The platform is the sole file writer. No mount or production deployment is
+performed by these changes. Uploaded AVI originals and verified lossless MP4 inputs
+retain separate hashes; publication identifies the actual input and original hash.
+
+Creation requires a UUID `Idempotency-Key`. A durable create reservation is committed
+before sending a request. The currently inspected inference service ignores caller
+idempotency keys and creates its own UUID. If the response is lost, the platform
+returns 503 on subsequent replay and does not issue another create. Such reservations
+require operator reconciliation against trusted upstream evidence; guessing or
+adopting an arbitrary existing task is not an automatic recovery mechanism.
+
+Confirmation persistence precedes tracking dispatch. Timeout recovery reads the
+upstream task and accepts only the exact saved geometry; an unresolved outcome stays
+pending without redispatch. A definite rejection can be retried using the original
+key. The inspected upstream currently accepts exactly four marks and labels up to
+80 characters, while this platform contract accepts zero to 64 marks and labels up
+to 100. The platform preserves valid geometry unchanged and reports failed dispatch
+when that older upstream rejects it. Deployment acceptance must verify a compatible
+upstream before promising the full confirmation workflow; it must not pad, truncate,
+or silently replace marks. `accepted` means accepted for tracking, not completed or
+reviewed. Publication still requires `succeeded` and `tracking_ok`.
