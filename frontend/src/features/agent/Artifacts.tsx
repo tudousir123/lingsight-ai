@@ -9,7 +9,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { agentRoutes } from "@/lib/upstreamRoutes.gen"
-import { type Artifact, agentFetch, agentJson, download, taskKey } from "./api"
+import {
+  type Artifact,
+  agentFetch,
+  agentJson,
+  download,
+  type Run,
+  type RunStatus,
+  statusLabels,
+  taskKey,
+} from "./api"
 
 function Markdown({ text }: { text: string }) {
   // Raw HTML stays text; remote images never load. Keep the default safe URL transform.
@@ -22,10 +31,12 @@ function Markdown({ text }: { text: string }) {
 export function ArtifactViewer({
   artifact,
   taskId,
+  runStatus,
   onClose,
 }: {
   artifact: Artifact
   taskId: string
+  runStatus?: RunStatus
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
@@ -96,6 +107,14 @@ export function ArtifactViewer({
       <DialogContent className="agent-file-dialog">
         <DialogTitle>{artifact.name}</DialogTitle>
         <DialogDescription>
+          {runStatus && (
+            <span>
+              所属执行：{statusLabels[runStatus]}。
+              {runStatus !== "succeeded"
+                ? "材料仅供核查，尚未合格交付。"
+                : "已通过当前完成契约，不代表科研结论获人工复核。"}
+            </span>
+          )}
           已保留来源与版本 · {Math.ceil(artifact.bytes / 1024)} KB
           <span className="agent-artifact-version">
             内容 SHA-256：{artifact.sha256}
@@ -171,9 +190,11 @@ export function ArtifactViewer({
 }
 export function ArtifactCards({
   artifacts,
+  runs = [],
   onSelect,
 }: {
   artifacts: Artifact[]
+  runs?: Run[]
   onSelect: (a: Artifact) => void
 }) {
   return (
@@ -198,6 +219,8 @@ export function ArtifactCards({
                     ? "数据"
                     : "文件"}{" "}
               · {Math.ceil(a.bytes / 1024)} KB
+              {runs.find((run) => run.id === a.run_id) &&
+                ` · 执行${statusLabels[runs.find((run) => run.id === a.run_id)!.status]}`}
             </small>
           </span>
         </button>

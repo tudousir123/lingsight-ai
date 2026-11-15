@@ -36,6 +36,7 @@ OPERATIONS = OperationTable(
     operations={
         "GET": (
             "capabilities",
+            "inputs",
             "personal-agent",
             "tasks",
             "tasks/{task_id}",
@@ -45,6 +46,7 @@ OPERATIONS = OperationTable(
             "artifacts/{artifact_id}",
         ),
         "POST": (
+            "inputs",
             "tasks",
             "tasks/{task_id}/messages",
             "runs/{run_id}/cancel",
@@ -89,6 +91,7 @@ async def ensure_project_support(
     project: bool = False,
     personal: bool = False,
     execution: bool = False,
+    files: bool = False,
 ) -> None:
     """Refuse old Agent versions before they can create an unscoped task."""
     unavailable = "科研 Agent 项目分析尚未就绪，请先更新服务并配置项目数据源"
@@ -96,6 +99,8 @@ async def ensure_project_support(
         unavailable = "个人 Agent 持久工作环境尚未就绪，请先更新服务"
     if execution:
         unavailable = "Pi Durable 执行能力未配置或协议不兼容，已禁用新执行"
+    if files:
+        unavailable = "受控文件能力不兼容，已禁用文件输入"
     probe = Request({**request.scope, "method": "GET", "query_string": b""})
     try:
         response = await forward(
@@ -123,6 +128,8 @@ async def ensure_project_support(
                 )
             ):
                 raise HTTPException(503, unavailable)
+            if files and capabilities.get("files") != "controlled-files-v1":
+                raise HTTPException(503, unavailable)
             if execution and (
                 not isinstance(runtime, dict)
                 or runtime.get("contract") != "durable-run-v1"
@@ -141,6 +148,7 @@ async def ensure_project_support(
 class TaskInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     goal: str = Field(min_length=1, max_length=12000)
+    input_ids: list[uuid.UUID] = Field(default_factory=list, max_length=8)
     project_id: uuid.UUID | None = None
     data_scope: DataScope | None = None
     completion_mode: CompletionMode = "auto"
@@ -201,6 +209,9 @@ async def agent_gateway(
         )
     payload = await read_payload(request, POLICY)
     project_scope = False
+    file_scope = path == "inputs"
+    if file_scope and request.query_params:
+        raise HTTPException(422, "Material selectors are forbidden")
     if request.method in {"POST", "PATCH"} and (
         payload or path == "tasks" or path.endswith("/messages")
     ):
@@ -256,7 +267,13 @@ async def agent_gateway(
                 )
         # Do not send project_id:null for none/whole_library: Agent distinguishes
         # a missing field from an invalid explicit null on task creation.
-        payload = parsed.model_dump_json(exclude_none=True).encode()
+        file_scope = isinstance(parsed, TaskInput) and bool(parsed.input_ids)
+        payload = parsed.model_dump_json(
+            exclude_none=True,
+            exclude={"input_ids"}
+            if isinstance(parsed, TaskInput) and not parsed.input_ids
+            else set(),
+        ).encode()
     # Validate cursor before making the capability probe, including malformed IDs.
     if path.endswith("/events"):
         from app.api.gateway import MAX_CURSOR
@@ -270,7 +287,10 @@ async def agent_gateway(
         request,
         service,
         project=project_scope,
-        execution=request.method == "POST" and not path.endswith("/cancel"),
+        files=file_scope,
+        execution=request.method == "POST"
+        and path != "inputs"
+        and not path.endswith("/cancel"),
         personal=path == "personal-agent"
         or (path == "tasks" and request.method == "POST"),
     )

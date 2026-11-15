@@ -712,3 +712,10 @@
   font-size: 0.75rem;
   color: var(--muted-foreground);
 }
+
+.agent-file-inputs { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.agent-file-inputs label { display: grid; gap: 6px; }
+.agent-file-inputs p { color: var(--muted-foreground); margin: 5px 0; }
+.agent-file-inputs strong { overflow-wrap: anywhere; }
+.agent-file-inputs input { max-width: 100%; }
+.agent-file-inputs button { text-decoration: underline; margin: 4px 0; }

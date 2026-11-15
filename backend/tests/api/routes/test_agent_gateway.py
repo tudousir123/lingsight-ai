@@ -165,6 +165,52 @@ class AgentGatewayTest(unittest.TestCase):
         )
         self.assertFalse(self.calls)
 
+    def test_owned_file_refs_are_forwarded_without_host_paths_and_old_service_fails_closed(
+        self,
+    ) -> None:
+        self.capabilities = httpx.Response(
+            200, json={**self.capabilities.json(), "files": "controlled-files-v1"}
+        )
+        self.response = httpx.Response(201, json={"id": TASK, "name": "synthetic.csv"})
+        uploaded = self.client.post(
+            "/agent/inputs",
+            json={"name": "synthetic.csv", "content": "x\n1\n"},
+            headers={"X-LingSight-User-Id": TASK},
+        )
+        self.assertEqual(uploaded.status_code, 201)
+        self.assertEqual(self.calls[-1].url.path, "/v1/inputs")
+        self.assertEqual(
+            self.calls[-1].headers["x-lingsight-user-id"], str(self.user.id)
+        )
+        self.calls.clear()
+        self.response = httpx.Response(202, json={"task": {"id": TASK}})
+        result = self.client.post(
+            "/agent/tasks",
+            json={"goal": "Create synthetic report", "input_ids": [TASK]},
+        )
+        self.assertEqual(result.status_code, 202)
+        self.assertIn(TASK.encode(), self.calls[-1].content)
+        self.calls.clear()
+        for body in [
+            {"goal": "x", "input_ids": ["/etc/passwd"]},
+            {"goal": "x", "input_ids": [TASK], "path": "/etc/passwd"},
+        ]:
+            self.assertEqual(
+                self.client.post("/agent/tasks", json=body).status_code, 422
+            )
+        self.assertFalse(self.calls)
+        self.capabilities = httpx.Response(
+            200,
+            json={k: v for k, v in self.capabilities.json().items() if k != "files"},
+        )
+        for path, body in [
+            ("/agent/inputs", {"name": "synthetic.csv", "content": "x"}),
+            ("/agent/tasks", {"goal": "x", "input_ids": [TASK]}),
+        ]:
+            self.calls.clear()
+            self.assertEqual(self.client.post(path, json=body).status_code, 503)
+            self.assertEqual([r.url.path for r in self.calls], ["/v1/capabilities"])
+
     def test_login_required(self) -> None:
         self.app.dependency_overrides.clear()
         self.assertEqual(self.client.get("/agent/tasks").status_code, 401)

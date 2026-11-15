@@ -41,6 +41,7 @@ import {
 } from "./api"
 import { ExecutionStatus, useExecutionCapability } from "./Execution"
 import { useTaskEvents } from "./events"
+import { type FileInputRef, FileInputs } from "./FileInputs"
 import { PersonalAgentStatus, usePersonalAgent } from "./PersonalAgent"
 import { ProjectConversationHome } from "./ProjectConversationHome"
 import {
@@ -252,6 +253,8 @@ export function AgentWorkspace({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState("")
   const [artifact, setArtifact] = useState<Artifact | null>(null)
+  const [fileInputs, setFileInputs] = useState<FileInputRef[]>([])
+  const [filesBusy, setFilesBusy] = useState(false)
   const [videos, setVideos] = useState<WorkflowVideo[]>([])
   const [attachmentOpen, setAttachmentOpen] = useState(false)
   const [attachmentSource, setAttachmentSource] =
@@ -294,6 +297,7 @@ export function AgentWorkspace({
     setError("")
     setArtifact(null)
     setVideos([])
+    setFileInputs([])
     setAttachmentOpen(false)
     setAttachmentSource("local")
   }, [taskId, projectId])
@@ -320,6 +324,8 @@ export function AgentWorkspace({
   const canSend =
     (!!draft.trim() || (canAttach && videos.length > 0)) &&
     !pending &&
+    !filesBusy &&
+    (!fileInputs.length || execution.data?.files === true) &&
     executionReady &&
     !blocked &&
     !tasks.error &&
@@ -351,6 +357,9 @@ export function AgentWorkspace({
           agentRoutes.tasks(),
           {
             goal: text,
+            ...(fileInputs.length
+              ? { input_ids: fileInputs.map((ref) => ref.id) }
+              : {}),
             ...(projectId ? { project_id: projectId } : {}),
           },
         )
@@ -392,6 +401,7 @@ export function AgentWorkspace({
       }
       consumeBrief()
       setDraft("")
+      setFileInputs([])
       refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : "提交失败，已保留你的问题。")
@@ -464,6 +474,19 @@ export function AgentWorkspace({
             </span>
           )}
         </div>
+        {!taskId && (
+          <FileInputs
+            value={fileInputs}
+            onChange={setFileInputs}
+            onBusy={setFilesBusy}
+            disabled={
+              pending ||
+              !executionReady ||
+              execution.data?.files !== true ||
+              videos.length > 0
+            }
+          />
+        )}
         {videos.length > 0 && (
           <VideoAttachmentList
             videos={videos}
@@ -683,8 +706,12 @@ export function AgentWorkspace({
                         {task.data.artifacts.length} 个文件 · 已保留版本
                       </small>
                     </h2>
+                    <p>
+                      每份材料保留所属执行与内容版本。未完成、失败或取消执行的材料仅供核查，不是已完成科研交付物。
+                    </p>
                     <ArtifactCards
                       artifacts={task.data.artifacts}
+                      runs={task.data.runs}
                       onSelect={setArtifact}
                     />
                   </section>
@@ -711,6 +738,10 @@ export function AgentWorkspace({
             key={artifact.id}
             artifact={artifact}
             taskId={taskId}
+            runStatus={
+              task.data?.runs.find((item) => item.id === artifact.run_id)
+                ?.status
+            }
             onClose={() => setArtifact(null)}
           />
         )}
