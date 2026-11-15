@@ -6,6 +6,7 @@ import hashlib
 import asyncio
 import struct
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from collections.abc import AsyncIterator
 
 import httpx
@@ -322,3 +323,183 @@ def test_real_two_gigabyte_stream_without_content_length(
     finally:
         # This test owns the isolated root; don't retain multi-GB pytest files.
         shutil.rmtree(media_root)
+
+
+def test_concurrent_removals_keep_one_valid_project_reference(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    media_root: Path,
+    mp4: bytes,
+) -> None:
+    headers = normal_user_token_headers
+    projects = [
+        client.post(
+            "/api/v1/projects/", headers=headers, json={"name": uuid.uuid4().hex}
+        ).json()["id"]
+        for _ in range(2)
+    ]
+    uploaded = client.post(
+        f"/api/v1/projects/{projects[0]}/videos",
+        headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        files={"file": ("a.mp4", mp4, "video/mp4")},
+    ).json()
+    assert (
+        client.post(
+            f"/api/v1/projects/{projects[1]}/members",
+            headers=headers,
+            json={"kind": "video", "id": uploaded["video_id"]},
+        ).status_code
+        == 201
+    )
+
+    def remove(project: str) -> int:
+        return client.delete(
+            f"/api/v1/projects/{project}/members/video/{uploaded['video_id']}",
+            headers=headers,
+        ).status_code
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        statuses = list(pool.map(remove, projects))
+    assert sorted(statuses) == [204, 409]
+    assert (
+        sum(
+            client.get(f"/api/v1/projects/{p}/videos", headers=headers).json()["count"]
+            for p in projects
+        )
+        == 1
+    )
+
+
+def test_auth_before_body_and_disconnect_cleanup(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    media_root: Path,
+) -> None:
+    from app.main import app
+    from starlette.requests import ClientDisconnect
+
+    headers = normal_user_token_headers
+    project = client.post(
+        "/api/v1/projects/", headers=headers, json={"name": uuid.uuid4().hex}
+    ).json()["id"]
+
+    async def forbidden_body() -> AsyncIterator[bytes]:
+        raise AssertionError("Unauthorized request body was consumed")
+        yield b""  # pragma: no cover
+
+    async def interrupted() -> AsyncIterator[bytes]:
+        yield b'--boundary\r\nContent-Disposition: form-data; name="file"; filename="a.mp4"\r\n\r\npartial'
+        raise ClientDisconnect
+
+    async def exercise() -> None:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as http:
+            request_headers = {
+                **headers,
+                "Idempotency-Key": str(uuid.uuid4()),
+                "Content-Type": "multipart/form-data; boundary=boundary",
+            }
+            denied = await http.post(
+                f"/api/v1/projects/{uuid.uuid4()}/videos",
+                headers=request_headers,
+                content=forbidden_body(),
+            )
+            assert denied.status_code == 404
+            failed = await http.post(
+                f"/api/v1/projects/{project}/videos",
+                headers=request_headers,
+                content=interrupted(),
+            )
+            assert failed.status_code == 422
+
+    asyncio.run(exercise())
+    assert not list((media_root / "staging").iterdir())
+    assert (
+        client.get(f"/api/v1/projects/{project}/videos", headers=headers).json()[
+            "count"
+        ]
+        == 0
+    )
+
+
+@pytest.mark.parametrize("failure", ["disk", "database"])
+def test_storage_failures_do_not_publish_or_leave_files(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    media_root: Path,
+    mp4: bytes,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: str,
+) -> None:
+    from app.core.db import engine
+    from sqlalchemy import event
+    from sqlalchemy.exc import OperationalError
+
+    headers = normal_user_token_headers
+    project = client.post(
+        "/api/v1/projects/", headers=headers, json={"name": uuid.uuid4().hex}
+    ).json()["id"]
+    original_open = Path.open
+
+    def unavailable(path: Path, *args: object, **kwargs: object):
+        if path.name == "incoming":
+            raise OSError(28, "disk full")
+        return original_open(path, *args, **kwargs)
+
+    def fail_insert(_conn, _cursor, statement, _parameters, _context, _executemany):
+        if statement.startswith("INSERT INTO uploaded_video"):
+            raise OperationalError(
+                "synthetic storage failure", {}, Exception("unavailable")
+            )
+
+    if failure == "disk":
+        monkeypatch.setattr(Path, "open", unavailable)
+    else:
+        event.listen(engine, "before_cursor_execute", fail_insert)
+    try:
+        response = client.post(
+            f"/api/v1/projects/{project}/videos",
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+            files={"file": ("a.mp4", mp4, "video/mp4")},
+        )
+        assert response.status_code == 503, response.text
+    finally:
+        if failure == "database":
+            event.remove(engine, "before_cursor_execute", fail_insert)
+    assert (
+        client.get(f"/api/v1/projects/{project}/videos", headers=headers).json()[
+            "count"
+        ]
+        == 0
+    )
+    assert not list((media_root / "staging").iterdir())
+    assert not list((media_root / "objects").iterdir())
+
+
+def test_historical_unowned_upload_reference_is_hidden(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    db,
+) -> None:
+    from app.models import ProjectMember
+    from app.crud import project_member_key
+
+    project = client.post(
+        "/api/v1/projects/",
+        headers=normal_user_token_headers,
+        json={"name": uuid.uuid4().hex},
+    ).json()["id"]
+    db.add(
+        ProjectMember(
+            project_id=uuid.UUID(project),
+            member_kind="video",
+            member_id="upl_legacy-foreign",
+            member_key=project_member_key("upl_legacy-foreign"),
+            label="private-video-name",
+        )
+    )
+    db.commit()
+    listing = client.get("/api/v1/projects/", headers=normal_user_token_headers)
+    stored = next(p for p in listing.json()["data"] if p["id"] == project)
+    assert stored["members"] == []

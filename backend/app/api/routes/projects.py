@@ -94,6 +94,35 @@ def _public(project: Project, members: list[ProjectMember]) -> ProjectPublic:
     )
 
 
+def _authorized_public(
+    session: SessionDep,
+    user: CurrentUser,
+    project: Project,
+    members: list[ProjectMember],
+) -> ProjectPublic:
+    visible = []
+    for member in members:
+        try:
+            _authorize_member(
+                session, user, project, member.member_kind, member.member_id
+            )
+        except HTTPException:
+            # Historical browser references were never ownership evidence.
+            continue
+        visible.append(member)
+    result = _public(project, visible)
+    if result.video_folder:
+        from app.inference_access import ensure_video_folder_access
+
+        try:
+            ensure_video_folder_access(
+                session, user, result.video_folder.source_id, result.video_folder.path
+            )
+        except HTTPException:
+            result.video_folder = None
+    return result
+
+
 @router.get("/", response_model=ProjectsPublic)
 def list_projects(session: SessionDep, current_user: CurrentUser) -> Any:
     """List the current user's projects with their member references."""
@@ -101,7 +130,10 @@ def list_projects(session: SessionDep, current_user: CurrentUser) -> Any:
     members = crud.list_project_members(
         session=session, project_ids=[project.id for project in projects]
     )
-    data = [_public(project, members.get(project.id, [])) for project in projects]
+    data = [
+        _authorized_public(session, current_user, project, members.get(project.id, []))
+        for project in projects
+    ]
     return ProjectsPublic(data=data, count=len(data))
 
 
@@ -135,7 +167,9 @@ def rename_project(
     except IntegrityError:
         raise HTTPException(status_code=409, detail=DUPLICATE_NAME_DETAIL) from None
     members = crud.list_project_members(session=session, project_ids=[project.id])
-    return _public(project, members.get(project.id, []))
+    return _authorized_public(
+        session, current_user, project, members.get(project.id, [])
+    )
 
 
 @router.put("/{project_id}/video-folder", response_model=ProjectPublic)
@@ -174,7 +208,9 @@ def select_project_video_folder(
     session.commit()
     session.refresh(project)
     members = crud.list_project_members(session=session, project_ids=[project.id])
-    return _public(project, members.get(project.id, []))
+    return _authorized_public(
+        session, current_user, project, members.get(project.id, [])
+    )
 
 
 @router.delete("/{project_id}", response_model=Message)

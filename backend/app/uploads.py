@@ -152,9 +152,13 @@ def storage_lock(root: Path) -> Iterator[None]:
 
 def cleanup_abandoned(session: Session, root: Path) -> None:
     """Called under the shared storage lock; active uploads hold per-dir locks."""
-    known = {
-        v.storage_key.split("/")[1] for v in session.exec(select(UploadedVideo)).all()
-    }
+    # Authentication may have opened a repeatable-read snapshot before another
+    # worker committed. Recovery needs a fresh snapshot under publication lock.
+    with Session(session.get_bind()) as snapshot:
+        known = {
+            v.storage_key.split("/")[1]
+            for v in snapshot.exec(select(UploadedVideo)).all()
+        }
     for bucket in ("staging", "objects"):
         directory = root / bucket
         if directory.is_symlink():

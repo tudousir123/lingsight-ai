@@ -253,8 +253,10 @@ async def upload_video(
                     video_id=video.video_id,
                 )
             )
-            session.commit()
             published = True
+            # A connection loss during COMMIT has an unknown outcome. Keep
+            # these complete files; next recovery reconciles against the DB.
+            session.commit()
         response.status_code = 201
         return video_public(video, project_id)
     except ClientDisconnect:
