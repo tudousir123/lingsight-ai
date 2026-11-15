@@ -80,7 +80,10 @@ def flow(client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
             state.reads += 1
             if state.change_on_dispatch and state.reads >= 2:
                 task = next(iter(upstream.tasks.values()))
-                task["candidate"]["seed"]["x"] = 321
+                if state.change_on_dispatch == "hash":
+                    task["candidate"]["video_sha256"] = "f" * 64
+                else:
+                    task["candidate"]["seed"]["x"] = 321
         return upstream.handle(request)
 
     original = httpx.Client
@@ -145,6 +148,8 @@ def submit(flow, payload=None, key=None):
         {"pool": {"cx": 320, "cy": 240, "radius": 0}},
         {"marks": [{"label": "bow", "polygon": [[1, 1], [15, 15], [1, 15], [15, 1]]}]},
         {"marks": [{"label": "line", "polygon": [[1, 1], [2, 2], [3, 3]]}]},
+        {"marks": [{"label": "boolean", "polygon": [[True, 1], [15, 1], [15, 15]]}]},
+        {"marks": [{"label": "string", "polygon": [["1", 1], [15, 1], [15, 15]]}]},
         {"marks": [{"label": "out", "polygon": [[-1, 1], [15, 1], [15, 15]]}]},
         {"marks": [{"label": " ", "polygon": [[1, 1], [15, 1], [15, 15]]}]},
         {"marks": [{"label": "same", "polygon": [[1, 1], [15, 1], [15, 15]]}] * 2},
@@ -338,3 +343,55 @@ def test_ambiguous_create_is_durable_across_retry_and_concurrent_calls(flow):
             responses = list(pool.map(lambda _: create(), range(2)))
         assert [r.status_code for r in responses] == [503, 503]
     assert len(creates) == 1
+
+
+def test_replaced_failed_confirmation_cannot_be_redispatched(flow):
+    flow.state.reject = True
+    old_key = str(uuid.uuid4())
+    first = submit(flow, key=old_key)
+    assert first.status_code == 201
+    replacement = {
+        **flow.payload,
+        "expected_confirmation_id": first.json()["id"],
+        "marks": [],
+    }
+    new_key = str(uuid.uuid4())
+    second = submit(flow, replacement, new_key)
+    assert second.status_code == 201, second.text
+    flow.state.reject = False
+    old_replay = submit(flow, key=old_key)
+    assert old_replay.status_code == 200
+    assert old_replay.json()["tracking_dispatch"]["status"] == "failed"
+    assert flow.upstream.confirm_calls == 0
+    assert (
+        submit(flow, replacement, new_key).json()["tracking_dispatch"]["status"]
+        == "accepted"
+    )
+    latest = flow.client.get(
+        flow.url + "/preannotation-confirmation", headers=flow.owner
+    )
+    assert latest.json()["id"] == second.json()["id"]
+
+
+def test_concurrent_distinct_versions_respect_expected_confirmation(flow):
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(pool.map(lambda _: submit(flow), range(2)))
+    assert sorted(r.status_code for r in responses) == [201, 409]
+    assert flow.upstream.confirm_calls == 1
+
+
+def test_input_hash_change_after_save_returns_persisted_failure(flow):
+    flow.state.change_on_dispatch = "hash"
+    response = submit(flow)
+    assert response.status_code == 201, response.text
+    assert response.json()["tracking_dispatch"] == {
+        "status": "failed",
+        "error_code": "stale_version",
+    }
+    assert (
+        flow.client.get(
+            flow.url + "/preannotation-confirmation", headers=flow.owner
+        ).json()["id"]
+        == response.json()["id"]
+    )
+    assert flow.upstream.confirm_calls == 0

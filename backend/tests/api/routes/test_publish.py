@@ -24,7 +24,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import update
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from app import publishing
 from app.core.config import settings
@@ -990,3 +990,82 @@ def test_project_deletion_cascades_published_rows(
     assert _result_rows(db, task_id) == []
     assert _frame_rows(db, task_id) == []
     assert db.get(Project, uuid.UUID(project_id)) is None
+
+
+def test_library_revocation_hides_owned_derivatives_and_agent_scope(
+    client: TestClient,
+    workspace_headers: dict[str, str],
+    superuser_token_headers: dict[str, str],
+) -> None:
+    project_id = _create_project(client, workspace_headers)
+    owner = client.get("/api/v1/users/me", headers=workspace_headers).json()
+    grant_url = f"/api/v1/users/{owner['id']}/whole-library-access"
+    assert (
+        client.put(
+            grant_url,
+            headers=superuser_token_headers,
+            json={"granted": True, "reason": "synthetic scope test"},
+        ).status_code
+        == 200
+    )
+    task_id, task = fresh_task()
+    upstream = FakeUpstream(task, default_artifacts())
+    with fake_inference(upstream, project_id=project_id):
+        with Session(engine) as setup:
+            setup.exec(
+                delete(ExperimentAccess).where(
+                    ExperimentAccess.user_id == uuid.UUID(owner["id"])
+                )
+            )
+            setup.commit()
+        assert (
+            _publish(client, workspace_headers, project_id, task_id).status_code == 201
+        )
+        results_url = f"/api/v1/projects/{project_id}/results"
+        assert client.get(results_url, headers=workspace_headers).json()["count"] == 1
+        assert (
+            client.get(
+                f"/api/v1/inference/tasks/{task_id}", headers=superuser_token_headers
+            ).status_code
+            == 404
+        )
+        assert (
+            client.put(
+                grant_url,
+                headers=superuser_token_headers,
+                json={"granted": False, "reason": "synthetic revocation"},
+            ).status_code
+            == 200
+        )
+        upstream.requests.clear()
+        assert client.get(results_url, headers=workspace_headers).json()["count"] == 0
+        assert (
+            client.get(
+                results_url + f"/{task_id}/frames", headers=workspace_headers
+            ).status_code
+            == 404
+        )
+        assert (
+            client.get("/api/v1/inference/tasks", headers=workspace_headers).json()
+            == []
+        )
+        assert (
+            client.get(
+                f"/api/v1/inference/tasks/{task_id}/artifacts/overlay.mp4",
+                headers={**workspace_headers, "Range": "bytes=0-4"},
+            ).status_code
+            == 403
+        )
+        with patch.object(settings, "AGENT_AUTHORIZATION_TOKEN", "synthetic-callback"):
+            callback = client.post(
+                "/api/v1/internal/agent/authorize",
+                headers={"Authorization": "Bearer synthetic-callback"},
+                json={
+                    "user_id": owner["id"],
+                    "data_scope": "project",
+                    "project_id": project_id,
+                },
+            )
+        assert callback.status_code == 200
+        assert callback.json()["allowed_publication_task_ids"] == []
+        assert upstream.requests == []

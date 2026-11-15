@@ -8,6 +8,7 @@ import uuid
 from datetime import UTC
 from typing import Any
 
+from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
@@ -39,7 +40,7 @@ class Pool(BaseModel):
 
 
 class Mark(BaseModel):
-    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False, strict=True)
     label: str = Field(min_length=1, max_length=100, strict=True)
     polygon: list[list[float]] = Field(min_length=3, max_length=1024)
 
@@ -314,7 +315,10 @@ def dispatch_confirmation(
                     row.geometry,
                     idempotency_key=str(row.id),
                 )
-                if accepted.get("confirmed") == row.geometry:
+                accepted_candidate = candidate_snapshot(accepted, binding)
+                if accepted_candidate["candidate_version"] != row.candidate_version:
+                    row.dispatch_status, row.dispatch_error = "failed", "stale_version"
+                elif accepted.get("confirmed") == row.geometry:
                     row.dispatch_status, row.dispatch_error = "accepted", None
                 else:
                     row.dispatch_status, row.dispatch_error = (
@@ -345,7 +349,16 @@ def dispatch_confirmation(
                 )
                 try:
                     recovered = client.fetch_task(binding.task_id)
-                    if recovered.get("confirmed") == row.geometry:
+                    recovered_candidate = candidate_snapshot(recovered, binding)
+                    if (
+                        recovered_candidate["candidate_version"]
+                        != row.candidate_version
+                    ):
+                        row.dispatch_status, row.dispatch_error = (
+                            "failed",
+                            "stale_version",
+                        )
+                    elif recovered.get("confirmed") == row.geometry:
                         row.dispatch_status, row.dispatch_error = "accepted", None
                 except (
                     InferenceUnreachable,
@@ -355,6 +368,13 @@ def dispatch_confirmation(
                     InferenceArtifactTooLarge,
                 ):
                     pass
+    except HTTPException as exc:
+        row.dispatch_status = "failed"
+        row.dispatch_error = (
+            exc.detail.get("code", "state_conflict")
+            if isinstance(exc.detail, dict)
+            else "state_conflict"
+        )
     except (
         InferenceUnreachable,
         InferenceUnconfigured,
