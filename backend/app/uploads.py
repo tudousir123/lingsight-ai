@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import shutil
 import subprocess
 import uuid
@@ -126,6 +127,26 @@ def media_root() -> Path:
         raise problem(503, "service_unavailable", "请配置专用平台媒体目录")
     if not root.is_dir():
         raise problem(503, "service_unavailable", "平台媒体存储不可用")
+    marker = root / ".lingsight-media-root"
+    try:
+        if not marker.exists() and any(root.iterdir()):
+            raise problem(503, "service_unavailable", "平台媒体目录必须为空的专用目录")
+        fd = os.open(marker, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "r+b") as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            identity = handle.read(128)
+            if not identity:
+                if any(child != marker for child in root.iterdir()):
+                    raise problem(
+                        503, "service_unavailable", "平台媒体目录必须为空的专用目录"
+                    )
+                handle.write(b"lingsight-platform-media-v1\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            elif identity != b"lingsight-platform-media-v1\n":
+                raise problem(503, "service_unavailable", "平台媒体目录标识无效")
+    except OSError:
+        raise problem(503, "service_unavailable", "平台媒体存储不可用") from None
     return root
 
 
@@ -169,6 +190,7 @@ def cleanup_abandoned(session: Session, root: Path) -> None:
             if (
                 item.is_symlink()
                 or not item.is_dir()
+                or re.fullmatch(r"[0-9a-f]{32}", item.name) is None
                 or (bucket == "objects" and item.name in known)
             ):
                 continue

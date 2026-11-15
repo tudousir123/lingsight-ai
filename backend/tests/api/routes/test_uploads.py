@@ -693,3 +693,84 @@ def test_multipart_extra_fields_and_untrusted_storage_configuration(
         )
         assert rejected.status_code == 503
         assert str(root) not in rejected.text
+
+
+def test_nonempty_unmarked_directory_is_never_adopted_or_cleaned(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    tmp_path: Path,
+    mp4: bytes,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    unrelated = tmp_path / "unrelated"
+    important = unrelated / "objects" / uuid.uuid4().hex
+    important.mkdir(parents=True)
+    artifact = important / "important.txt"
+    artifact.write_text("unrelated existing data")
+    monkeypatch.setenv("PLATFORM_MEDIA_ROOT", str(unrelated))
+    headers = normal_user_token_headers
+    project = client.post(
+        "/api/v1/projects/", headers=headers, json={"name": uuid.uuid4().hex}
+    ).json()["id"]
+    response = client.post(
+        f"/api/v1/projects/{project}/videos",
+        headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        files={"file": ("a.mp4", mp4, "video/mp4")},
+    )
+    assert response.status_code == 503
+    assert artifact.read_text() == "unrelated existing data"
+    assert not (unrelated / ".lingsight-media-root").exists()
+
+
+def test_concurrent_same_idempotency_key_creates_one_upload(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    media_root: Path,
+    mp4: bytes,
+) -> None:
+    from app.main import app
+    from app.core.db import engine
+    from sqlalchemy import event
+
+    headers = {**normal_user_token_headers, "Idempotency-Key": str(uuid.uuid4())}
+    project = client.post(
+        "/api/v1/projects/", headers=headers, json={"name": uuid.uuid4().hex}
+    ).json()["id"]
+    url = f"/api/v1/projects/{project}/videos"
+    entered, resume = threading.Event(), threading.Event()
+
+    def pause(_conn, _cursor, statement, parameters, _context, _executemany):
+        if (
+            "FROM project" in statement
+            and isinstance(parameters, dict)
+            and project in [str(v) for v in parameters.values()]
+            and not entered.is_set()
+        ):
+            entered.set()
+            assert resume.wait(20)
+
+    def delayed() -> httpx.Response:
+        with TestClient(app) as other:
+            return other.post(
+                url, headers=headers, files={"file": ("same.mp4", mp4, "video/mp4")}
+            )
+
+    event.listen(engine, "after_cursor_execute", pause)
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(delayed)
+            assert entered.wait(20)
+            try:
+                first = client.post(
+                    url, headers=headers, files={"file": ("same.mp4", mp4, "video/mp4")}
+                )
+                assert first.status_code == 201, first.text
+            finally:
+                resume.set()
+            replay = pending.result(timeout=20)
+        assert replay.status_code == 200, replay.text
+        assert first.json() == replay.json()
+        assert client.get(url, headers=headers).json()["count"] == 1
+    finally:
+        resume.set()
+        event.remove(engine, "after_cursor_execute", pause)
