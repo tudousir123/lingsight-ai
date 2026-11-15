@@ -26,11 +26,19 @@ from tests.utils.user import create_random_user
 
 
 @pytest.fixture
-def agent_http(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> Iterator[str]:
+def agent_http(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient, request: pytest.FixtureRequest
+) -> Iterator[str]:
     repository = os.environ.get("AGENT_CONTRACT_REPOSITORY")
     if not repository or not shutil.which("node"):
         pytest.skip("Set AGENT_CONTRACT_REPOSITORY to the separate Agent checkout")
-    script = Path(repository) / "scripts" / "contract-fixture.ts"
+    fixture_name = getattr(request, "param", "contract-fixture.ts")
+    if isinstance(fixture_name, tuple):
+        fixture_name, durable = fixture_name
+        monkeypatch.setenv("AGENT_CONTRACT_DURABLE", "1" if durable else "0")
+    if fixture_name not in {"contract-fixture.ts", "memory-contract-fixture.ts"}:
+        pytest.fail("Unknown isolated Agent contract fixture")
+    script = Path(repository) / "scripts" / fixture_name
     if not script.is_file():
         pytest.fail("Agent checkout is missing its synthetic contract fixture")
     callback_token = "synthetic-platform-callback-token"
@@ -390,10 +398,10 @@ def test_real_personal_identity_shared_by_two_project_tasks_but_not_other_user(
 
 @pytest.fixture
 def durable_agent_http(
-    monkeypatch: pytest.MonkeyPatch, client: TestClient
+    monkeypatch: pytest.MonkeyPatch, client: TestClient, request: pytest.FixtureRequest
 ) -> Iterator[str]:
     monkeypatch.setenv("AGENT_CONTRACT_DURABLE", "1")
-    yield from agent_http.__wrapped__(monkeypatch, client)
+    yield from agent_http.__wrapped__(monkeypatch, client, request)
 
 
 @pytest.mark.usefixtures("durable_agent_http")
