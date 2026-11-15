@@ -1,0 +1,60 @@
+.agent-memory-panel {
+  margin: 10px 0 18px;
+  padding: 12px 16px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  color: var(--muted-foreground, #64748b);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.agent-memory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.agent-memory-heading strong {
+  color: var(--foreground, #334155);
+}
+.agent-memory-heading button,
+.agent-memory-panel summary {
+  cursor: pointer;
+  color: var(--primary, #2563eb);
+}
+.agent-memory-panel p {
+  margin: 5px 0;
+}
+.agent-memory-panel details {
+  margin-top: 6px;
+}
+.agent-memory-records {
+  padding-left: 18px;
+}
+.agent-memory-records > li {
+  padding: 8px 0;
+}
+.agent-memory-records > li > p {
+  color: var(--foreground, #334155);
+  font-size: 13px;
+}
+.agent-memory-sources {
+  padding-left: 12px;
+  border-left: 2px solid var(--border, #e5e7eb);
+  list-style: none;
+}
+.agent-memory-sources span {
+  margin-left: 10px;
+}
+.agent-memory-sources a {
+  text-decoration: underline;
+}
+.agent-memory-sources code {
+  font-size: 10px;
+}
+.agent-memory-uses,
+.agent-memory-recipients {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border, #e5e7eb);
+}

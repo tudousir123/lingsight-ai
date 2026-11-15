@@ -26,11 +26,19 @@ from tests.utils.user import create_random_user
 
 
 @pytest.fixture
-def agent_http(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> Iterator[str]:
+def agent_http(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient, request: pytest.FixtureRequest
+) -> Iterator[str]:
     repository = os.environ.get("AGENT_CONTRACT_REPOSITORY")
     if not repository or not shutil.which("node"):
         pytest.skip("Set AGENT_CONTRACT_REPOSITORY to the separate Agent checkout")
-    script = Path(repository) / "scripts" / "contract-fixture.ts"
+    fixture_name = getattr(request, "param", "contract-fixture.ts")
+    if isinstance(fixture_name, tuple):
+        fixture_name, durable = fixture_name
+        monkeypatch.setenv("AGENT_CONTRACT_DURABLE", "1" if durable else "0")
+    if fixture_name not in {"contract-fixture.ts", "memory-contract-fixture.ts"}:
+        pytest.fail("Unknown isolated Agent contract fixture")
+    script = Path(repository) / "scripts" / fixture_name
     if not script.is_file():
         pytest.fail("Agent checkout is missing its synthetic contract fixture")
     callback_token = "synthetic-platform-callback-token"
@@ -390,10 +398,10 @@ def test_real_personal_identity_shared_by_two_project_tasks_but_not_other_user(
 
 @pytest.fixture
 def durable_agent_http(
-    monkeypatch: pytest.MonkeyPatch, client: TestClient
+    monkeypatch: pytest.MonkeyPatch, client: TestClient, request: pytest.FixtureRequest
 ) -> Iterator[str]:
     monkeypatch.setenv("AGENT_CONTRACT_DURABLE", "1")
-    yield from agent_http.__wrapped__(monkeypatch, client)
+    yield from agent_http.__wrapped__(monkeypatch, client, request)
 
 
 @pytest.mark.usefixtures("durable_agent_http")
@@ -407,17 +415,35 @@ def test_real_durable_gateway_completion_and_sourced_output(
     assert capability.status_code == 200, capability.text
     assert capability.json()["execution"] == {
         "contract": "durable-run-v1",
+        "requests": "persistent-v1",
+        "recovery": "safe-v1",
         "engine": "pi-durable",
         "version": "1.5.2",
         "enabled": True,
     }
+    request_id = str(uuid.uuid4())
+    input_body = {
+        "goal": "Explain synthetic orientation",
+        "completion_mode": "qa",
+        "request_id": request_id,
+    }
     created = client.post(
         f"{api}/agent/tasks",
         headers=headers,
-        json={"goal": "Explain synthetic orientation", "completion_mode": "qa"},
+        json=input_body,
     )
     assert created.status_code == 202, created.text
     task = created.json()["task"]
+    repeated = client.post(f"{api}/agent/tasks", headers=headers, json=input_body)
+    assert repeated.status_code == 202, repeated.text
+    assert repeated.json() == created.json()
+    conflict = client.post(
+        f"{api}/agent/tasks",
+        headers=headers,
+        json={**input_body, "goal": "Explain different synthetic intent"},
+    )
+    assert conflict.status_code == 409, conflict.text
+    assert repeated.json()["request_id"] == request_id
     deadline = time.monotonic() + 15
     while True:
         detail = client.get(f"{api}/agent/tasks/{task['id']}", headers=headers)

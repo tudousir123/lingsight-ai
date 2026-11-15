@@ -62,13 +62,11 @@ test("workspace uploads small authorized content and sends only opaque server re
     return route.fulfill({ json: [] })
   })
   await page.goto("/")
-  await page
-    .getByLabel("授权分析文件")
-    .setInputFiles({
-      name: "observations.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from("x\n1\n"),
-    })
+  await page.getByLabel("授权分析文件").setInputFiles({
+    name: "observations.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("x\n1\n"),
+  })
   await expect(
     page.getByText("observations.csv", { exact: true }),
   ).toBeVisible()

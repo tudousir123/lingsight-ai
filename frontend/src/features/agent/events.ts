@@ -18,19 +18,38 @@ function sleep(ms: number, signal: AbortSignal) {
 
 // Durable cursor polling uses the same event log as SSE. Disconnecting never
 // cancels a task; switching tasks aborts only this browser's pending requests.
-export function useTaskEvents(taskId: string) {
+export function useTaskEvents(taskId: string, owner: string) {
+  const cacheKey = `lingsight.agent.events.v1:${owner}:${taskId}`
   const [state, setState] = useState<{
     id: string
     events: TaskEvent[]
     error: string
-  }>({ id: taskId, events: [], error: "" })
+  }>({ id: cacheKey, events: [], error: "" })
   useEffect(() => {
-    if (!taskId) return
+    if (!taskId || !owner) return
     const controller = new AbortController()
     const { signal } = controller
     let ignore = false
-    let cursor = 0
     let events: TaskEvent[] = []
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(cacheKey) ?? "[]")
+      if (
+        Array.isArray(saved) &&
+        saved.every(
+          (e) =>
+            Number.isSafeInteger(e.id) &&
+            e.id > 0 &&
+            typeof e.run_id === "string" &&
+            e.data &&
+            typeof e.type === "string",
+        )
+      )
+        events = saved
+    } catch {
+      /* A missing cache never cancels server work: replay from zero. */
+    }
+    let cursor = events[events.length - 1]?.id ?? 0
+    setState({ id: cacheKey, events, error: "" })
     const poll = async () => {
       while (!ignore) {
         let delay: number
@@ -48,13 +67,21 @@ export function useTaskEvents(taskId: string) {
           if (next.length) {
             cursor = next[next.length - 1].id
             events = [...events, ...next]
+            try {
+              sessionStorage.setItem(
+                cacheKey,
+                JSON.stringify(events.slice(-500)),
+              )
+            } catch {
+              /* Replay from zero after a cache quota failure. */
+            }
           }
-          setState({ id: taskId, events, error: "" })
+          setState({ id: cacheKey, events, error: "" })
           delay = batch.length >= 500 ? 0 : 1500
         } catch (e) {
           if (ignore) return
           setState({
-            id: taskId,
+            id: cacheKey,
             events,
             error:
               e instanceof Error
@@ -72,6 +99,6 @@ export function useTaskEvents(taskId: string) {
       ignore = true
       controller.abort()
     }
-  }, [taskId])
-  return state.id === taskId ? state : { id: taskId, events: [], error: "" }
+  }, [taskId, owner, cacheKey])
+  return state.id === cacheKey ? state : { id: cacheKey, events: [], error: "" }
 }

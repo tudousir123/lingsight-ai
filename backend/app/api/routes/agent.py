@@ -38,6 +38,8 @@ OPERATIONS = OperationTable(
             "capabilities",
             "inputs",
             "personal-agent",
+            "memories",
+            "tasks/{task_id}/memories",
             "tasks",
             "tasks/{task_id}",
             "tasks/{task_id}/events",
@@ -92,9 +94,12 @@ async def ensure_project_support(
     personal: bool = False,
     execution: bool = False,
     files: bool = False,
+    memory: bool = False,
 ) -> None:
     """Refuse old Agent versions before they can create an unscoped task."""
     unavailable = "科研 Agent 项目分析尚未就绪，请先更新服务并配置项目数据源"
+    if memory:
+        unavailable = "个人偏好记忆尚未就绪，请先更新科研 Agent 服务"
     if personal:
         unavailable = "个人 Agent 持久工作环境尚未就绪，请先更新服务"
     if execution:
@@ -120,11 +125,18 @@ async def ensure_project_support(
                 if isinstance(capabilities, dict)
                 else None
             )
-            if not capable_agent(capabilities, project=project) or (
-                personal
-                and (
-                    capabilities.get("personal_agent") != "persistent-v1"
-                    or capabilities.get("environment") != "task-workspace-v1"
+            if (
+                not capable_agent(capabilities, project=project)
+                or (
+                    personal
+                    and (
+                        capabilities.get("personal_agent") != "persistent-v1"
+                        or capabilities.get("environment") != "task-workspace-v1"
+                    )
+                )
+                or (
+                    memory
+                    and capabilities.get("personal_memory") != "personal-memory-v1"
                 )
             ):
                 raise HTTPException(503, unavailable)
@@ -135,6 +147,8 @@ async def ensure_project_support(
                 or runtime.get("contract") != "durable-run-v1"
                 or runtime.get("engine") != "pi-durable"
                 or runtime.get("version") != "1.5.2"
+                or runtime.get("requests") != "persistent-v1"
+                or runtime.get("recovery") != "safe-v1"
                 or runtime.get("enabled") is not True
             ):
                 raise HTTPException(503, unavailable)
@@ -145,7 +159,18 @@ async def ensure_project_support(
         raise HTTPException(503, unavailable) from None
 
 
-class TaskInput(BaseModel):
+class RequestIdentity(BaseModel):
+    request_id: uuid.UUID | None = None
+
+    @field_validator("request_id", mode="before")
+    @classmethod
+    def non_null_request_id(cls, value: object) -> object:
+        if value is None:
+            raise ValueError("request_id cannot be null")
+        return value
+
+
+class TaskInput(RequestIdentity):
     model_config = ConfigDict(extra="forbid")
     goal: str = Field(min_length=1, max_length=12000)
     input_ids: list[uuid.UUID] = Field(default_factory=list, max_length=8)
@@ -172,7 +197,7 @@ class TaskInput(BaseModel):
         return self
 
 
-class MessageInput(BaseModel):
+class MessageInput(RequestIdentity):
     model_config = ConfigDict(extra="forbid")
     text: str = Field(min_length=1, max_length=12000)
     completion_mode: CompletionMode = "auto"
@@ -189,12 +214,17 @@ async def agent_gateway(
 ) -> Response:
     ensure_workspace_user(current_user)
     OPERATIONS.check(request.method, path, UNKNOWN_OPERATION)
-    if path in {"personal-agent", "capabilities"} and (
+    memory_read = request.method == "GET" and (
+        path == "memories" or path.endswith("/memories")
+    )
+    if (path in {"personal-agent", "capabilities"} or memory_read) and (
         request.query_params
         or request.headers.get("content-length", "0") != "0"
         or request.headers.get("transfer-encoding")
     ):
-        raise HTTPException(422, "Personal identity accepts no selectors or body")
+        raise HTTPException(
+            422, "Personal identity and memory reads accept no selectors or body"
+        )
     service = _service()
     if not service.api_token:
         raise HTTPException(503, service.unconfigured_detail)
@@ -291,6 +321,7 @@ async def agent_gateway(
         execution=request.method == "POST"
         and path != "inputs"
         and not path.endswith("/cancel"),
+        memory=memory_read,
         personal=path == "personal-agent"
         or (path == "tasks" and request.method == "POST"),
     )
