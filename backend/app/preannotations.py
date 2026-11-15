@@ -13,6 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
+from app.contracts import ErrorCode
+from app.core.config import settings
 from app.inference_access import failure, geometry_public, task_public
 from app.inference_client import (
     InferenceArtifactTooLarge,
@@ -23,6 +25,7 @@ from app.inference_client import (
     InferenceUpstreamError,
 )
 from app.inference_models import InferenceBinding, PreannotationConfirmation
+from app.models import Project
 
 
 class Seed(BaseModel):
@@ -73,7 +76,7 @@ def candidate_snapshot(
     task_public(task, binding)
     candidate = task.get("candidate")
     if not isinstance(candidate, dict):
-        raise failure(404, "resource_not_found", "Candidate not found")
+        raise failure(404, ErrorCode.RESOURCE_NOT_FOUND, "Candidate not found")
     width, height, count = (
         candidate.get(key) for key in ("width", "height", "frame_count")
     )
@@ -89,7 +92,7 @@ def candidate_snapshot(
     ):
         raise failure(
             409,
-            "state_conflict",
+            ErrorCode.STATE_CONFLICT,
             "Candidate image frame, dimensions or input hash unavailable",
         )
     if binding.source_kind == "user_upload" and (width, height, count) != (
@@ -98,10 +101,12 @@ def candidate_snapshot(
         binding.input_frame_count,
     ):
         raise failure(
-            409, "state_conflict", "Candidate dimensions do not match uploaded input"
+            409,
+            ErrorCode.STATE_CONFLICT,
+            "Candidate dimensions do not match uploaded input",
         )
     if binding.video_sha256 is not None and binding.video_sha256 != sha:
-        raise failure(409, "stale_version", "Inference input hash changed")
+        raise failure(409, ErrorCode.STALE_VERSION, "Inference input hash changed")
     evidence = candidate.get("evidence") or {}
     reasons = (
         evidence.get("review_reasons", candidate.get("review_reasons", []))
@@ -117,7 +122,7 @@ def candidate_snapshot(
         "width": width,
         "height": height,
         "frame_count": count,
-        "image_url": f"/api/v1/inference/tasks/{binding.task_id}/artifacts/candidate.jpg",
+        "image_url": f"{settings.API_V1_STR}/inference/tasks/{binding.task_id}/artifacts/candidate.jpg",
         **geometry_public(candidate),
         "evidence": {
             "review_reasons": [r for r in reasons if isinstance(r, str)]
@@ -130,7 +135,9 @@ def candidate_snapshot(
             {"task_id": binding.task_id, "candidate": candidate}
         )
     except TypeError, ValueError:
-        raise failure(502, "upstream_error", "Candidate is not valid JSON") from None
+        raise failure(
+            502, ErrorCode.UPSTREAM_ERROR, "Candidate is not valid JSON"
+        ) from None
     return result
 
 
@@ -141,7 +148,7 @@ def validate_geometry(
     seed, pool = data.seed, data.pool
 
     def invalid(message: str) -> None:
-        raise failure(422, "invalid_geometry", message)
+        raise failure(422, ErrorCode.INVALID_GEOMETRY, message)
 
     if not (0 <= seed.frame < count and 0 <= seed.x < w and 0 <= seed.y < h):
         invalid("Seed outside video")
@@ -267,7 +274,7 @@ def verify_consumed_confirmation(
         or row.geometry != task.get("confirmed")
     ):
         raise failure(
-            409, "state_conflict", "Task does not match persisted confirmation"
+            409, ErrorCode.STATE_CONFLICT, "Task does not match persisted confirmation"
         )
 
 
@@ -277,14 +284,25 @@ def dispatch_confirmation(
     row: PreannotationConfirmation,
     binding: InferenceBinding,
 ) -> None:
-    # Serialize recovery against all workers; geometry is never updated.
+    # Replacement and dispatch reserve in the same order: project, binding,
+    # confirmation. Recheck after the save commit: a rejected version may have
+    # been replaced while this request was waiting to dispatch.
+    session.exec(
+        select(Project).where(Project.id == binding.project_id).with_for_update()
+    ).one()
+    binding = session.exec(
+        select(InferenceBinding)
+        .where(InferenceBinding.id == binding.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).one()
     row = session.exec(
         select(PreannotationConfirmation)
         .where(PreannotationConfirmation.id == row.id)
         .with_for_update()
         .execution_options(populate_existing=True)
     ).one()
-    if row.dispatch_status == "accepted":
+    if binding.confirmation_id != row.id or row.dispatch_status == "accepted":
         session.commit()
         return
     assert binding.task_id
@@ -292,18 +310,21 @@ def dispatch_confirmation(
         task = client.fetch_task(binding.task_id)
         current = candidate_snapshot(task, binding)
         if current["candidate_version"] != row.candidate_version:
-            row.dispatch_status, row.dispatch_error = "failed", "stale_version"
+            row.dispatch_status, row.dispatch_error = "failed", ErrorCode.STALE_VERSION
         elif task.get("confirmed") == row.geometry:
             row.dispatch_status, row.dispatch_error = "accepted", None
         elif task.get("confirmed") is not None:
-            row.dispatch_status, row.dispatch_error = "failed", "confirmation_mismatch"
+            row.dispatch_status, row.dispatch_error = (
+                "failed",
+                ErrorCode.CONFIRMATION_MISMATCH,
+            )
         elif row.dispatch_attempted:
             row.dispatch_status, row.dispatch_error = (
                 "pending",
-                "dispatch_outcome_unknown",
+                ErrorCode.DISPATCH_OUTCOME_UNKNOWN,
             )
         elif task.get("status") != "waiting_for_review":
-            row.dispatch_status, row.dispatch_error = "failed", "state_conflict"
+            row.dispatch_status, row.dispatch_error = "failed", ErrorCode.STATE_CONFLICT
         else:
             row.dispatch_attempted = True
             session.add(row)
@@ -317,25 +338,28 @@ def dispatch_confirmation(
                 )
                 accepted_candidate = candidate_snapshot(accepted, binding)
                 if accepted_candidate["candidate_version"] != row.candidate_version:
-                    row.dispatch_status, row.dispatch_error = "failed", "stale_version"
+                    row.dispatch_status, row.dispatch_error = (
+                        "failed",
+                        ErrorCode.STALE_VERSION,
+                    )
                 elif accepted.get("confirmed") == row.geometry:
                     row.dispatch_status, row.dispatch_error = "accepted", None
                 else:
                     row.dispatch_status, row.dispatch_error = (
                         "pending",
-                        "dispatch_outcome_unknown",
+                        ErrorCode.DISPATCH_OUTCOME_UNKNOWN,
                     )
             except InferenceUpstreamError as exc:
                 if exc.status_code in (400, 404, 409, 422):
                     row.dispatch_attempted = False
                     row.dispatch_status, row.dispatch_error = (
                         "failed",
-                        "upstream_rejected",
+                        ErrorCode.UPSTREAM_REJECTED,
                     )
                 else:
                     row.dispatch_status, row.dispatch_error = (
                         "pending",
-                        "dispatch_outcome_unknown",
+                        ErrorCode.DISPATCH_OUTCOME_UNKNOWN,
                     )
             except (
                 InferenceUnreachable,
@@ -345,7 +369,7 @@ def dispatch_confirmation(
             ):
                 row.dispatch_status, row.dispatch_error = (
                     "pending",
-                    "dispatch_outcome_unknown",
+                    ErrorCode.DISPATCH_OUTCOME_UNKNOWN,
                 )
                 try:
                     recovered = client.fetch_task(binding.task_id)
@@ -356,7 +380,7 @@ def dispatch_confirmation(
                     ):
                         row.dispatch_status, row.dispatch_error = (
                             "failed",
-                            "stale_version",
+                            ErrorCode.STALE_VERSION,
                         )
                     elif recovered.get("confirmed") == row.geometry:
                         row.dispatch_status, row.dispatch_error = "accepted", None
@@ -371,9 +395,9 @@ def dispatch_confirmation(
     except HTTPException as exc:
         row.dispatch_status = "failed"
         row.dispatch_error = (
-            exc.detail.get("code", "state_conflict")
+            exc.detail.get("code", ErrorCode.STATE_CONFLICT)
             if isinstance(exc.detail, dict)
-            else "state_conflict"
+            else ErrorCode.STATE_CONFLICT
         )
     except (
         InferenceUnreachable,
@@ -382,7 +406,10 @@ def dispatch_confirmation(
         InferenceUpstreamError,
         InferenceArtifactTooLarge,
     ):
-        row.dispatch_status, row.dispatch_error = "failed", "service_unavailable"
+        row.dispatch_status, row.dispatch_error = (
+            "failed",
+            ErrorCode.SERVICE_UNAVAILABLE,
+        )
     session.add(row)
     try:
         session.commit()
@@ -390,6 +417,6 @@ def dispatch_confirmation(
         session.rollback()
         raise failure(
             503,
-            "service_unavailable",
+            ErrorCode.SERVICE_UNAVAILABLE,
             "Confirmation saved; dispatch outcome requires recovery",
         ) from None

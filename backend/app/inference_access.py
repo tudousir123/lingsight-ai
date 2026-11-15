@@ -11,6 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlmodel import Session, select
 
 from app.api.deps import owned_project
+from app.contracts import ErrorCode
 from app.inference_models import InferenceBinding
 from app.models import Project, PublishedResult, User
 
@@ -28,7 +29,7 @@ def failure(status: int, code: str, message: str) -> HTTPException:
 def relative_path(value: str) -> str:
     path = PurePosixPath(value)
     if path.is_absolute() or ".." in path.parts or "\\" in value or "\x00" in value:
-        raise failure(422, "invalid_input", "Invalid source-relative path")
+        raise failure(422, ErrorCode.INVALID_INPUT, "Invalid source-relative path")
     return "" if str(path) == "." else str(path)
 
 
@@ -46,12 +47,12 @@ def ensure_video_folder_access(
     if source_id == MediaSettings().PLATFORM_MEDIA_INFERENCE_SOURCE_ID:
         raise failure(
             403,
-            "permission_denied",
+            ErrorCode.PERMISSION_DENIED,
             "Platform media is accessible only through owned uploads",
         )
     if source_id.startswith("upload-"):
         raise failure(
-            422, "invalid_input", "Use the project videos API for user uploads"
+            422, ErrorCode.INVALID_INPUT, "Use the project videos API for user uploads"
         )
     mapping = InferenceAccessSettings().INFERENCE_EXPERIMENT_DIRECTORIES.get(
         source_id, {}
@@ -62,7 +63,9 @@ def ensure_video_folder_access(
         and within(path, relative_path(directory))
         for experiment, directory in mapping.items()
     ):
-        raise failure(403, "permission_denied", "Video source scope is not authorized")
+        raise failure(
+            403, ErrorCode.PERMISSION_DENIED, "Video source scope is not authorized"
+        )
 
 
 def encode_video(source: str, path: str) -> str:
@@ -96,7 +99,9 @@ def decode_video(video_id: str) -> tuple[str, str]:
             raise ValueError
         return source, relative_path(path)
     except ValueError, UnicodeError, TypeError, KeyError:
-        raise failure(422, "invalid_input", "Invalid video identifier") from None
+        raise failure(
+            422, ErrorCode.INVALID_INPUT, "Invalid video identifier"
+        ) from None
 
 
 def ensure_library_video_member(
@@ -112,7 +117,9 @@ def ensure_library_video_member(
         or project.video_directory is None
         or not within(path, project.video_directory)
     ):
-        raise failure(404, "resource_not_found", "Video is not in the project folder")
+        raise failure(
+            404, ErrorCode.RESOURCE_NOT_FOUND, "Video is not in the project folder"
+        )
     ensure_video_folder_access(session, user, source, directory)
     from app.inference_client import (
         InferenceArtifactTooLarge,
@@ -125,22 +132,24 @@ def ensure_library_video_member(
     try:
         listing = InferenceClient().fetch_directory(source, directory)
     except InferenceUnconfigured, InferenceUnreachable:
-        raise failure(503, "service_unavailable", "Video source unavailable") from None
+        raise failure(
+            503, ErrorCode.SERVICE_UNAVAILABLE, "Video source unavailable"
+        ) from None
     except InferenceNotFound:
-        raise failure(404, "resource_not_found", "Video not found") from None
+        raise failure(404, ErrorCode.RESOURCE_NOT_FOUND, "Video not found") from None
     except InferenceUpstreamError, InferenceArtifactTooLarge:
-        raise failure(502, "upstream_error", "Video source failed") from None
+        raise failure(502, ErrorCode.UPSTREAM_ERROR, "Video source failed") from None
     if not any(
         item.get("type") == "video" and item.get("id") == video_id
         for item in listing["items"]
         if isinstance(item, dict)
     ):
-        raise failure(404, "resource_not_found", "Video not found")
+        raise failure(404, ErrorCode.RESOURCE_NOT_FOUND, "Video not found")
 
 
 def authorize_binding(session: Session, user: User, binding: InferenceBinding) -> None:
     if binding.owner_user_id != user.id:
-        raise failure(404, "resource_not_found", "Task not found")
+        raise failure(404, ErrorCode.RESOURCE_NOT_FOUND, "Task not found")
     project = owned_project(session, user, binding.project_id)
     if binding.source_kind == "user_upload":
         from app.uploads import owned_video
@@ -150,7 +159,7 @@ def authorize_binding(session: Session, user: User, binding: InferenceBinding) -
             video.inference_sha256 != binding.video_sha256
             or video.sha256 != binding.original_video_sha256
         ):
-            raise failure(409, "state_conflict", "Video input changed")
+            raise failure(409, ErrorCode.STATE_CONFLICT, "Video input changed")
     else:
         source, path = decode_video(binding.video_id)
         if (
@@ -158,7 +167,9 @@ def authorize_binding(session: Session, user: User, binding: InferenceBinding) -
             or project.video_directory is None
             or not within(path, project.video_directory)
         ):
-            raise failure(404, "resource_not_found", "Video is not in project folder")
+            raise failure(
+                404, ErrorCode.RESOURCE_NOT_FOUND, "Video is not in project folder"
+            )
         ensure_video_folder_access(
             session, user, source, relative_path(str(PurePosixPath(path).parent))
         )
@@ -174,7 +185,7 @@ def owned_binding(
         query = query.with_for_update().execution_options(populate_existing=True)
     binding = session.exec(query).first()
     if binding is None:
-        raise failure(404, "resource_not_found", "Task not found")
+        raise failure(404, ErrorCode.RESOURCE_NOT_FOUND, "Task not found")
     authorize_binding(session, user, binding)
     return binding
 
@@ -258,7 +269,7 @@ def task_public(task: dict[str, Any], binding: InferenceBinding) -> dict[str, An
         task.get("id") != binding.task_id
         or task.get("video_id") != binding.upstream_video_id
     ):
-        raise failure(502, "upstream_error", "Inference task identity mismatch")
+        raise failure(502, ErrorCode.UPSTREAM_ERROR, "Inference task identity mismatch")
     return {
         **{key: task.get(key) for key in ("id", "status", "stage")},
         "error": "Inference task failed" if task.get("error") else None,

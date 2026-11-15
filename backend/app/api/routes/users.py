@@ -11,8 +11,10 @@ from app.api.deps import (
     SessionDep,
     get_current_active_superuser,
 )
+from app.contracts import ErrorCode
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
+from app.media_settings import MAX_VIDEO_BYTES, VIDEO_MIME_TYPES
 from app.models import (
     ExperimentAccess,
     Message,
@@ -150,7 +152,7 @@ def read_workspace(session: SessionDep, current_user: CurrentUser) -> dict[str, 
                 )
             ).all()
         ),
-        "upload": {"max_bytes": 2_000_000_000, "extensions": ["mp4", "avi"]},
+        "upload": {"max_bytes": MAX_VIDEO_BYTES, "extensions": list(VIDEO_MIME_TYPES)},
     }
 
 
@@ -270,7 +272,8 @@ def _library_public(session: SessionDep, user: User) -> LibraryAccessPublic:
 def require_library_admin(current_user: CurrentUser) -> None:
     if not current_user.is_superuser:
         raise HTTPException(
-            403, {"code": "permission_denied", "message": "Administrator required"}
+            403,
+            {"code": ErrorCode.PERMISSION_DENIED, "message": "Administrator required"},
         )
 
 
@@ -283,7 +286,7 @@ def read_library_access(user_id: uuid.UUID, session: SessionDep) -> LibraryAcces
     user = session.get(User, user_id)
     if user is None:
         raise HTTPException(
-            404, {"code": "resource_not_found", "message": "User not found"}
+            404, {"code": ErrorCode.RESOURCE_NOT_FOUND, "message": "User not found"}
         )
     return _library_public(session, user)
 
@@ -306,7 +309,7 @@ def update_library_access(
     ).first()
     if user is None:
         raise HTTPException(
-            404, {"code": "resource_not_found", "message": "User not found"}
+            404, {"code": ErrorCode.RESOURCE_NOT_FOUND, "message": "User not found"}
         )
     grant = session.get(WholeLibraryAccess, user_id)
     if grant and grant.granted == body.granted and grant.reason == body.reason:

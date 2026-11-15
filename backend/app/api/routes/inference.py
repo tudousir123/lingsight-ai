@@ -25,6 +25,7 @@ from app.api.gateway import (
     UpstreamService,
     forward,
 )
+from app.contracts import ErrorCode
 from app.core.config import settings
 from app.inference_access import (
     authorize_binding,
@@ -138,33 +139,39 @@ async def bounded_json(request: Request) -> Any:
     body = bytearray()
     async for chunk in request.stream():
         if len(body) + len(chunk) > POLICY.body_cap_bytes:
-            raise failure(413, "payload_too_large", "Request body too large")
+            raise failure(413, ErrorCode.PAYLOAD_TOO_LARGE, "Request body too large")
         body.extend(chunk)
     try:
         return json.loads(body)
     except ValueError, UnicodeError:
-        raise failure(422, "invalid_input", "Invalid JSON") from None
+        raise failure(422, ErrorCode.INVALID_INPUT, "Invalid JSON") from None
 
 
 def idempotency_key(request: Request) -> uuid.UUID:
     try:
         return uuid.UUID(request.headers.get("Idempotency-Key", ""))
     except ValueError:
-        raise failure(422, "invalid_input", "Idempotency-Key must be a UUID") from None
+        raise failure(
+            422, ErrorCode.INVALID_INPUT, "Idempotency-Key must be a UUID"
+        ) from None
 
 
 def upstream_error(exc: Exception) -> None:
     if isinstance(exc, InferenceNotFound):
-        raise failure(404, "resource_not_found", "Inference resource not found")
+        raise failure(404, ErrorCode.RESOURCE_NOT_FOUND, "Inference resource not found")
     if isinstance(exc, (InferenceUnconfigured, InferenceUnreachable)):
-        raise failure(503, "service_unavailable", "Inference service unavailable")
+        raise failure(
+            503, ErrorCode.SERVICE_UNAVAILABLE, "Inference service unavailable"
+        )
     if isinstance(exc, InferenceUpstreamError) and exc.status_code in (409, 422):
         raise failure(
             exc.status_code,
-            "state_conflict" if exc.status_code == 409 else "invalid_input",
+            ErrorCode.STATE_CONFLICT
+            if exc.status_code == 409
+            else ErrorCode.INVALID_INPUT,
             "Inference request refused",
         )
-    raise failure(502, "upstream_error", "Inference service failed")
+    raise failure(502, ErrorCode.UPSTREAM_ERROR, "Inference service failed")
 
 
 UPSTREAM_ERRORS = (
@@ -211,7 +218,7 @@ def inference_operation(
                 data = TaskCreate.model_validate(payload)
             except ValidationError:
                 raise failure(
-                    422, "invalid_input", "project_id and video_id are required"
+                    422, ErrorCode.INVALID_INPUT, "project_id and video_id are required"
                 ) from None
             key = idempotency_key(request)
             project = owned_project(session, current_user, data.project_id)
@@ -228,14 +235,14 @@ def inference_operation(
                 ):
                     raise failure(
                         409,
-                        "idempotency_conflict",
+                        ErrorCode.IDEMPOTENCY_CONFLICT,
                         "Idempotency key has different input",
                     )
                 authorize_binding(session, current_user, existing)
                 if not existing.task_id:
                     raise failure(
                         503,
-                        "service_unavailable",
+                        ErrorCode.SERVICE_UNAVAILABLE,
                         "Task creation outcome is unresolved; do not create another task",
                     )
                 return task_public(client.fetch_task(existing.task_id), existing)
@@ -279,12 +286,14 @@ def inference_operation(
             except IntegrityError:
                 session.rollback()
                 raise failure(
-                    409, "state_conflict", "Task creation already in progress"
+                    409, ErrorCode.STATE_CONFLICT, "Task creation already in progress"
                 ) from None
             except SQLAlchemyError:
                 session.rollback()
                 raise failure(
-                    503, "service_unavailable", "Task reservation could not be saved"
+                    503,
+                    ErrorCode.SERVICE_UNAVAILABLE,
+                    "Task reservation could not be saved",
                 ) from None
             # An ambiguous HTTP result leaves the durable reservation. Never retry create blindly.
             task = client.request_json(
@@ -296,7 +305,9 @@ def inference_operation(
             try:
                 binding.task_id = str(uuid.UUID(task["id"]))
             except ValueError, KeyError, TypeError:
-                raise failure(502, "upstream_error", "Invalid task identity") from None
+                raise failure(
+                    502, ErrorCode.UPSTREAM_ERROR, "Invalid task identity"
+                ) from None
             result = task_public(task, binding)
             session.add(binding)
             try:
@@ -305,7 +316,7 @@ def inference_operation(
                 session.rollback()
                 raise failure(
                     503,
-                    "service_unavailable",
+                    ErrorCode.SERVICE_UNAVAILABLE,
                     "Task identity could not be saved; creation outcome requires reconciliation",
                 ) from None
             response.status_code = 202
@@ -322,7 +333,9 @@ def inference_operation(
                         session, current_user, uuid.UUID(project_id)
                     )
                 except ValueError:
-                    raise failure(422, "invalid_input", "Invalid project ID") from None
+                    raise failure(
+                        422, ErrorCode.INVALID_INPUT, "Invalid project ID"
+                    ) from None
                 query = query.where(InferenceBinding.project_id == project.id)
             items = []
             for binding in session.exec(query).all():
@@ -386,14 +399,18 @@ def inference_operation(
                     uuid.UUID(request.query_params.get("project_id", "")),
                 )
             except ValueError:
-                raise failure(422, "invalid_input", "project_id is required") from None
+                raise failure(
+                    422, ErrorCode.INVALID_INPUT, "project_id is required"
+                ) from None
             if (
                 project.video_source_id != source
                 or project.video_directory is None
                 or not within(directory, project.video_directory)
             ):
                 raise failure(
-                    404, "resource_not_found", "Directory is not in project folder"
+                    404,
+                    ErrorCode.RESOURCE_NOT_FOUND,
+                    "Directory is not in project folder",
                 )
             return client.fetch_directory(source, directory)["items"]
         task_id = path.split("/")[1]

@@ -3,6 +3,7 @@
 import asyncio
 import fcntl
 import hashlib
+import os
 import shutil
 import struct
 import subprocess
@@ -777,3 +778,79 @@ def test_concurrent_same_idempotency_key_creates_one_upload(
     finally:
         resume.set()
         event.remove(engine, "after_cursor_execute", pause)
+
+
+@pytest.mark.parametrize("stage", ["evidence", "inference.mp4", "preview.mp4"])
+def test_ffmpeg_disk_exhaustion_is_retryable_and_cleans_partial_upload(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    media_root: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    stage: str,
+) -> None:
+    extension = "avi" if stage == "inference.mp4" else "mp4"
+    source = tmp_path / f"clip.{extension}"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=64x48:rate=5:duration=1",
+            "-c:v",
+            "mpeg4",
+            str(source),
+        ],
+        check=True,
+    )
+    real_ffmpeg = shutil.which("ffmpeg")
+    assert real_ffmpeg
+    shim = tmp_path / "bin"
+    shim.mkdir()
+    executable = shim / "ffmpeg"
+    executable.write_text(
+        "#!/usr/bin/python3\n"
+        "import os, sys\n"
+        f"target = {stage!r}\n"
+        "output = sys.argv[-1]\n"
+        "if (target == 'evidence' and output == '-') or output.endswith(target):\n"
+        "    if output == '-':\n"
+        "        os.write(1, b'partial evidence')\n"
+        "    else:\n"
+        "        with open(output, 'wb') as partial: partial.write(b'partial video')\n"
+        "    os.write(2, b'No space left on device: /private/storage/secret.mp4\\n')\n"
+        "    for _ in range(32): os.write(2, b'x' * 4096)\n"
+        "    sys.exit(1)\n"
+        f"os.execv({real_ffmpeg!r}, [{real_ffmpeg!r}, *sys.argv[1:]])\n"
+    )
+    executable.chmod(0o700)
+    monkeypatch.setenv("PATH", str(shim) + os.pathsep + os.environ["PATH"])
+    headers = normal_user_token_headers
+    project = client.post(
+        "/api/v1/projects/", headers=headers, json={"name": uuid.uuid4().hex}
+    ).json()["id"]
+    url = f"/api/v1/projects/{project}/videos"
+    key = str(uuid.uuid4())
+    response = client.post(
+        url,
+        headers={**headers, "Idempotency-Key": key},
+        files={"file": (source.name, source.read_bytes(), "application/octet-stream")},
+    )
+    assert response.status_code == 503, response.text
+    assert response.json()["detail"]["code"] == "service_unavailable"
+    assert "/private/" not in response.text
+    assert str(media_root) not in response.text
+    assert client.get(url, headers=headers).json()["count"] == 0
+    assert not list((media_root / "staging").iterdir())
+    assert not list((media_root / "objects").iterdir())
+    executable.unlink()
+    retry = client.post(
+        url,
+        headers={**headers, "Idempotency-Key": key},
+        files={"file": (source.name, source.read_bytes(), "application/octet-stream")},
+    )
+    assert retry.status_code == 201, retry.text
+    assert client.get(url, headers=headers).json()["count"] == 1

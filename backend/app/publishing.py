@@ -35,6 +35,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
+from app.contracts import ErrorCode
 from app.inference_access import failure, owned_binding
 from app.inference_client import (
     JSON_ARTIFACTS,
@@ -627,10 +628,10 @@ def publish_task_results(
     """Publish one reviewed task into a project; returns (result, replayed)."""
     user = session.get(User, user_id)
     if user is None:
-        raise failure(404, "resource_not_found", "Task not found")
+        raise failure(404, ErrorCode.RESOURCE_NOT_FOUND, "Task not found")
     binding = owned_binding(session, user, task_id)
     if binding.project_id != project_id:
-        raise failure(409, "state_conflict", CROSS_PROJECT_DETAIL)
+        raise failure(409, ErrorCode.STATE_CONFLICT, CROSS_PROJECT_DETAIL)
     try:
         task = client.fetch_task(task_id)
         verify_consumed_confirmation(session, binding, task)

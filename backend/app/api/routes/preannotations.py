@@ -16,6 +16,7 @@ from app.api.routes.inference import (
     idempotency_key,
     upstream_error,
 )
+from app.contracts import ErrorCode
 from app.inference_access import failure, owned_binding
 from app.inference_client import InferenceClient
 from app.inference_models import InferenceBinding, PreannotationConfirmation
@@ -44,7 +45,7 @@ def get_preannotation(
     owned_project(session, current_user, project_id)
     binding = owned_binding(session, current_user, str(task_id))
     if binding.project_id != project_id or binding.video_id != video_id:
-        raise failure(404, "resource_not_found", "Candidate not found")
+        raise failure(404, ErrorCode.RESOURCE_NOT_FOUND, "Candidate not found")
     try:
         task = InferenceClient().fetch_task(str(task_id))
         candidate = candidate_snapshot(task, binding)
@@ -52,7 +53,9 @@ def get_preannotation(
             task.get("status") != "waiting_for_review"
             and binding.confirmation_id is None
         ):
-            raise failure(409, "state_conflict", "Candidate not ready for review")
+            raise failure(
+                409, ErrorCode.STATE_CONFLICT, "Candidate not ready for review"
+            )
         return candidate
     except UPSTREAM_ERRORS as exc:
         upstream_error(exc)
@@ -88,7 +91,7 @@ def get_confirmation(
         )
     ).first()
     if row is None:
-        raise failure(404, "resource_not_found", "Confirmation not found")
+        raise failure(404, ErrorCode.RESOURCE_NOT_FOUND, "Confirmation not found")
     binding = session.get(InferenceBinding, row.binding_id)
     assert binding is not None and binding.task_id is not None
     binding = owned_binding(session, current_user, binding.task_id)
@@ -108,7 +111,9 @@ async def confirm_preannotation(
     try:
         data = ConfirmationInput.model_validate(await bounded_json(request))
     except ValidationError:
-        raise failure(422, "invalid_geometry", "Invalid confirmation fields") from None
+        raise failure(
+            422, ErrorCode.INVALID_GEOMETRY, "Invalid confirmation fields"
+        ) from None
     key = idempotency_key(request)
     return await run_in_threadpool(
         save_confirmation,
@@ -136,7 +141,7 @@ def save_confirmation(
     ).one()
     binding = owned_binding(session, current_user, str(data.task_id), lock=True)
     if binding.project_id != project_id or binding.video_id != video_id:
-        raise failure(404, "resource_not_found", "Task video not found")
+        raise failure(404, ErrorCode.RESOURCE_NOT_FOUND, "Task video not found")
     digest = fingerprint(data.model_dump(mode="json"))
     row = session.exec(
         select(PreannotationConfirmation).where(
@@ -149,7 +154,7 @@ def save_confirmation(
         if row.request_sha256 != digest or row.binding_id != binding.id:
             raise failure(
                 409,
-                "idempotency_conflict",
+                ErrorCode.IDEMPOTENCY_CONFLICT,
                 "Idempotency key has different confirmation",
             )
         if binding.confirmation_id != row.id:
@@ -160,14 +165,16 @@ def save_confirmation(
         return confirmation_public(row, binding)
     latest = latest_confirmation(session, binding)
     if (latest.id if latest else None) != data.expected_confirmation_id:
-        raise failure(409, "stale_version", "Latest confirmation changed")
+        raise failure(409, ErrorCode.STALE_VERSION, "Latest confirmation changed")
     bound = (
         session.get(PreannotationConfirmation, binding.confirmation_id)
         if binding.confirmation_id
         else None
     )
     if bound and (bound.dispatch_attempted or bound.dispatch_status != "failed"):
-        raise failure(409, "state_conflict", "Confirmation has already been dispatched")
+        raise failure(
+            409, ErrorCode.STATE_CONFLICT, "Confirmation has already been dispatched"
+        )
     try:
         task = client.fetch_task(str(data.task_id))
         candidate = candidate_snapshot(task, binding)
@@ -175,9 +182,11 @@ def save_confirmation(
         upstream_error(exc)
         raise AssertionError("unreachable")
     if task.get("status") != "waiting_for_review" or task.get("confirmed") is not None:
-        raise failure(409, "state_conflict", "Task already tracking or not ready")
+        raise failure(
+            409, ErrorCode.STATE_CONFLICT, "Task already tracking or not ready"
+        )
     if candidate["candidate_version"] != data.candidate_version:
-        raise failure(409, "stale_version", "Candidate changed")
+        raise failure(409, ErrorCode.STALE_VERSION, "Candidate changed")
     geometry = validate_geometry(data, candidate)
     row = PreannotationConfirmation(
         binding_id=binding.id,
@@ -200,7 +209,7 @@ def save_confirmation(
     except SQLAlchemyError:
         session.rollback()
         raise failure(
-            503, "service_unavailable", "Confirmation could not be saved"
+            503, ErrorCode.SERVICE_UNAVAILABLE, "Confirmation could not be saved"
         ) from None
     dispatch_confirmation(session, client, row, binding)
     session.refresh(row)
