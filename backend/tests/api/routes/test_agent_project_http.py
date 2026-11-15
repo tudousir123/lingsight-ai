@@ -497,6 +497,7 @@ def test_real_file_analysis_gateway_harness_container_and_owned_downloads(
     db: Session,
 ) -> None:
     import hashlib
+
     from tests.api.routes.test_platform_user_flow import signup
 
     owner, owner_id = signup(client)
