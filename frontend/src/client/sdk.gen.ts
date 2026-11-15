@@ -2,7 +2,7 @@
 
 import { type Client, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { agentAgentGateway2Data, agentAgentGateway2Errors, agentAgentGateway2Responses, agentAgentGateway3Data, agentAgentGateway3Errors, agentAgentGateway3Responses, agentAgentGatewayData, agentAgentGatewayErrors, agentAgentGatewayResponses, experimentsGetPreparationData, experimentsGetPreparationErrors, experimentsGetPreparationResponses, experimentsGetResultData, experimentsGetResultErrors, experimentsGetResultResponses, experimentsGetTrialData, experimentsGetTrialErrors, experimentsGetTrialMediaData, experimentsGetTrialMediaErrors, experimentsGetTrialMediaResponses, experimentsGetTrialResponses, experimentsListExperimentsData, experimentsListExperimentsResponses, experimentsListTrialsData, experimentsListTrialsErrors, experimentsListTrialsResponses, experimentsPutReviewData, experimentsPutReviewErrors, experimentsPutReviewResponses, inferenceInferenceArtifactData, inferenceInferenceArtifactErrors, inferenceInferenceArtifactResponses, inferenceInferenceGateway2Data, inferenceInferenceGateway2Errors, inferenceInferenceGateway2Responses, inferenceInferenceGatewayData, inferenceInferenceGatewayErrors, inferenceInferenceGatewayResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, projectsAddProjectMemberData, projectsAddProjectMemberErrors, projectsAddProjectMemberResponses, projectsCreateProjectData, projectsCreateProjectErrors, projectsCreateProjectResponses, projectsDeleteProjectData, projectsDeleteProjectErrors, projectsDeleteProjectResponses, projectsImportProjectsData, projectsImportProjectsErrors, projectsImportProjectsResponses, projectsListProjectsData, projectsListProjectsResponses, projectsRemoveProjectMemberData, projectsRemoveProjectMemberErrors, projectsRemoveProjectMemberResponses, projectsRenameProjectData, projectsRenameProjectErrors, projectsRenameProjectResponses, projectsSelectProjectVideoFolderData, projectsSelectProjectVideoFolderErrors, projectsSelectProjectVideoFolderResponses, resultsListResultFramesData, resultsListResultFramesErrors, resultsListResultFramesResponses, resultsListResultsData, resultsListResultsErrors, resultsListResultsResponses, resultsPublishResultData, resultsPublishResultErrors, resultsPublishResultResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
+import type { agentAgentGateway2Data, agentAgentGateway2Errors, agentAgentGateway2Responses, agentAgentGateway3Data, agentAgentGateway3Errors, agentAgentGateway3Responses, agentAgentGatewayData, agentAgentGatewayErrors, agentAgentGatewayResponses, experimentsGetPreparationData, experimentsGetPreparationErrors, experimentsGetPreparationResponses, experimentsGetResultData, experimentsGetResultErrors, experimentsGetResultResponses, experimentsGetTrialData, experimentsGetTrialErrors, experimentsGetTrialMediaData, experimentsGetTrialMediaErrors, experimentsGetTrialMediaResponses, experimentsGetTrialResponses, experimentsListExperimentsData, experimentsListExperimentsResponses, experimentsListTrialsData, experimentsListTrialsErrors, experimentsListTrialsResponses, experimentsPutReviewData, experimentsPutReviewErrors, experimentsPutReviewResponses, inferenceInferenceArtifactData, inferenceInferenceArtifactErrors, inferenceInferenceArtifactResponses, inferenceInferenceGateway2Data, inferenceInferenceGateway2Errors, inferenceInferenceGateway2Responses, inferenceInferenceGatewayData, inferenceInferenceGatewayErrors, inferenceInferenceGatewayResponses, internalAgentAuthorizeData, internalAgentAuthorizeErrors, internalAgentAuthorizeResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, preannotationsConfirmPreannotationData, preannotationsConfirmPreannotationErrors, preannotationsConfirmPreannotationResponses, preannotationsGetConfirmationData, preannotationsGetConfirmationErrors, preannotationsGetConfirmationResponses, preannotationsGetPreannotationData, preannotationsGetPreannotationErrors, preannotationsGetPreannotationResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, projectsAddProjectMemberData, projectsAddProjectMemberErrors, projectsAddProjectMemberResponses, projectsCreateProjectData, projectsCreateProjectErrors, projectsCreateProjectResponses, projectsDeleteProjectData, projectsDeleteProjectErrors, projectsDeleteProjectResponses, projectsImportProjectsData, projectsImportProjectsErrors, projectsImportProjectsResponses, projectsListProjectsData, projectsListProjectsResponses, projectsRemoveProjectMemberData, projectsRemoveProjectMemberErrors, projectsRemoveProjectMemberResponses, projectsRenameProjectData, projectsRenameProjectErrors, projectsRenameProjectResponses, projectsSelectProjectVideoFolderData, projectsSelectProjectVideoFolderErrors, projectsSelectProjectVideoFolderResponses, resultsListResultFramesData, resultsListResultFramesErrors, resultsListResultFramesResponses, resultsListResultsData, resultsListResultsErrors, resultsListResultsResponses, resultsPublishResultData, resultsPublishResultErrors, resultsPublishResultResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadLibraryAccessData, usersReadLibraryAccessErrors, usersReadLibraryAccessResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersReadWorkspaceData, usersReadWorkspaceResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdateLibraryAccessData, usersUpdateLibraryAccessErrors, usersUpdateLibraryAccessResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses, videosGetVideoData, videosGetVideoErrors, videosGetVideoResponses, videosListVideosData, videosListVideosErrors, videosListVideosResponses, videosOriginalMediaData, videosOriginalMediaErrors, videosOriginalMediaResponses, videosPreviewMediaData, videosPreviewMediaErrors, videosPreviewMediaResponses, videosUploadVideoData, videosUploadVideoErrors, videosUploadVideoResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -194,6 +194,18 @@ export class UsersService {
     }
     
     /**
+     * Read Workspace
+     */
+    public static readWorkspace<ThrowOnError extends boolean = true>(options?: Options<usersReadWorkspaceData, ThrowOnError>) {
+        return (options?.client ?? client).get<usersReadWorkspaceResponses, unknown, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/users/me/workspace',
+            ...options
+        });
+    }
+    
+    /**
      * Register User
      *
      * Create new user without the need to be logged in.
@@ -248,6 +260,34 @@ export class UsersService {
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/users/{user_id}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Read Library Access
+     */
+    public static readLibraryAccess<ThrowOnError extends boolean = true>(options: Options<usersReadLibraryAccessData, ThrowOnError>) {
+        return (options.client ?? client).get<usersReadLibraryAccessResponses, usersReadLibraryAccessErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/users/{user_id}/whole-library-access',
+            ...options
+        });
+    }
+    
+    /**
+     * Update Library Access
+     */
+    public static updateLibraryAccess<ThrowOnError extends boolean = true>(options: Options<usersUpdateLibraryAccessData, ThrowOnError>) {
+        return (options.client ?? client).put<usersUpdateLibraryAccessResponses, usersUpdateLibraryAccessErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/users/{user_id}/whole-library-access',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
@@ -596,6 +636,23 @@ export class AgentService {
     }
 }
 
+export class InternalAgentService {
+    /**
+     * Authorize
+     */
+    public static agentAuthorize<ThrowOnError extends boolean = true>(options: Options<internalAgentAuthorizeData, ThrowOnError>) {
+        return (options.client ?? client).post<internalAgentAuthorizeResponses, internalAgentAuthorizeErrors, ThrowOnError>({
+            responseType: 'json',
+            url: '/api/v1/internal/agent/authorize',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+}
+
 export class InferenceService {
     /**
      * Inference Artifact
@@ -629,6 +686,106 @@ export class InferenceService {
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/inference/{path}',
+            ...options
+        });
+    }
+}
+
+export class PreannotationsService {
+    /**
+     * Get Preannotation
+     */
+    public static getPreannotation<ThrowOnError extends boolean = true>(options: Options<preannotationsGetPreannotationData, ThrowOnError>) {
+        return (options.client ?? client).get<preannotationsGetPreannotationResponses, preannotationsGetPreannotationErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/videos/{video_id}/preannotation',
+            ...options
+        });
+    }
+    
+    /**
+     * Get Confirmation
+     */
+    public static getConfirmation<ThrowOnError extends boolean = true>(options: Options<preannotationsGetConfirmationData, ThrowOnError>) {
+        return (options.client ?? client).get<preannotationsGetConfirmationResponses, preannotationsGetConfirmationErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/videos/{video_id}/preannotation-confirmation',
+            ...options
+        });
+    }
+    
+    /**
+     * Confirm Preannotation
+     */
+    public static confirmPreannotation<ThrowOnError extends boolean = true>(options: Options<preannotationsConfirmPreannotationData, ThrowOnError>) {
+        return (options.client ?? client).post<preannotationsConfirmPreannotationResponses, preannotationsConfirmPreannotationErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/videos/{video_id}/preannotation-confirmations',
+            ...options
+        });
+    }
+}
+
+export class VideosService {
+    /**
+     * List Videos
+     */
+    public static listVideos<ThrowOnError extends boolean = true>(options: Options<videosListVideosData, ThrowOnError>) {
+        return (options.client ?? client).get<videosListVideosResponses, videosListVideosErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/videos',
+            ...options
+        });
+    }
+    
+    /**
+     * Upload Video
+     */
+    public static uploadVideo<ThrowOnError extends boolean = true>(options: Options<videosUploadVideoData, ThrowOnError>) {
+        return (options.client ?? client).post<videosUploadVideoResponses, videosUploadVideoErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/videos',
+            ...options
+        });
+    }
+    
+    /**
+     * Get Video
+     */
+    public static getVideo<ThrowOnError extends boolean = true>(options: Options<videosGetVideoData, ThrowOnError>) {
+        return (options.client ?? client).get<videosGetVideoResponses, videosGetVideoErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/videos/{video_id}',
+            ...options
+        });
+    }
+    
+    /**
+     * Original Media
+     */
+    public static originalMedia<ThrowOnError extends boolean = true>(options: Options<videosOriginalMediaData, ThrowOnError>) {
+        return (options.client ?? client).get<videosOriginalMediaResponses, videosOriginalMediaErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/videos/{video_id}/media',
+            ...options
+        });
+    }
+    
+    /**
+     * Preview Media
+     */
+    public static previewMedia<ThrowOnError extends boolean = true>(options: Options<videosPreviewMediaData, ThrowOnError>) {
+        return (options.client ?? client).get<videosPreviewMediaResponses, videosPreviewMediaErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/projects/{project_id}/videos/{video_id}/preview',
             ...options
         });
     }
