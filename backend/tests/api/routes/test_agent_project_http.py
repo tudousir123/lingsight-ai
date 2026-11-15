@@ -46,7 +46,7 @@ def agent_http(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
         token = "synthetic-contract-token-000000000"
         with httpx.Client(trust_env=False) as probe:
             response = probe.get(
-                f"{url}/v1/tasks", headers={"Authorization": f"Bearer {token}"}
+                f"{url}/v1/capabilities", headers={"Authorization": f"Bearer {token}"}
             )
             assert response.status_code == 200, response.text
         monkeypatch.setattr(settings, "AGENT_BASE_URL", url)
@@ -68,6 +68,7 @@ def test_real_project_task_scope_and_bundle(
     client: TestClient,
     db: Session,
     superuser_token_headers: dict[str, str],
+    agent_http: str,
 ) -> None:
     headers = superuser_token_headers
     api = settings.API_V1_STR
@@ -91,6 +92,17 @@ def test_real_project_task_scope_and_bundle(
             headers=headers,
             json={"goal": "complete", "project_id": project_id},
         )
+        with httpx.Client(trust_env=False) as probe:
+            capabilities = probe.get(
+                f"{agent_http}/v1/capabilities",
+                headers={"Authorization": f"Bearer {settings.AGENT_API_TOKEN}"},
+            ).json()
+        if capabilities.get("user_scope") != "platform-user-v1":
+            # Old read-only checkout remains a meaningful compatibility test:
+            # no task or shared output may pass the multi-user platform gate.
+            assert response.status_code == 503, response.text
+            assert client.get(f"{api}/agent/tasks", headers=headers).status_code == 503
+            return
         assert response.status_code == 202, response.text
         task = response.json()["task"]
         assert task["project_id"] == project_id
@@ -114,7 +126,7 @@ def test_real_project_task_scope_and_bundle(
             headers=headers,
             json={"text": "follow-up", "project_id": str(foreign.id)},
         )
-        assert follow.status_code == 202, follow.text
+        assert follow.status_code == 422, follow.text
         assert client.get(task_url, headers=headers).json()["project_id"] == project_id
     finally:
         own = db.get(Project, uuid.UUID(project_id))

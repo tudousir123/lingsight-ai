@@ -6,11 +6,10 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
-from sqlmodel import select
 
 from app.api.deps import CurrentUser, MediaUserDep, SessionDep
 from app.core.research import get_research_database_settings
-from app.models import ExperimentAccess
+from app.scope import allowed_experiment_ids
 from app.trials.assets import ResearchTrialAssets
 from app.trials.catalog import CatalogUnavailable, TrialCatalog
 from app.trials.fixture_store import FileTrialStore, FixtureUnavailable
@@ -75,14 +74,7 @@ AssetsDep = Annotated[TrialAssetsProtocol, Depends(get_trial_assets)]
 
 
 def _allowed_ids(session: SessionDep, current_user: CurrentUser) -> set[str] | None:
-    if current_user.is_superuser:
-        return None
-    grants = session.exec(
-        select(ExperimentAccess.experiment_id).where(
-            ExperimentAccess.user_id == current_user.id
-        )
-    )
-    return set(grants.all())
+    return allowed_experiment_ids(session, current_user)
 
 
 def _check_access(
@@ -270,4 +262,5 @@ def get_trial_media(
         media_file,
         media_type="video/mp4",
         filename=str(trial.get("video_name") or f"{trial_id}.mp4"),
+        headers={"Cache-Control": "private, no-store"},
     )

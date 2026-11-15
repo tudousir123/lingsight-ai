@@ -25,7 +25,13 @@ class AgentGatewayTest(unittest.TestCase):
         self.response = httpx.Response(200, json=[])
         self.capabilities = httpx.Response(
             200,
-            json={"project_scope": "immutable-v1", "project_data_configured": True},
+            json={
+                "project_scope": "immutable-v1",
+                "project_data_configured": True,
+                "user_scope": "platform-user-v1",
+                "data_scope": "authorized-v1",
+                "qa_completion": "intent-v1",
+            },
         )
         self.error: Exception | None = None
 
@@ -60,10 +66,16 @@ class AgentGatewayTest(unittest.TestCase):
         self.assertEqual(self.client.get("/agent/tasks").status_code, 401)
         self.assertFalse(self.calls)
 
-    def test_other_user_cannot_read_workspace(self) -> None:
-        self.user.email = "other@example.com"
-        self.assertEqual(self.client.get("/agent/tasks").status_code, 403)
-        self.assertFalse(self.calls)
+    def test_all_active_users_get_trusted_isolated_context(self) -> None:
+        self.user.email = "new-signup@example.com"
+        response = self.client.get(
+            "/agent/tasks", headers={"X-LingSight-User-Id": TASK}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.calls[-1].headers["x-lingsight-user-id"], str(self.user.id)
+        )
+        self.assertEqual(self.calls[0].url.path, "/v1/capabilities")
 
     def test_creation_uses_private_auth_and_passes_body(self) -> None:
         self.response = httpx.Response(202, json={"task": {"id": TASK}})
@@ -76,7 +88,7 @@ class AgentGatewayTest(unittest.TestCase):
         self.assertEqual(
             self.calls[0].headers["authorization"], "Bearer private-service-test-token"
         )
-        self.assertIn(b"Analyze this video", self.calls[0].content)
+        self.assertIn(b"Analyze this video", self.calls[-1].content)
         self.assertNotIn("private-service-test-token", r.text)
 
     def test_event_cursor_and_sse_are_preserved(self) -> None:
@@ -91,8 +103,8 @@ class AgentGatewayTest(unittest.TestCase):
         )
         self.assertEqual(r.status_code, 200)
         self.assertIn("id: 8", r.text)
-        self.assertEqual(self.calls[0].url.params["after"], "7")
-        self.assertEqual(self.calls[0].headers["accept"], "text/event-stream")
+        self.assertEqual(self.calls[-1].url.params["after"], "7")
+        self.assertEqual(self.calls[-1].headers["accept"], "text/event-stream")
 
     def test_bad_cursor_and_unknown_paths_are_rejected(self) -> None:
         self.assertEqual(
@@ -148,13 +160,161 @@ class AgentGatewayTest(unittest.TestCase):
         self.error = httpx.ConnectError("connection refused")
         r = self.client.get("/agent/tasks")
         self.assertEqual(r.status_code, 503)
-        self.assertEqual(r.json()["detail"], "暂时无法连接科研 Agent，请稍后重试")
+        self.assertIn("尚未就绪", r.json()["detail"])
 
-    def test_workspace_gate_precedes_operation_whitelist(self) -> None:
-        # Current contract: the workspace gate runs before the operation
-        # whitelist; the inference gateway checks in the opposite order.
-        self.user.email = "other@example.com"
+    def test_inactive_account_cannot_access_workspace(self) -> None:
+        self.user.is_active = False
         self.assertEqual(self.client.get("/agent/health").status_code, 403)
+        self.assertFalse(self.calls)
+
+    def test_default_none_and_completion_mode_forwarded(self) -> None:
+        import json
+
+        result = self.client.post(
+            "/agent/tasks", json={"goal": " Explain latency ", "completion_mode": "qa"}
+        )
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(
+            json.loads(self.calls[-1].content),
+            {"goal": "Explain latency", "data_scope": "none", "completion_mode": "qa"},
+        )
+
+    def test_creation_rejects_scope_identity_and_invalid_goal(self) -> None:
+        for body in [
+            {"goal": "   "},
+            {"goal": "x" * 12001},
+            {"goal": "ask", "owner_user_id": str(self.user.id)},
+            {"goal": "ask", "data_scope": "project"},
+            {"goal": "ask", "project_id": None},
+            {"goal": "ask", "data_scope": "none", "project_id": None},
+            {"goal": "ask", "data_scope": "whole_library", "project_id": TASK},
+            {"goal": "ask", "data_scope": None},
+            {"goal": "ask", "completion_mode": "unknown"},
+        ]:
+            with self.subTest(body=body):
+                result = self.client.post("/agent/tasks", json=body)
+                self.assertEqual(result.status_code, 422)
+                self.assertEqual(result.json()["detail"]["code"], "invalid_input")
+        self.assertFalse(self.calls)
+
+    def test_followup_cannot_mutate_task_scope(self) -> None:
+        for field in ["owner_user_id", "project_id", "data_scope"]:
+            result = self.client.post(
+                f"/agent/tasks/{TASK}/messages", json={"text": "next", field: TASK}
+            )
+            self.assertEqual(result.status_code, 422)
+        result = self.client.post(
+            f"/agent/tasks/{TASK}/messages",
+            json={"text": "Create report", "completion_mode": "research"},
+        )
+        self.assertEqual(result.status_code, 200)
+        self.assertIn(b'"completion_mode":"research"', self.calls[-1].content)
+
+    def test_each_user_operation_requires_capability_and_trusted_identity(self) -> None:
+        routes = [
+            ("GET", "tasks"),
+            ("GET", f"tasks/{TASK}"),
+            ("GET", f"tasks/{TASK}/events"),
+            ("GET", f"tasks/{TASK}/bundle"),
+            ("GET", f"runs/{TASK}"),
+            ("GET", f"artifacts/{TASK}"),
+            ("POST", f"runs/{TASK}/cancel"),
+            ("POST", f"runs/{TASK}/resume"),
+            ("POST", f"runs/{TASK}/clarifications/{TASK}/answer"),
+            ("PATCH", f"artifacts/{TASK}"),
+        ]
+        for method, path in routes:
+            with self.subTest(path=path, method=method):
+                self.calls.clear()
+                response = self.client.request(
+                    method,
+                    f"/agent/{path}?owner_user_id={TASK}&project_id={TASK}",
+                    headers={"X-LingSight-User-Id": TASK, "X-User-Id": TASK},
+                    json={"answer": "yes"}
+                    if method == "POST"
+                    else {"markdown": "text"}
+                    if method == "PATCH"
+                    else None,
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(self.calls[0].url.path, "/v1/capabilities")
+                self.assertEqual(
+                    self.calls[-1].headers["x-lingsight-user-id"], str(self.user.id)
+                )
+                self.assertNotIn("x-user-id", self.calls[-1].headers)
+                self.assertNotIn("project_id", self.calls[-1].url.params)
+
+    def test_old_agent_cannot_expose_any_user_data(self) -> None:
+        self.capabilities = httpx.Response(
+            200, json={"project_scope": "immutable-v1", "project_data_configured": True}
+        )
+        result = self.client.get("/agent/tasks")
+        self.assertEqual(result.status_code, 503)
+        self.assertEqual([call.url.path for call in self.calls], ["/v1/capabilities"])
+
+    def test_none_scope_does_not_require_project_data_source(self) -> None:
+        payload = self.capabilities.json()
+        payload["project_data_configured"] = False
+        self.capabilities = httpx.Response(200, json=payload)
+        self.assertEqual(
+            self.client.post(
+                "/agent/tasks", json={"goal": "What is latency?"}
+            ).status_code,
+            200,
+        )
+
+    def test_business_error_envelopes_and_service_failures_are_distinct(self) -> None:
+        for status in [403, 404, 409, 422, 503]:
+            self.response = httpx.Response(
+                status,
+                json={
+                    "error": {
+                        "code": "scope_revoked",
+                        "message": "Scope unavailable",
+                        "fields": {"scope": "revoked"},
+                    }
+                },
+            )
+            result = self.client.get(f"/agent/tasks/{TASK}")
+            self.assertEqual(result.status_code, status)
+            self.assertEqual(
+                result.json(),
+                {
+                    "detail": {
+                        "code": "scope_revoked",
+                        "message": "Scope unavailable",
+                        "fields": {"scope": "revoked"},
+                    }
+                },
+            )
+        self.response = httpx.Response(
+            401,
+            json={
+                "error": {
+                    "code": "authentication_required",
+                    "message": "private credential",
+                }
+            },
+        )
+        result = self.client.get("/agent/tasks")
+        self.assertEqual(result.status_code, 502)
+        self.assertNotIn("private credential", result.text)
+
+    def test_json_parse_and_media_type_errors(self) -> None:
+        self.assertEqual(
+            self.client.post(
+                "/agent/tasks",
+                content="broken",
+                headers={"Content-Type": "application/json"},
+            ).status_code,
+            400,
+        )
+        self.assertEqual(
+            self.client.post(
+                "/agent/tasks", content="{}", headers={"Content-Type": "text/plain"}
+            ).status_code,
+            415,
+        )
         self.assertFalse(self.calls)
 
 
