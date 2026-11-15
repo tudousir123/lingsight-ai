@@ -31,6 +31,8 @@ def test_personal_preference_real_gateway_source_recall_and_user_isolation(
     assert capability.json()["personal_memory"] == "personal-memory-v1"
     assert capability.json()["execution"] == {
         "contract": "durable-run-v1",
+        "requests": "persistent-v1",
+        "recovery": "safe-v1",
         "engine": "pi-durable",
         "version": "1.5.2",
         "enabled": True,
