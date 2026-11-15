@@ -60,6 +60,12 @@ def authorize(body: AuthorizationInput, session: SessionDep) -> dict[str, Any]:
                 403, {"code": "permission_denied", "message": "Account unavailable"}
             )
         return authorize_scope(session, user, body.data_scope, body.project_id)
+    except HTTPException as error:
+        if error.status_code == 404:
+            raise HTTPException(
+                404, {"code": "resource_not_found", "message": "Project not found"}
+            ) from None
+        raise
     except SQLAlchemyError:
         raise HTTPException(
             503,

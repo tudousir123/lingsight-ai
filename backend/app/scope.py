@@ -3,7 +3,7 @@
 import hashlib
 import json
 import uuid
-from typing import Any, Literal
+from typing import Any, Literal, TypeGuard
 
 import httpx
 from fastapi import HTTPException
@@ -57,6 +57,10 @@ def capable_agent(capabilities: object, *, project: bool = False) -> bool:
 
 
 DataScope = Literal["none", "project", "whole_library"]
+
+
+def is_data_scope(value: object) -> TypeGuard[DataScope]:
+    return isinstance(value, str) and value in {"none", "project", "whole_library"}
 
 
 def authorize_scope(
@@ -170,7 +174,7 @@ def ensure_agent_task_owner(session: Session, user: User, task_id: str) -> None:
             404, {"code": "resource_not_found", "message": "Task not found"}
         )
     data_scope = task.get("data_scope")
-    if data_scope not in {"none", "project", "whole_library"}:
+    if not is_data_scope(data_scope):
         raise HTTPException(
             503, {"code": "service_unavailable", "message": "Invalid Agent task scope"}
         )

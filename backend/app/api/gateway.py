@@ -258,7 +258,7 @@ async def forward(
             await close()
 
     response_headers = {
-        "Cache-Control": "no-store",
+        "Cache-Control": "private, no-store" if policy.agent_errors else "no-store",
         "X-Content-Type-Options": "nosniff",
         "Content-Security-Policy": "sandbox; default-src 'none'",
     }

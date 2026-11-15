@@ -1,8 +1,9 @@
-import os
 from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+from app import scope_models, upload_models  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -21,7 +22,6 @@ fileConfig(config.config_file_name)
 
 from app import inference_models  # noqa
 from app.models import SQLModel  # noqa
-from app import scope_models  # noqa: F401
 from app.core.config import settings # noqa
 
 target_metadata = SQLModel.metadata
