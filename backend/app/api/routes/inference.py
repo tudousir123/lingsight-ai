@@ -5,8 +5,9 @@ from typing import Any
 
 from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, ConfigDict, ValidationError
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import col, select
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import StreamingResponse
 
 from app.api.deps import (
@@ -120,7 +121,9 @@ async def inference_artifact(
     OPERATIONS.check("GET", full, UNKNOWN_OPERATION)
     ensure_workspace_user(current_user)
     owned_binding(session, current_user, path.split("/")[1])
-    return await forward(request, full, _service(), POLICY)
+    response = await forward(request, full, _service(), POLICY)
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 class TaskCreate(BaseModel):
@@ -183,11 +186,29 @@ async def inference_gateway(
 ) -> Any:
     OPERATIONS.check(request.method, path, UNKNOWN_OPERATION)
     ensure_workspace_user(current_user)
+    payload = (
+        await bounded_json(request)
+        if request.method == "POST" and (path == "tasks" or path.endswith("/review"))
+        else None
+    )
+    return await run_in_threadpool(
+        inference_operation, path, request, current_user, session, response, payload
+    )
+
+
+def inference_operation(
+    path: str,
+    request: Request,
+    current_user: CurrentUser,
+    session: SessionDep,
+    response: Response,
+    payload: Any,
+) -> Any:
     client = InferenceClient()
     try:
         if path == "tasks" and request.method == "POST":
             try:
-                data = TaskCreate.model_validate(await bounded_json(request))
+                data = TaskCreate.model_validate(payload)
             except ValidationError:
                 raise failure(
                     422, "invalid_input", "project_id and video_id are required"
@@ -222,7 +243,7 @@ async def inference_gateway(
             from app.uploads import inference_input, owned_video
 
             upload = session.get(UploadedVideo, data.video_id)
-            if upload is not None or data.video_id.startswith("upload-"):
+            if upload is not None or data.video_id.startswith("upl_"):
                 upload = owned_video(session, current_user, project.id, data.video_id)
                 source, relative = inference_input(upload)
                 binding = InferenceBinding(
@@ -234,6 +255,9 @@ async def inference_gateway(
                     upstream_video_id=encode_video(source, relative),
                     video_sha256=upload.inference_sha256,
                     original_video_sha256=upload.sha256,
+                    input_width=upload.width,
+                    input_height=upload.height,
+                    input_frame_count=upload.frame_count,
                     idempotency_key=key,
                 )
             else:
@@ -257,6 +281,11 @@ async def inference_gateway(
                 raise failure(
                     409, "state_conflict", "Task creation already in progress"
                 ) from None
+            except SQLAlchemyError:
+                session.rollback()
+                raise failure(
+                    503, "service_unavailable", "Task reservation could not be saved"
+                ) from None
             # An ambiguous HTTP result leaves the durable reservation. Never retry create blindly.
             task = client.request_json(
                 "POST",
@@ -270,7 +299,15 @@ async def inference_gateway(
                 raise failure(502, "upstream_error", "Invalid task identity") from None
             result = task_public(task, binding)
             session.add(binding)
-            session.commit()
+            try:
+                session.commit()
+            except SQLAlchemyError:
+                session.rollback()
+                raise failure(
+                    503,
+                    "service_unavailable",
+                    "Task identity could not be saved; creation outcome requires reconciliation",
+                ) from None
             response.status_code = 202
             return result
         if path == "tasks":
@@ -311,7 +348,10 @@ async def inference_gateway(
             from app.scope import allowed_experiment_ids
 
             allowed = allowed_experiment_ids(session, current_user)
+            from app.media_settings import MediaSettings
+
             mapping = InferenceAccessSettings().INFERENCE_EXPERIMENT_DIRECTORIES
+            mapping.pop(MediaSettings().PLATFORM_MEDIA_INFERENCE_SOURCE_ID, None)
             visible = {
                 source
                 for source, experiments in mapping.items()
@@ -366,7 +406,6 @@ async def inference_gateway(
             )
         if request.method == "GET":
             return task_public(client.fetch_task(task_id), binding)
-        payload = await bounded_json(request) if path.endswith("/review") else None
         if path.endswith("/retry") and binding.confirmation_id:
             from app.preannotations import verify_consumed_confirmation
 

@@ -85,3 +85,17 @@ def test_publish_cannot_adopt_unknown_task(
         json={"task_id": str(uuid.uuid4())},
     )
     assert response.status_code == 404
+
+
+def test_physical_upload_source_is_never_a_library_directory(
+    client: TestClient, superuser_token_headers: dict[str, str], monkeypatch
+) -> None:
+    monkeypatch.setenv("PLATFORM_MEDIA_INFERENCE_SOURCE_ID", "private-media")
+    monkeypatch.setenv(
+        "INFERENCE_EXPERIMENT_DIRECTORIES", '{"private-media":{"experiment":""}}'
+    )
+    response = client.get(
+        "/api/v1/inference/videos?source_id=private-media",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 403

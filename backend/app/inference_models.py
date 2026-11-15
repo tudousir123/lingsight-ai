@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import JSON, Column, UniqueConstraint
+from sqlalchemy.dialects.mysql import DATETIME
 from sqlmodel import Field, SQLModel
 
 from app.models import Char36UUID, get_datetime_utc
@@ -28,6 +29,9 @@ class InferenceBinding(SQLModel, table=True):
     upstream_video_id: str = Field(max_length=4096)
     video_sha256: str | None = Field(default=None, max_length=64)
     original_video_sha256: str | None = Field(default=None, max_length=64)
+    input_width: int | None = None
+    input_height: int | None = None
+    input_frame_count: int | None = None
     idempotency_key: uuid.UUID = Field(sa_type=Char36UUID)
     task_id: str | None = Field(default=None, max_length=36, unique=True)
     confirmation_id: uuid.UUID | None = Field(default=None, sa_type=Char36UUID)
@@ -57,7 +61,9 @@ class PreannotationConfirmation(SQLModel, table=True):
     height: int
     frame_count: int
     geometry: dict[str, Any] = Field(sa_column=Column(JSON, nullable=False))
-    confirmed_at: datetime = Field(default_factory=get_datetime_utc)
+    confirmed_at: datetime = Field(
+        default_factory=get_datetime_utc, sa_type=DATETIME(fsp=6)
+    )
     dispatch_status: str = Field(default="pending", max_length=16)
     dispatch_error: str | None = Field(default=None, max_length=64)
     dispatch_attempted: bool = False
