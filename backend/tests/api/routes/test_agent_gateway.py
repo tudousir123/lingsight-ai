@@ -28,6 +28,8 @@ class AgentGatewayTest(unittest.TestCase):
             json={
                 "execution": {
                     "contract": "durable-run-v1",
+                    "requests": "persistent-v1",
+                    "recovery": "safe-v1",
                     "engine": "pi-durable",
                     "version": "1.5.2",
                     "enabled": True,
@@ -68,6 +70,40 @@ class AgentGatewayTest(unittest.TestCase):
             self.addCleanup(p.stop)
         self.client = TestClient(self.app)
         self.addCleanup(self.client.close)
+
+    def test_stable_request_identity_is_forwarded_and_malformed_identity_rejected(
+        self,
+    ) -> None:
+        import json
+
+        for path, body in [
+            ("/agent/tasks", {"goal": "Synthetic explanation"}),
+            (f"/agent/tasks/{TASK}/messages", {"text": "Synthetic follow-up"}),
+            (f"/agent/runs/{TASK}/resume", {}),
+            (
+                f"/agent/runs/{TASK}/clarifications/{TASK}/answer",
+                {"answer": "Direction only"},
+            ),
+        ]:
+            with self.subTest(path=path):
+                self.calls.clear()
+                response = self.client.post(path, json={**body, "request_id": TASK})
+                self.assertEqual(response.status_code, 200, response.text)
+                self.assertEqual(json.loads(self.calls[-1].content)["request_id"], TASK)
+        for path, body in [
+            ("/agent/tasks", {"goal": "Synthetic explanation"}),
+            (f"/agent/tasks/{TASK}/messages", {"text": "Synthetic follow-up"}),
+        ]:
+            for value in ["not-a-uuid", None, 42]:
+                with self.subTest(path=path, value=value):
+                    self.calls.clear()
+                    self.assertEqual(
+                        self.client.post(
+                            path, json={**body, "request_id": value}
+                        ).status_code,
+                        422,
+                    )
+                    self.assertEqual(self.calls, [])
 
     def test_execution_capability_fails_closed_before_any_execution_write(self) -> None:
         supported = self.capabilities.json()

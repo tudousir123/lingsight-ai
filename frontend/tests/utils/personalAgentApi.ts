@@ -31,6 +31,8 @@ export async function stubPersonalAgent(page: Page, owner = "user") {
 export const executionCapabilityFixture = {
   execution: {
     contract: "durable-run-v1",
+    requests: "persistent-v1",
+    recovery: "safe-v1",
     engine: "pi-durable",
     version: "1.5.2",
     enabled: true,

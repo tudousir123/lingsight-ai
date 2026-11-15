@@ -140,6 +140,8 @@ async def ensure_project_support(
                 or runtime.get("contract") != "durable-run-v1"
                 or runtime.get("engine") != "pi-durable"
                 or runtime.get("version") != "1.5.2"
+                or runtime.get("requests") != "persistent-v1"
+                or runtime.get("recovery") != "safe-v1"
                 or runtime.get("enabled") is not True
             ):
                 raise HTTPException(503, unavailable)
@@ -150,7 +152,18 @@ async def ensure_project_support(
         raise HTTPException(503, unavailable) from None
 
 
-class TaskInput(BaseModel):
+class RequestIdentity(BaseModel):
+    request_id: uuid.UUID | None = None
+
+    @field_validator("request_id", mode="before")
+    @classmethod
+    def non_null_request_id(cls, value: object) -> object:
+        if value is None:
+            raise ValueError("request_id cannot be null")
+        return value
+
+
+class TaskInput(RequestIdentity):
     model_config = ConfigDict(extra="forbid")
     goal: str = Field(min_length=1, max_length=12000)
     project_id: uuid.UUID | None = None
@@ -176,7 +189,7 @@ class TaskInput(BaseModel):
         return self
 
 
-class MessageInput(BaseModel):
+class MessageInput(RequestIdentity):
     model_config = ConfigDict(extra="forbid")
     text: str = Field(min_length=1, max_length=12000)
     completion_mode: CompletionMode = "auto"
