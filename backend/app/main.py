@@ -2,9 +2,11 @@ from pathlib import Path
 
 import sentry_sdk
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
+from app.api.errors import resource_validation_error
 from app.api.main import api_router
 from app.core.config import settings
 
@@ -23,6 +25,8 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=custom_generate_unique_id,
 )
+
+app.add_exception_handler(RequestValidationError, resource_validation_error)
 
 app.add_middleware(
     CORSMiddleware,
