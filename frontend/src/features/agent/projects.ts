@@ -10,6 +10,7 @@ import {
   ResultsService,
 } from "@/client"
 import useAuth from "@/hooks/useAuth"
+import { problemText } from "@/lib/apiError"
 
 export type WorkspaceProject = ProjectPublic
 export type WorkspaceProjectMember = NonNullable<
@@ -34,6 +35,8 @@ export function projectErrorText(error: unknown, fallback: string): string {
   if (error instanceof AxiosError) {
     const detail = (error.response?.data as { detail?: unknown })?.detail
     if (typeof detail === "string") return detail
+    if (typeof detail === "object" && detail !== null)
+      return problemText(error, fallback)
   }
   return error instanceof Error && error.message ? error.message : fallback
 }

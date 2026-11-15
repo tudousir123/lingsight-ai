@@ -1,8 +1,7 @@
-// Field contract for the video inference service (lingsight-inference,
-// private repo). True source: that service's FastAPI /v1 interface (videos
-// directory listing, tasks lifecycle, pre-annotation candidate, review) and
-// its artifact set — the platform gateway forwards at
-// backend/app/api/routes/inference.py. Field-shape drift is owned upstream by
+// Field contract for the platform's inference gateway
+// (backend/app/api/routes/inference.py, ADR-0019): task/source/directory lists
+// are plain arrays and tasks are bound to a project video. The candidate and
+// confirmation shapes live in features/agent/videos.ts. Field-shape drift is owned upstream by
 // that service's own tests plus the platform e2e smoke; this module only
 // pins what the workbench UI consumes.
 
@@ -19,28 +18,14 @@ export type VideoSource = {
   available: boolean
   error?: { code: string; message: string }
 }
-export type Point = [number, number]
-export type Mark = {
-  label: string
-  polygon: Point[] | null
-  confidence?: number
-}
-export type Candidate = {
-  width: number
-  height: number
-  frame_count: number
-  seed: { frame: number; x: number; y: number } | null
-  pool: { cx: number; cy: number; radius: number } | null
-  marks: Mark[]
-  evidence: { review_reasons: string[] }
-}
 export type Task = {
   id: string
+  project_id?: string
   video_id: string
+  source_kind?: "user_upload" | "filesystem"
+  confirmation_id?: string | null
   status: string
   stage: string
   error: string | null
-  candidate: Candidate | null
-  confirmed: unknown
   review: { tracking_ok: boolean; note: string } | null
 }

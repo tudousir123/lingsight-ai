@@ -19,7 +19,14 @@ async function mockWorkspace(page: Page) {
       },
     }),
   )
-  stubProjectsApi(page)
+  stubProjectsApi(page, [
+    {
+      id: "learning-memory",
+      name: "学习与记忆",
+      members: [],
+      video_folder: { source_id: "nas", path: "", label: "根目录" },
+    },
+  ])
 }
 
 function deferred() {
@@ -30,16 +37,14 @@ function deferred() {
   return { promise, release }
 }
 
-const root = {
-  items: [
-    { type: "directory", name: "dir-a", path: "a" },
-    { type: "directory", name: "dir-b", path: "b" },
-  ],
-}
+const root = [
+  { type: "directory", name: "dir-a", path: "a" },
+  { type: "directory", name: "dir-b", path: "b" },
+]
 const dirItems: Record<string, unknown> = {
   "": root,
-  a: { items: [{ type: "video", name: "a-video.mp4", id: "va" }] },
-  b: { items: [{ type: "video", name: "b-video.mp4", id: "vb" }] },
+  a: [{ type: "video", name: "a-video.mp4", id: "va" }],
+  b: [{ type: "video", name: "b-video.mp4", id: "vb" }],
 }
 
 type VideosHandler = (
@@ -60,7 +65,7 @@ async function mockVideos(page: Page, handler?: VideosHandler) {
       return route.fulfill({ json: dirItems[path] })
     }
     if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
-      return route.fulfill({ json: { items: [] } })
+      return route.fulfill({ json: [] })
     return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
   })
   return counts
@@ -85,7 +90,7 @@ test("切换目录时中止上一个目录的在途请求", async ({ page }) => 
     if (videosPath(request, "a"))
       failed.push(request.failure()?.errorText ?? "")
   })
-  await page.goto("/inference")
+  await page.goto("/inference?project_id=learning-memory")
   const requestA = page.waitForRequest((r) => videosPath(r, "a"))
   await page.getByRole("button", { name: "打开" }).first().click()
   await requestA
@@ -109,7 +114,7 @@ test("离开推理页（卸载）时中止在途的目录请求", async ({ page 
     if (videosPath(request, "a"))
       failed.push(request.failure()?.errorText ?? "")
   })
-  await page.goto("/inference")
+  await page.goto("/inference?project_id=learning-memory")
   const requestA = page.waitForRequest((r) => videosPath(r, "a"))
   await page.getByRole("button", { name: "打开" }).first().click()
   await requestA
@@ -134,24 +139,23 @@ test("加载失败后下一轮轮询成功，错误清除并显示数据", async
           json: { detail: "推理服务暂不可用" },
         })
       return route.fulfill({
-        json: {
-          items: [
-            {
-              id: "77777777-7777-4777-8777-777777777777",
-              video_id: "one",
-              status: "running",
-              stage: "tracking",
-              error: null,
-              review: null,
-              candidate: null,
-            },
-          ],
-        },
+        json: [
+          {
+            id: "77777777-7777-4777-8777-777777777777",
+            project_id: "learning-memory",
+            video_id: "one",
+            status: "running",
+            stage: "tracking",
+            error: null,
+            review: null,
+            confirmation_id: null,
+          },
+        ],
       })
     }
     return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
   })
-  await page.goto("/inference")
+  await page.goto("/inference?project_id=learning-memory")
   await expect(
     page.getByRole("alert").filter({ hasText: "推理服务暂不可用" }),
   ).toBeVisible()
@@ -173,7 +177,7 @@ test("目录竞态：上一目录的慢响应不覆盖当前目录结果", async
     }
     return route.fulfill({ json: dirItems[path] })
   })
-  await page.goto("/inference")
+  await page.goto("/inference?project_id=learning-memory")
   const requestA = page.waitForRequest((r) => videosPath(r, "a"))
   await page.getByRole("button", { name: "打开" }).first().click()
   await requestA
@@ -199,7 +203,7 @@ test("缓存回访：再次进入已加载目录立即显示缓存，不等待�
     }
     return route.fulfill({ json: dirItems[path] })
   })
-  await page.goto("/inference")
+  await page.goto("/inference?project_id=learning-memory")
   await page.getByRole("button", { name: "打开" }).first().click()
   await expect(page.getByText("a-video.mp4")).toBeVisible()
   await page.getByRole("button", { name: "返回上一级" }).click()
@@ -209,77 +213,4 @@ test("缓存回访：再次进入已加载目录立即显示缓存，不等待�
   // 第二次获取仍被挂起，缓存内容必须已在页面上。
   await expect(page.getByText("a-video.mp4")).toBeVisible({ timeout: 1000 })
   holdRefetch.release()
-})
-
-const reviewTask = {
-  id: "88888888-8888-4888-8888-888888888888",
-  video_id: "one",
-  status: "waiting_for_review",
-  stage: "preannotation",
-  error: null,
-  review: null,
-  candidate: {
-    width: 100,
-    height: 100,
-    frame_count: 100,
-    seed: { frame: 3, x: 20, y: 25 },
-    pool: { cx: 50, cy: 50, radius: 35 },
-    marks: [
-      {
-        label: "m0",
-        polygon: [
-          [1, 1],
-          [2, 1],
-          [1, 2],
-        ],
-      },
-    ],
-    evidence: { review_reasons: [] },
-  },
-}
-
-test("轮廓 JSON 结构非法时在表单内报错、禁用提交，页面不崩溃", async ({
-  page,
-}) => {
-  await mockWorkspace(page)
-  await page.route("**/api/v1/inference/**", (route) => {
-    const url = new URL(route.request().url())
-    if (url.pathname.endsWith("/videos"))
-      return route.fulfill({ json: { items: [] } })
-    if (url.pathname.endsWith("/tasks") && route.request().method() === "GET")
-      return route.fulfill({ json: { items: [reviewTask] } })
-    if (url.pathname.endsWith("candidate.jpg"))
-      return route.fulfill({ status: 404 })
-    return route.fulfill({ status: 404, json: { detail: "not stubbed" } })
-  })
-  await page.goto("/inference")
-  await page.getByRole("button", { name: /等待预标注确认/ }).click()
-  const textarea = page.getByRole("textbox", { name: /轮廓坐标/ })
-  const confirm = page.getByRole("button", { name: "确认并开始追踪" })
-  await expect(confirm).toBeEnabled()
-
-  const invalid = [
-    "[null]",
-    '[{"label":"m0","polygon":[[1]]}]',
-    '[{"label":"m0","polygon":[1,2,3]}]',
-    '[{"label":"m0","polygon":[[1,"2"]]}]',
-    '[{"polygon":[[1,1],[2,1],[1,2]]}]',
-  ]
-  for (const text of invalid) {
-    await textarea.fill(text)
-    await expect(
-      page.getByRole("alert").filter({ hasText: "轮廓格式有误" }),
-    ).toBeVisible()
-    await expect(confirm).toBeDisabled()
-    await expect(textarea).toHaveAttribute("aria-invalid", "true")
-    await expect(
-      page.getByRole("heading", { name: /等待预标注确认/ }),
-    ).toBeVisible()
-  }
-
-  await textarea.fill('[{"label":"m0","polygon":[[1,1],[2,1],[1,2]]}]')
-  await expect(
-    page.getByRole("alert").filter({ hasText: "轮廓格式有误" }),
-  ).toHaveCount(0)
-  await expect(confirm).toBeEnabled()
 })

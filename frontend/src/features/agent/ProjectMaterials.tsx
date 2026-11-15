@@ -1,4 +1,4 @@
-import { useQueries } from "@tanstack/react-query"
+import { useQueries, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { Clapperboard, Database, Files, FileVideo, Play } from "lucide-react"
 import { useState } from "react"
@@ -15,13 +15,21 @@ import { agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { ArtifactCards, ArtifactViewer } from "./Artifacts"
 import { type Artifact, agentJson, type Task, taskKey } from "./api"
 import { ProjectVideoFolder } from "./ProjectVideoFolder"
+import { ProjectVideos } from "./ProjectVideos"
 import {
   membersOfKind,
+  projectErrorText,
   useProjectResults,
   useRemoveProjectMember,
   useResultFrames,
   type WorkspaceProject,
 } from "./projects"
+import {
+  hasLibraryScope,
+  projectVideosKey,
+  useProjectVideos,
+  useWorkspaceInfo,
+} from "./videos"
 import "./project-materials.css"
 
 const FRAMES_PAGE_SIZE = 50
@@ -191,9 +199,17 @@ function ProjectDatabase({
 
 function OriginalVideos({ project }: { project: WorkspaceProject }) {
   const removeMember = useRemoveProjectMember()
+  const queryClient = useQueryClient()
   const [folderOpen, setFolderOpen] = useState(false)
-  const members = membersOfKind(project, "video")
+  const workspace = useWorkspaceInfo()
+  const uploads = useProjectVideos(project.id)
+  const uploadIds = new Set((uploads.data ?? []).map((video) => video.video_id))
+  // Uploads are project members too; only list the other references here.
+  const members = membersOfKind(project, "video").filter(
+    (member) => !uploadIds.has(member.id),
+  )
   const folder = project.video_folder
+  const showFolder = !!folder || hasLibraryScope(workspace.data)
   return (
     <section className="materials-panel" aria-labelledby="project-videos-title">
       <div className="materials-panel-heading">
@@ -203,16 +219,35 @@ function OriginalVideos({ project }: { project: WorkspaceProject }) {
           to="/inference"
           search={
             folder
-              ? { source_id: folder.source_id, path: folder.path ?? "" }
-              : {}
+              ? {
+                  project_id: project.id,
+                  source_id: folder.source_id,
+                  path: folder.path ?? "",
+                }
+              : { project_id: project.id }
           }
         >
-          打开视频目录
+          打开视频推理
         </Link>
       </div>
+      <ProjectVideos
+        project={project}
+        removing={removeMember.isPending}
+        onRemove={(video) =>
+          removeMember.mutate(
+            { projectId: project.id, kind: "video", id: video.video_id },
+            {
+              onSuccess: () =>
+                void queryClient.invalidateQueries({
+                  queryKey: projectVideosKey(project.id),
+                }),
+            },
+          )
+        }
+      />
       {folder && <p className="materials-note">来源：{folder.label}</p>}
-      {members.length === 0 && (
-        <p className="materials-empty">暂无原始视频。</p>
+      {members.length === 0 && uploads.isSuccess && !uploads.data.length && (
+        <p className="materials-empty">暂无原始视频。上传 mp4 或 avi 开始。</p>
       )}
       {members.length > 0 && (
         <ul className="materials-list">
@@ -239,14 +274,20 @@ function OriginalVideos({ project }: { project: WorkspaceProject }) {
           ))}
         </ul>
       )}
-      {removeMember.error && <p role="alert">移出失败，请重试。</p>}
-      <details
-        className="materials-folder"
-        onToggle={(event) => setFolderOpen(event.currentTarget.open)}
-      >
-        <summary>{members.length ? "管理视频来源" : "添加视频"}</summary>
-        {folderOpen && <ProjectVideoFolder project={project} />}
-      </details>
+      {removeMember.error && (
+        <p role="alert">
+          {projectErrorText(removeMember.error, "移出失败，请重试。")}
+        </p>
+      )}
+      {showFolder && (
+        <details
+          className="materials-folder"
+          onToggle={(event) => setFolderOpen(event.currentTarget.open)}
+        >
+          <summary>{members.length ? "管理视频来源" : "添加视频"}</summary>
+          {folderOpen && <ProjectVideoFolder project={project} />}
+        </details>
+      )}
     </section>
   )
 }
