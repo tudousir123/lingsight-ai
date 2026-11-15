@@ -81,6 +81,8 @@ async function mockPlatform(
     confirmationReadError?: number
     // 模拟任务轮询尚未反映下发：确认后任务仍停在 waiting_for_review。
     staysWaiting?: boolean
+    // 服务器此前已收到过的幂等键（例如响应在途时页面被刷新）。
+    priorKeys?: string[]
   } = {},
 ) {
   await page.addInitScript(() => {
@@ -205,7 +207,9 @@ async function mockPlatform(
   await page.route(`${base}/preannotation-confirmations`, (route: Route) => {
     const body = route.request().postDataJSON()
     const key = route.request().headers()["idempotency-key"] ?? ""
-    const replay = state.posts.some((post) => post.key === key)
+    const replay =
+      (options.priorKeys ?? []).includes(key) ||
+      state.posts.some((post) => post.key === key)
     state.posts.push({ body, key })
     if (options.confirmError)
       return route.fulfill({
@@ -635,4 +639,86 @@ test("同一会话确认后下发仍 pending：新确认被禁用，但原键原
   await expect.poll(() => state.posts.length).toBe(2)
   expect(state.posts[1]).toEqual(state.posts[0])
   await expect(page.getByText(/并不代表追踪完成/)).toBeVisible()
+})
+
+// 未收到响应就中断的请求（本地没有 confirmationId）：几何相同不足以证明它产生了已保存版本。
+const SAVED_GEOMETRY = {
+  seed: { frame: 7, x: 450, y: 350 },
+  pool: { cx: 500, cy: 400, radius: 300 },
+  marks: [],
+}
+const unacknowledged = (expected: string | null, key: string) =>
+  JSON.stringify({
+    payload: JSON.stringify({
+      task_id: TASK,
+      candidate_version: VERSION,
+      expected_confirmation_id: expected,
+      ...SAVED_GEOMETRY,
+    }),
+    key,
+  })
+
+for (const dispatch of [
+  { status: "failed", error_code: "upstream_rejected" },
+  { status: "pending", error_code: "dispatch_outcome_unknown" },
+] as const) {
+  test(`以已保存版本为基线、未获响应的新请求（${dispatch.status}）不被当作该版本的重试下发`, async ({
+    page,
+  }) => {
+    const state = await mockPlatform(page, {
+      tasks: [
+        {
+          id: TASK,
+          status: "waiting_for_review",
+          confirmation_id: CONFIRMED_ID,
+        },
+      ],
+      confirmations: [confirmationFor(CONFIRMED_ID, TASK, dispatch)],
+    })
+    await page.addInitScript(
+      ([key, value]) => sessionStorage.setItem(key, value),
+      [
+        `lingsight.confirm-attempt.${TASK}`,
+        unacknowledged(CONFIRMED_ID, "new-key"),
+      ] as const,
+    )
+    await openTask(page, TASK)
+    await expect(page.getByText(CONFIRMED_ID)).toBeVisible()
+    // 该请求的乐观锁基线就是已保存版本，它只可能创建新版本，不可能是其原始请求。
+    await expect(page.getByRole("button", { name: "重试下发" })).toHaveCount(0)
+    await expect(
+      page.getByText(/需在最初提交确认的浏览器会话中恢复下发/),
+    ).toBeVisible()
+    expect(state.posts).toHaveLength(0)
+  })
+}
+
+test("响应在途时刷新：基线早于已保存版本的原始请求仍可原键原载荷恢复下发", async ({
+  page,
+}) => {
+  const state = await mockPlatform(page, {
+    tasks: [
+      { id: TASK, status: "waiting_for_review", confirmation_id: CONFIRMED_ID },
+    ],
+    confirmations: [
+      confirmationFor(CONFIRMED_ID, TASK, {
+        status: "failed",
+        error_code: "upstream_rejected",
+      }),
+    ],
+    priorKeys: ["orig-key"],
+  })
+  const stored = unacknowledged(null, "orig-key")
+  await page.addInitScript(
+    ([key, value]) => sessionStorage.setItem(key, value),
+    [`lingsight.confirm-attempt.${TASK}`, stored] as const,
+  )
+  await openTask(page, TASK)
+  await expect(page.getByText(CONFIRMED_ID)).toBeVisible()
+  await page.getByRole("button", { name: "重试下发" }).click()
+  await expect.poll(() => state.posts.length).toBe(1)
+  expect(state.posts[0].key).toBe("orig-key")
+  expect(state.posts[0].body).toEqual(JSON.parse(JSON.parse(stored).payload))
+  await expect(page.getByText(/并不代表追踪完成/)).toBeVisible()
+  expect(state.confirmations.map((c) => c.id)).toEqual([CONFIRMED_ID])
 })

@@ -138,6 +138,8 @@ function replayable(attempt: Attempt | null, confirmed: Confirmation) {
   const sent = parseInput(attempt.payload)
   return (
     !!sent &&
+    // A request based on this version can only have created a newer one.
+    sent.expected_confirmation_id !== confirmed.id &&
     sent.task_id === confirmed.task_id &&
     sent.candidate_version === confirmed.candidate_version &&
     geometryOf(sent) === geometryOf(confirmed)
