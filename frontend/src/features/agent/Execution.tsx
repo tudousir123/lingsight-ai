@@ -12,6 +12,7 @@ export type ExecutionCapability = {
   operations: "ledger-v1"
   cancellation: "verified-v1"
   enabled: boolean
+  files?: boolean
 }
 
 export function useExecutionCapability() {
@@ -20,12 +21,10 @@ export function useExecutionCapability() {
     queryKey: ["agent-execution-capability", user?.id],
     enabled: !!user?.id,
     queryFn: async ({ signal }) => {
-      const response = await agentJson<{ execution?: ExecutionCapability }>(
-        agentRoutes.capabilities(),
-        undefined,
-        "GET",
-        signal,
-      )
+      const response = await agentJson<{
+        execution?: ExecutionCapability
+        files?: string
+      }>(agentRoutes.capabilities(), undefined, "GET", signal)
       const capability = response?.execution
       if (
         capability?.contract !== "durable-run-v1" ||
@@ -40,7 +39,7 @@ export function useExecutionCapability() {
         throw new Error(
           "执行能力不可用：Agent 服务缺少兼容的 Pi Durable 协议。",
         )
-      return capability
+      return { ...capability, files: response.files === "controlled-files-v1" }
     },
     retry: false,
     refetchInterval: 5000,

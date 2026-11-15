@@ -9,6 +9,7 @@ export const inferenceGatewayBase = "/api/v1/inference"
 export const agentRoutes = {
   artifactsByArtifactId: (artifactId: string) => `artifacts/${artifactId}`,
   capabilities: () => `capabilities`,
+  inputs: () => `inputs`,
   memories: () => `memories`,
   personalAgent: () => `personal-agent`,
   runsByRunId: (runId: string) => `runs/${runId}`,

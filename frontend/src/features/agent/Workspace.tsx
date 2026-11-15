@@ -41,6 +41,7 @@ import {
 } from "./api"
 import { ExecutionStatus, useExecutionCapability } from "./Execution"
 import { useTaskEvents } from "./events"
+import { type FileInputRef, FileInputs } from "./FileInputs"
 import { MemoryPanel } from "./MemoryPanel"
 import { OperationReview } from "./Operations"
 import { PersonalAgentStatus, usePersonalAgent } from "./PersonalAgent"
@@ -289,6 +290,8 @@ export function AgentWorkspace({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState("")
   const [artifact, setArtifact] = useState<Artifact | null>(null)
+  const [fileInputs, setFileInputs] = useState<FileInputRef[]>([])
+  const [filesBusy, setFilesBusy] = useState(false)
   const [videos, setVideos] = useState<WorkflowVideo[]>([])
   const [attachmentOpen, setAttachmentOpen] = useState(false)
   const [attachmentSource, setAttachmentSource] =
@@ -334,6 +337,7 @@ export function AgentWorkspace({
     setError("")
     setArtifact(null)
     setVideos([])
+    setFileInputs([])
     setAttachmentOpen(false)
     setAttachmentSource("local")
   }, [taskId, projectId])
@@ -343,9 +347,39 @@ export function AgentWorkspace({
     : agentRoutes.tasks()
   useEffect(() => {
     if (!requestOwner) return
+    let alive = true
+    const controller = new AbortController()
     try {
       const saved = pendingRequest(requestOwner, inputPath)
       const text = saved?.body.text ?? saved?.body.goal
+      if (!taskId && Array.isArray(saved?.body.input_ids)) {
+        const ids = saved.body.input_ids
+        setFilesBusy(true)
+        void agentJson<FileInputRef[]>(
+          agentRoutes.inputs(),
+          undefined,
+          "GET",
+          controller.signal,
+        )
+          .then((refs) => {
+            if (!alive) return
+            const selected = ids.map((id) => refs.find((ref) => ref.id === id))
+            if (selected.some((ref) => !ref))
+              throw new Error(
+                "上次请求的材料引用不可用，已保留原请求。请先核查任务，不要另建替代任务。",
+              )
+            setFileInputs(selected as FileInputRef[])
+          })
+          .catch((error) => {
+            if (alive)
+              setError(
+                error instanceof Error ? error.message : "无法恢复材料引用。",
+              )
+          })
+          .finally(() => {
+            if (alive) setFilesBusy(false)
+          })
+      }
       if (typeof text === "string") {
         setDraft(text)
         setError(
@@ -355,7 +389,11 @@ export function AgentWorkspace({
     } catch (error) {
       setError(error instanceof Error ? error.message : "未确认请求不可用。")
     }
-  }, [requestOwner, inputPath])
+    return () => {
+      alive = false
+      controller.abort()
+    }
+  }, [requestOwner, inputPath, taskId])
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: tasksKey })
     void queryClient.invalidateQueries({ queryKey: taskKey(taskId) })
@@ -369,7 +407,11 @@ export function AgentWorkspace({
     (!!task.data &&
       task.data.personal_agent_id === personal.data?.id &&
       task.data.environment_id === personal.data?.environment.id)
+  const taskHasFiles =
+    task.data?.artifacts?.some((item) => item.kind === "input") === true
+  const taskFilesReady = !taskHasFiles || execution.data?.files === true
   const executionReady =
+    taskFilesReady &&
     personalReady &&
     taskBound &&
     !execution.isPending &&
@@ -383,6 +425,8 @@ export function AgentWorkspace({
   const canSend =
     (!!draft.trim() || (canAttach && videos.length > 0)) &&
     !pending &&
+    !filesBusy &&
+    (!fileInputs.length || execution.data?.files === true) &&
     executionReady &&
     !blocked &&
     !tasks.error &&
@@ -414,6 +458,9 @@ export function AgentWorkspace({
           inputPath,
           {
             goal: text,
+            ...(fileInputs.length
+              ? { input_ids: fileInputs.map((ref) => ref.id) }
+              : {}),
             ...(projectId ? { project_id: projectId } : {}),
           },
         )
@@ -455,6 +502,7 @@ export function AgentWorkspace({
       }
       consumeBrief()
       setDraft("")
+      setFileInputs([])
       refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : "提交失败，已保留你的问题。")
@@ -485,6 +533,10 @@ export function AgentWorkspace({
     input.current?.focus({ preventScroll: true })
   }
   const startVideoAnalysis = (source: WorkflowVideo["source"]) => {
+    if (fileInputs.length) {
+      setError("请先移除分析文件，再切换视频流程；两种输入不会混用。")
+      return
+    }
     if (!canAttach) {
       void navigate({ to: source === "drive" ? "/inference" : "/annotations" })
       return
@@ -528,6 +580,21 @@ export function AgentWorkspace({
             </span>
           )}
         </div>
+        {!taskId && (
+          <FileInputs
+            value={fileInputs}
+            onChange={setFileInputs}
+            onBusy={setFilesBusy}
+            key={`${projectId ?? ""}:${personal.data?.id ?? ""}`}
+            disabled={
+              pending ||
+              filesBusy ||
+              !executionReady ||
+              execution.data?.files !== true ||
+              videos.length > 0
+            }
+          />
+        )}
         {videos.length > 0 && (
           <VideoAttachmentList
             videos={videos}
@@ -568,7 +635,7 @@ export function AgentWorkspace({
           }}
         />
         <div className="agent-composer-toolbar">
-          {canAttach && (
+          {canAttach && fileInputs.length === 0 && (
             <VideoAttachment
               open={attachmentOpen}
               onOpenChange={setAttachmentOpen}
@@ -646,6 +713,11 @@ export function AgentWorkspace({
               onRetry={() => void execution.refetch()}
             />
             <MemoryPanel taskId={taskId} />
+            {taskHasFiles && !taskFilesReady && !execution.isPending && (
+              <p className="agent-error" role="alert">
+                此任务包含受控文件；当前服务不支持文件协议，已禁用继续分析与恢复。历史材料仍可读取。
+              </p>
+            )}
             {!!task.data && personal.data && !taskBound && (
               <p className="agent-error" role="alert">
                 此任务未绑定当前个人环境，已禁用继续执行。历史材料不会自动迁移。
@@ -765,8 +837,12 @@ export function AgentWorkspace({
                         {task.data.artifacts.length} 个文件 · 已保留版本
                       </small>
                     </h2>
+                    <p>
+                      每份材料保留所属执行与内容版本。未完成、失败或取消执行的材料仅供核查，不是已完成科研交付物。
+                    </p>
                     <ArtifactCards
                       artifacts={task.data.artifacts}
+                      runs={task.data.runs}
                       onSelect={setArtifact}
                     />
                   </section>
@@ -793,6 +869,10 @@ export function AgentWorkspace({
             key={artifact.id}
             artifact={artifact}
             taskId={taskId}
+            runStatus={
+              task.data?.runs.find((item) => item.id === artifact.run_id)
+                ?.status
+            }
             onClose={() => setArtifact(null)}
           />
         )}
