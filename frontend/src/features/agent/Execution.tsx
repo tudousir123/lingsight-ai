@@ -13,6 +13,7 @@ export type ExecutionCapability = {
   cancellation: "verified-v1"
   enabled: boolean
   files?: boolean
+  browser?: boolean
 }
 
 export function useExecutionCapability() {
@@ -24,6 +25,13 @@ export function useExecutionCapability() {
       const response = await agentJson<{
         execution?: ExecutionCapability
         files?: string
+        browser?: {
+          contract: string
+          enabled: boolean
+          profile: string
+          javascript: boolean
+          downloads: boolean
+        }
       }>(agentRoutes.capabilities(), undefined, "GET", signal)
       const capability = response?.execution
       if (
@@ -39,7 +47,16 @@ export function useExecutionCapability() {
         throw new Error(
           "执行能力不可用：Agent 服务缺少兼容的 Pi Durable 协议。",
         )
-      return { ...capability, files: response.files === "controlled-files-v1" }
+      return {
+        ...capability,
+        files: response.files === "controlled-files-v1",
+        browser:
+          response.browser?.contract === "controlled-browser-v1" &&
+          response.browser.enabled === true &&
+          response.browser.profile === "owner-storage-state-v1" &&
+          response.browser.javascript === false &&
+          response.browser.downloads === false,
+      }
     },
     retry: false,
     refetchInterval: 5000,

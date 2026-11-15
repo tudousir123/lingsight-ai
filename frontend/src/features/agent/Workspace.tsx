@@ -39,6 +39,7 @@ import {
   taskKey,
   tasksKey,
 } from "./api"
+import { BrowserPanel } from "./Browser"
 import { ExecutionStatus, useExecutionCapability } from "./Execution"
 import { useTaskEvents } from "./events"
 import { type FileInputRef, FileInputs } from "./FileInputs"
@@ -80,12 +81,14 @@ function Conversation({
   events,
   owner,
   operationsSupported,
+  browserSupported,
   onReview,
 }: {
   task: Task
   events: TaskEvent[]
   owner: string
   operationsSupported: boolean
+  browserSupported: boolean
   onReview: () => void
 }) {
   return (
@@ -133,6 +136,11 @@ function Conversation({
               owner={owner}
               supported={operationsSupported}
               onDone={onReview}
+            />
+            <BrowserPanel
+              run={run}
+              owner={owner}
+              supported={browserSupported}
             />
             {run.recovery_blocked && (
               <p role="status">{run.recovery_blocked}</p>
@@ -813,6 +821,9 @@ export function AgentWorkspace({
                   operationsSupported={
                     !execution.error &&
                     execution.data?.operations === "ledger-v1"
+                  }
+                  browserSupported={
+                    !execution.error && execution.data?.browser === true
                   }
                   onReview={refresh}
                 />

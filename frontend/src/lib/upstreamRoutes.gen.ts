@@ -13,6 +13,7 @@ export const agentRoutes = {
   memories: () => `memories`,
   personalAgent: () => `personal-agent`,
   runsByRunId: (runId: string) => `runs/${runId}`,
+  runsByRunIdBrowserGrants: (runId: string) => `runs/${runId}/browser-grants`,
   runsByRunIdCancel: (runId: string) => `runs/${runId}/cancel`,
   runsByRunIdClarificationsByClarificationIdAnswer: (runId: string, clarificationId: string) => `runs/${runId}/clarifications/${clarificationId}/answer`,
   runsByRunIdOperations: (runId: string) => `runs/${runId}/operations`,

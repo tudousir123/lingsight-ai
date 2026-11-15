@@ -40,6 +40,7 @@ def agent_http(
         "contract-fixture.ts",
         "memory-contract-fixture.ts",
         "operations-contract-fixture.ts",
+        "browser-contract-fixture.ts",
         "file-contract-fixture.ts",
     }:
         pytest.fail("Unknown isolated Agent contract fixture")

@@ -46,6 +46,7 @@ OPERATIONS = OperationTable(
             "tasks/{task_id}/bundle",
             "runs/{run_id}",
             "runs/{run_id}/operations",
+            "runs/{run_id}/browser-grants",
             "artifacts/{artifact_id}",
         ),
         "POST": (
@@ -54,6 +55,7 @@ OPERATIONS = OperationTable(
             "tasks/{task_id}/messages",
             "runs/{run_id}/cancel",
             "runs/{run_id}/resume",
+            "runs/{run_id}/browser-grants",
             "runs/{run_id}/operations/{operation_id}/verify",
             "runs/{run_id}/operations/{operation_id}/resolve",
             "runs/{run_id}/clarifications/{clarification_id}/answer",
@@ -100,6 +102,7 @@ async def ensure_project_support(
     files: bool = False,
     memory: bool = False,
     operations: bool = False,
+    browser: bool = False,
 ) -> None:
     """Refuse old Agent versions before they can create an unscoped task."""
     unavailable = "科研 Agent 项目分析尚未就绪，请先更新服务并配置项目数据源"
@@ -113,6 +116,8 @@ async def ensure_project_support(
         unavailable = "工具操作核验协议不兼容，请更新科研 Agent 服务"
     if files:
         unavailable = "受控文件能力不兼容，已禁用文件输入"
+    if browser:
+        unavailable = "受控浏览器未配置或授权协议不兼容"
     probe = Request({**request.scope, "method": "GET", "query_string": b""})
     try:
         response = await forward(
@@ -153,6 +158,17 @@ async def ensure_project_support(
                 or runtime.get("cancellation") != "verified-v1"
             ):
                 raise HTTPException(503, unavailable)
+            if browser:
+                controlled = capabilities.get("browser")
+                if (
+                    not isinstance(controlled, dict)
+                    or controlled.get("contract") != "controlled-browser-v1"
+                    or controlled.get("enabled") is not True
+                    or controlled.get("profile") != "owner-storage-state-v1"
+                    or controlled.get("javascript") is not False
+                    or controlled.get("downloads") is not False
+                ):
+                    raise HTTPException(503, unavailable)
             if files and capabilities.get("files") != "controlled-files-v1":
                 raise HTTPException(503, unavailable)
             if execution and (
@@ -260,6 +276,11 @@ async def agent_gateway(
     payload = await read_payload(request, POLICY)
     project_scope = False
     file_scope = path == "inputs"
+    browser_scope = path.endswith("/browser-grants")
+    if browser_scope and (
+        request.query_params or (request.method == "GET" and payload)
+    ):
+        raise HTTPException(422, "Browser selectors are forbidden")
     if file_scope and request.query_params:
         raise HTTPException(422, "Material selectors are forbidden")
     if request.method in {"POST", "PATCH"} and (
@@ -342,7 +363,8 @@ async def agent_gateway(
         and path != "inputs"
         and not path.endswith("/cancel")
         and not operation_review,
-        operations=operation_review,
+        operations=operation_review or browser_scope,
+        browser=browser_scope,
         memory=memory_read,
         personal=path == "personal-agent"
         or (path == "tasks" and request.method == "POST"),

@@ -211,13 +211,15 @@ export function ArtifactCards({
           <span>
             <strong>{a.name}</strong>
             <small>
-              {a.kind === "figure"
-                ? "图表"
-                : a.kind === "report"
-                  ? "报告"
-                  : a.kind === "data"
-                    ? "数据"
-                    : "文件"}{" "}
+              {a.name.startsWith("browser-source-")
+                ? "网页来源（不可信）"
+                : a.kind === "figure"
+                  ? "图表"
+                  : a.kind === "report"
+                    ? "报告"
+                    : a.kind === "data"
+                      ? "数据"
+                      : "文件"}{" "}
               · {Math.ceil(a.bytes / 1024)} KB
               {runs.find((run) => run.id === a.run_id) &&
                 ` · 执行${statusLabels[runs.find((run) => run.id === a.run_id)!.status]}`}

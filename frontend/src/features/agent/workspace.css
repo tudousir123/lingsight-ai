@@ -778,3 +778,30 @@
   text-decoration: underline;
   margin: 4px 0;
 }
+.agent-browser {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.agent-browser summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.agent-browser input:not([type="checkbox"]),
+.agent-browser select {
+  display: block;
+  width: 100%;
+  margin: 0.4rem 0 0;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+}
+.agent-browser input[type="checkbox"] {
+  margin-right: 0.5rem;
+}
+.agent-browser fieldset {
+  margin-top: 1rem;
+  min-width: 0;
+}
