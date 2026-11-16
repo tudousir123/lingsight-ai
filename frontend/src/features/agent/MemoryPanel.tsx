@@ -5,7 +5,7 @@ import { agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { agentJson } from "./api"
 import "./memory.css"
 
-type Source = {
+export type Source = {
   id: string
   task_id: string
   run_id: string
@@ -45,7 +45,7 @@ type Uses = {
     sources: Source[]
   }[]
 }
-function Sources({ sources }: { sources: Source[] }) {
+export function Sources({ sources }: { sources: Source[] }) {
   return (
     <ul className="agent-memory-sources">
       {sources.map((source) => (

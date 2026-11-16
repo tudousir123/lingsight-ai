@@ -53,6 +53,7 @@ import {
   useWorkspaceProjects,
 } from "./projects"
 import { useTasks } from "./queries"
+import { ResearchMemoryPanel } from "./ResearchMemory"
 import { agentRequest, pendingRequest } from "./requests"
 import { VideoAttachment, VideoAttachmentList } from "./VideoAttachment"
 import {
@@ -721,6 +722,13 @@ export function AgentWorkspace({
               onRetry={() => void execution.refetch()}
             />
             <MemoryPanel taskId={taskId} />
+            {task.data?.project_id && (
+              <ResearchMemoryPanel
+                taskId={taskId}
+                projectId={task.data.project_id}
+                supported={!!execution.data?.researchMemory}
+              />
+            )}
             {taskHasFiles && !taskFilesReady && !execution.isPending && (
               <p className="agent-error" role="alert">
                 此任务包含受控文件；当前服务不支持文件协议，已禁用继续分析与恢复。历史材料仍可读取。
