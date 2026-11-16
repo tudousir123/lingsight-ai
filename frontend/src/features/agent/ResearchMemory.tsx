@@ -6,6 +6,11 @@ import {
   agentRoutes,
 } from "@/lib/upstreamRoutes.gen"
 import { AgentError, agentJson } from "./api"
+import {
+  type MemoryIndex,
+  MemoryIndexControl,
+  MemoryMutation,
+} from "./MemoryManagement"
 import { type Source, Sources, useMemoryUses } from "./MemoryPanel"
 import { agentRequest, discardPendingRequest, pendingRequest } from "./requests"
 
@@ -18,7 +23,7 @@ type ResearchMemory = {
   content_version: number
   version: number
   source_fingerprint: string
-  state: "active" | "rejected" | "source_changed"
+  state: "active" | "rejected" | "source_changed" | "deleted"
   confirmation: "pending" | "confirmed" | "rejected"
   sources: Source[]
 }
@@ -30,6 +35,7 @@ type ResearchView = {
     extraction: { recipient: string } | null
     embedding: { recipient: string } | null
   }
+  index?: MemoryIndex
   items: ResearchMemory[]
 }
 function Decision({
@@ -208,18 +214,28 @@ export function ResearchMemoryPanel({
             {view.processing.embedding?.recipient ?? "未启用"}
             。任务生成沿用现有授权模型；确认本身不调用额外模型。
           </p>
+          {view.index && (
+            <MemoryIndexControl
+              index={view.index}
+              owner={user!.id}
+              path={agentRoutes.tasksByTaskIdResearchMemoriesRebuild(taskId)}
+              onDone={() => void memories.refetch()}
+            />
+          )}
           <ul className="agent-memory-records">
             {view.items.map((memory) => (
               <li key={memory.id}>
                 <p>{memory.content}</p>
                 <strong>
-                  {memory.state === "source_changed"
-                    ? "来源已变化 · 旧确认失效，需新候选"
-                    : memory.confirmation === "confirmed"
-                      ? "已确认 · 仅本项目"
-                      : memory.confirmation === "rejected"
-                        ? "已拒绝 · 不会自动提升"
-                        : "候选 · 待核对"}
+                  {memory.state === "deleted"
+                    ? "已删除 · 不再复用"
+                    : memory.state === "source_changed"
+                      ? "来源已变化 · 旧确认失效，需新候选"
+                      : memory.confirmation === "confirmed"
+                        ? "已确认 · 仅本项目"
+                        : memory.confirmation === "rejected"
+                          ? "已拒绝 · 不会自动提升"
+                          : "候选 · 待核对"}
                 </strong>
                 <p>
                   内容版本 {memory.content_version} · 核对版本 {memory.version}
@@ -229,6 +245,19 @@ export function ResearchMemoryPanel({
                   <summary>来源集合版本指纹</summary>
                   <code>{memory.source_fingerprint}</code>
                 </details>
+                <MemoryMutation
+                  memory={memory}
+                  owner={user!.id}
+                  path={agentRoutes.tasksByTaskIdResearchMemoriesByMemoryIdMutation(
+                    taskId,
+                    memory.id,
+                  )}
+                  research={true}
+                  onDone={() => {
+                    void memories.refetch()
+                    void uses.refetch()
+                  }}
+                />
                 <Decision
                   memory={memory}
                   taskId={taskId}

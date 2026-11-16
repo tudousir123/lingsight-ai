@@ -11,6 +11,7 @@ CompletionMode = Literal["auto", "qa", "research"]
 # independently deployed Agent's capability advertisement.
 AGENT_BROWSER_CONTRACT = "controlled-browser-v1"
 AGENT_BROWSER_PROFILE = "owner-storage-state-v1"
+AGENT_MEMORY_MANAGEMENT_CONTRACT = "memory-management-v1"
 AGENT_RESEARCH_MEMORY_CONTRACT = "project-research-memory-v1"
 
 

@@ -23,6 +23,7 @@ from app.api.gateway import LiteralSet, OperationTable
 from app.contracts import (
     AGENT_BROWSER_CONTRACT,
     AGENT_BROWSER_PROFILE,
+    AGENT_MEMORY_MANAGEMENT_CONTRACT,
     AGENT_RESEARCH_MEMORY_CONTRACT,
 )
 
@@ -143,6 +144,7 @@ def render_module(services: Sequence[ServiceRoutes]) -> str:
     ]
     lines.extend(
         [
+            f'export const agentMemoryManagementContract = "{AGENT_MEMORY_MANAGEMENT_CONTRACT}" as const',
             f'export const agentResearchMemoryContract = "{AGENT_RESEARCH_MEMORY_CONTRACT}" as const',
             "",
             "export const agentBrowserContract = {",

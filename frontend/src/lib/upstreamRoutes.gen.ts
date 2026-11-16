@@ -3,6 +3,7 @@
 // Sources: backend/app/api/routes/*.py tables and backend/app/contracts.py versions;
 // backend/tests/scripts/test_export_frontend_routes.py fails on drift.
 
+export const agentMemoryManagementContract = "memory-management-v1" as const
 export const agentResearchMemoryContract = "project-research-memory-v1" as const
 
 export const agentBrowserContract = {
@@ -18,6 +19,9 @@ export const agentRoutes = {
   capabilities: () => `capabilities`,
   inputs: () => `inputs`,
   memories: () => `memories`,
+  memoriesRebuild: () => `memories/rebuild`,
+  memoriesByMemoryIdHistory: (memoryId: string) => `memories/${memoryId}/history`,
+  memoriesByMemoryIdMutation: (memoryId: string) => `memories/${memoryId}/mutation`,
   personalAgent: () => `personal-agent`,
   runsByRunId: (runId: string) => `runs/${runId}`,
   runsByRunIdBrowserGrants: (runId: string) => `runs/${runId}/browser-grants`,
@@ -34,7 +38,10 @@ export const agentRoutes = {
   tasksByTaskIdMemories: (taskId: string) => `tasks/${taskId}/memories`,
   tasksByTaskIdMessages: (taskId: string) => `tasks/${taskId}/messages`,
   tasksByTaskIdResearchMemories: (taskId: string) => `tasks/${taskId}/research-memories`,
+  tasksByTaskIdResearchMemoriesRebuild: (taskId: string) => `tasks/${taskId}/research-memories/rebuild`,
   tasksByTaskIdResearchMemoriesByMemoryIdDecision: (taskId: string, memoryId: string) => `tasks/${taskId}/research-memories/${memoryId}/decision`,
+  tasksByTaskIdResearchMemoriesByMemoryIdHistory: (taskId: string, memoryId: string) => `tasks/${taskId}/research-memories/${memoryId}/history`,
+  tasksByTaskIdResearchMemoriesByMemoryIdMutation: (taskId: string, memoryId: string) => `tasks/${taskId}/research-memories/${memoryId}/mutation`,
 } as const
 
 export type InferenceArtifactName = "candidate.jpg" | "overlay.mp4" | "tracking.json" | "keypoints.json" | "provenance.json"

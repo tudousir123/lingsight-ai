@@ -3,6 +3,11 @@ import { Link } from "@tanstack/react-router"
 import useAuth from "@/hooks/useAuth"
 import { agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { agentJson } from "./api"
+import {
+  type MemoryIndex,
+  MemoryIndexControl,
+  MemoryMutation,
+} from "./MemoryManagement"
 import "./memory.css"
 
 export type Source = {
@@ -20,7 +25,9 @@ type Preference = {
   project_id: null
   content: string
   content_version: number
-  state: "active"
+  version: number
+  source_fingerprint: string
+  state: "active" | "deleted"
   sources: Source[]
 }
 type Recipient = { recipient: string; model: string }
@@ -31,7 +38,7 @@ type MemoryView = {
     extraction: Recipient | null
     embedding: Recipient | null
   }
-  index: { state: string }
+  index: MemoryIndex
   items: Preference[]
 }
 export type Uses = {
@@ -110,7 +117,7 @@ export function MemoryPanel({ taskId }: { taskId?: string }) {
             m.owner_user_id !== user?.id ||
             m.kind !== "personal_preference" ||
             m.project_id !== null ||
-            m.state !== "active" ||
+            !["active", "deleted"].includes(m.state) ||
             !Array.isArray(m.sources),
         )
       )
@@ -162,6 +169,12 @@ export function MemoryPanel({ taskId }: { taskId?: string }) {
               ；权威记录仍可查看，不保证本次召回。
             </p>
           )}
+          <MemoryIndexControl
+            index={view.index}
+            owner={user!.id}
+            path={agentRoutes.memoriesRebuild()}
+            onDone={() => void memories.refetch()}
+          />
           <details>
             <summary>查看个人偏好（{view.items.length}）</summary>
             {view.items.length === 0 && <p>尚无已保存的个人偏好。</p>}
@@ -169,8 +182,23 @@ export function MemoryPanel({ taskId }: { taskId?: string }) {
               {view.items.map((memory) => (
                 <li key={memory.id}>
                   <p>{memory.content}</p>
-                  <small>自动保存 · 内容版本 {memory.content_version}</small>
+                  <small>
+                    {memory.state === "deleted"
+                      ? "已删除 · 不再复用"
+                      : "自动保存"}{" "}
+                    · 内容版本 {memory.content_version}
+                  </small>
                   <Sources sources={memory.sources} />
+                  <MemoryMutation
+                    memory={memory}
+                    owner={user!.id}
+                    path={agentRoutes.memoriesByMemoryIdMutation(memory.id)}
+                    research={false}
+                    onDone={() => {
+                      void memories.refetch()
+                      void uses.refetch()
+                    }}
+                  />
                 </li>
               ))}
             </ul>

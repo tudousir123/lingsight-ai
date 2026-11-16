@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import useAuth from "@/hooks/useAuth"
 import {
   agentBrowserContract,
+  agentMemoryManagementContract,
   agentResearchMemoryContract,
   agentRoutes,
 } from "@/lib/upstreamRoutes.gen"
@@ -17,6 +18,7 @@ export type ExecutionCapability = {
   cancellation: "verified-v1"
   enabled: boolean
   files?: boolean
+  memoryManagement?: boolean
   researchMemory?: boolean
   browser?: boolean
 }
@@ -29,6 +31,7 @@ export function useExecutionCapability() {
     queryFn: async ({ signal }) => {
       const response = await agentJson<{
         execution?: ExecutionCapability
+        memory_management?: string
         research_memory?: string
         files?: string
         browser?: {
@@ -55,6 +58,8 @@ export function useExecutionCapability() {
         )
       return {
         ...capability,
+        memoryManagement:
+          response.memory_management === agentMemoryManagementContract,
         researchMemory:
           response.research_memory === agentResearchMemoryContract,
         files: response.files === "controlled-files-v1",

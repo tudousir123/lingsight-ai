@@ -12,6 +12,7 @@ from app.api.routes.agent import router
 from app.contracts import (
     AGENT_BROWSER_CONTRACT,
     AGENT_BROWSER_PROFILE,
+    AGENT_MEMORY_MANAGEMENT_CONTRACT,
     AGENT_RESEARCH_MEMORY_CONTRACT,
 )
 from app.core.config import settings
@@ -77,6 +78,42 @@ class AgentGatewayTest(unittest.TestCase):
             self.addCleanup(p.stop)
         self.client = TestClient(self.app)
         self.addCleanup(self.client.close)
+
+    def test_memory_management_protocol_fails_closed_without_requiring_generation(
+        self,
+    ) -> None:
+        capability = self.capabilities.json()
+        capability["execution"]["enabled"] = False
+        capability["research_memory"] = AGENT_RESEARCH_MEMORY_CONTRACT
+        routes = [
+            ("GET", f"memories/{TASK}/history"),
+            ("POST", f"memories/{TASK}/mutation"),
+            ("POST", "memories/rebuild"),
+            ("GET", f"tasks/{TASK}/research-memories/{TASK}/history"),
+            ("POST", f"tasks/{TASK}/research-memories/{TASK}/mutation"),
+            ("POST", f"tasks/{TASK}/research-memories/rebuild"),
+        ]
+        for version in (None, "unsupported", AGENT_MEMORY_MANAGEMENT_CONTRACT):
+            for method, path in routes:
+                with self.subTest(version=version, path=path):
+                    self.capabilities = httpx.Response(
+                        200, json={**capability, "memory_management": version}
+                    )
+                    self.calls.clear()
+                    response = self.client.request(
+                        method,
+                        "/agent/" + path,
+                        **({"json": {"request_id": TASK}} if method == "POST" else {}),
+                    )
+                    self.assertEqual(
+                        response.status_code,
+                        200 if version == AGENT_MEMORY_MANAGEMENT_CONTRACT else 503,
+                        response.text,
+                    )
+                    self.assertEqual(
+                        len(self.calls),
+                        2 if version == AGENT_MEMORY_MANAGEMENT_CONTRACT else 1,
+                    )
 
     def test_research_review_requires_compatible_protocol_but_not_enabled_generation(
         self,
