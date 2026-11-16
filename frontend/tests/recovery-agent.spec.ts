@@ -3,6 +3,7 @@ import {
   executionCapabilityFixture,
   personalAgentFixture,
   personalTaskBinding,
+  requestIdPattern,
 } from "./utils/personalAgentApi"
 import { stubProjectsApi } from "./utils/projectsApi"
 
@@ -152,6 +153,36 @@ for (const kind of ["create", "message", "resume", "clarification"] as const) {
       await expect(page).toHaveURL(new RegExp(`/tasks/${id}`))
   })
 }
+test("without secure-context randomUUID, submissions retain a v4 identity across lost acknowledgement and reload", async ({
+  page,
+}) => {
+  // HTTP LAN/container origins provide getRandomValues but not randomUUID.
+  // Keep this browser-boundary regression effective on localhost previews too.
+  await page.addInitScript(() => {
+    Object.defineProperty(crypto, "randomUUID", { value: undefined })
+  })
+  const f = await fixture(page)
+  await page.goto(`/tasks/${id}`)
+  const input = page.getByRole("textbox", { name: "研究问题", exact: true })
+  const send = page.getByRole("button", { name: "发送研究问题" })
+  await input.fill("Explain synthetic direction without a secure context")
+  await send.click()
+  await expect.poll(() => f.writes.length).toBe(1)
+  expect(f.writes[0].body.request_id).toMatch(requestIdPattern)
+  await page.reload()
+  await expect(input).toHaveValue(
+    "Explain synthetic direction without a secure context",
+  )
+  await send.click()
+  await expect.poll(() => f.writes.length).toBe(2)
+  expect(f.writes[1]).toEqual(f.writes[0])
+  await expect(input).toHaveValue("")
+  await input.fill("A new acknowledged synthetic request")
+  await send.click()
+  await expect.poll(() => f.writes.length).toBe(3)
+  expect(f.writes[2].body.request_id).not.toBe(f.writes[0].body.request_id)
+})
+
 test("reopening fills only missing event suffix and closing the page never cancels the Run", async ({
   page,
 }) => {

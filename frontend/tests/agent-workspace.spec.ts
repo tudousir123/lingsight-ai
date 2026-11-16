@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test"
 import {
+  emptyWorkspaceMemoryResponse,
   executionCapabilityFixture,
   personalAgentFixture,
   personalTaskBinding,
@@ -56,6 +57,9 @@ async function mock(page: Page) {
   await page.route("**/api/v1/agent/**", async (r) => {
     const url = new URL(r.request().url())
     const path = url.pathname
+    const memory = emptyWorkspaceMemoryResponse(path)
+    if (r.request().method() === "GET" && memory)
+      return r.fulfill({ json: memory })
     if (path.endsWith("/capabilities"))
       return r.fulfill({ json: executionCapabilityFixture })
     if (path.endsWith("/personal-agent"))

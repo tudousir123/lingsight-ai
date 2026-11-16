@@ -2,6 +2,8 @@ import type { Page } from "@playwright/test"
 import {
   agentEnvironmentContract,
   agentExecutionContract,
+  agentPersonalMemoryContract,
+  agentResearchMemoryContract,
 } from "../../src/lib/upstreamRoutes.gen"
 
 export const personalAgentFixture = {
@@ -19,6 +21,9 @@ export const personalAgentFixture = {
     host_shell: false,
   },
 }
+export const requestIdPattern =
+  /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
+
 export const personalTaskBinding = {
   personal_agent_id: personalAgentFixture.id,
   environment_id: personalAgentFixture.environment.id,
@@ -37,4 +42,34 @@ export const executionCapabilityFixture = {
     ...agentExecutionContract,
     enabled: true,
   },
+}
+
+export const researchExecutionCapabilityFixture = {
+  ...executionCapabilityFixture,
+  research_memory: agentResearchMemoryContract,
+}
+
+// Non-memory UI scenarios still render memory panels. Return a valid disabled
+// service view, not an unrelated task/array that raises protocol alerts.
+export function emptyWorkspaceMemoryResponse(
+  path: string,
+  projectId?: string | null,
+) {
+  const relative = path.split("/agent/").at(-1)
+  const view = {
+    processing: { state: "disabled", extraction: null, embedding: null },
+    index: { state: "disabled" },
+    items: [],
+  }
+  if (relative === "memories")
+    return { contract: agentPersonalMemoryContract, ...view }
+  if (relative?.endsWith("/research-memories"))
+    return {
+      contract: agentResearchMemoryContract,
+      project_id: projectId,
+      ...view,
+    }
+  if (relative?.endsWith("/memories"))
+    return { contract: agentPersonalMemoryContract, items: [] }
+  return undefined
 }

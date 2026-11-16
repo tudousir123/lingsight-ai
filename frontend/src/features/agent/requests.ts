@@ -1,3 +1,4 @@
+import { newUuid } from "@/lib/uuid"
 import { AgentError, agentJson } from "./api"
 
 type PendingRequest = { request_id: string; body: Record<string, unknown> }
@@ -27,7 +28,7 @@ export async function agentRequest<T = unknown>(
     throw new Error(
       "上次请求接收状态未确认。请恢复原文或刷新工作区后重试；不要重复创建任务。",
     )
-  const request = previous ?? { request_id: crypto.randomUUID(), body }
+  const request = previous ?? { request_id: newUuid(), body }
   // If local persistence fails, do not issue an untraceable write.
   localStorage.setItem(key(owner, path), JSON.stringify(request))
   try {
