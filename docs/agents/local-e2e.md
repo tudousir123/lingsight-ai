@@ -73,9 +73,9 @@ python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
 
 SDK hook 同时覆盖后端 Schema/依赖、生成器配置，以及根 `package.json`、`bun.lock`、`frontend/package.json`。CI 的冻结依赖安装和 SDK drift 检查继续保留。
 
-## 5. 网关路由与浏览器兼容版本的单源导出
+## 5. 网关路由与平台兼容版本的单源导出
 
-平台支持的浏览器协议/profile 版本只在 `backend/app/contracts.py` 声明；网关直接 import，工作区及其 API 夹具 import 既有生成模块 `frontend/src/lib/upstreamRoutes.gen.ts`。Agent 自身是独立部署的版本广告来源；不能用「共享常量」替代双方各自的 fail-closed 版本/能力核验。
+平台支持的执行引擎、请求/恢复/操作账本、个人 Agent、环境、文件、记忆及浏览器协议/profile 版本只在 `backend/app/contracts.py` 声明；网关直接 import，工作区、类型及其 API 夹具 import 既有生成模块 `frontend/src/lib/upstreamRoutes.gen.ts`。Agent 自身是独立部署的版本广告来源；不能用「共享常量」替代双方各自的 fail-closed 版本/能力核验。这些值不是运行健康或科研验收结论，禁用生成时的历史读取和显式管理仍走原有独立门控。
 
 修改声明后沿用现有命令，不需安装新生成工具：
 
@@ -85,4 +85,4 @@ uv run python scripts/export_frontend_routes.py
 uv run pytest tests/scripts/test_export_frontend_routes.py tests/api/routes/test_agent_gateway.py -q
 ```
 
-前一测试逐字比较整个生成物，路由和浏览器版本任一漂移都会失败。浏览器兼容拒绝另由网关 HTTP 用例与 `frontend/tests/browser-agent.spec.ts` 锁住；夹具 UI 不替代真实 JWT/gateway/Chromium 的 `tests/api/routes/test_agent_browser_http.py`。
+前一测试逐字比较整个生成物，路由和支持版本任一漂移都会失败。缺字段、旧版本和非布尔能力拒绝由网关用例及 `frontend/tests/durable-agent.spec.ts` 等受影响 UI 用例锁住；浏览器兼容拒绝另由 `frontend/tests/browser-agent.spec.ts` 锁住。夹具 UI 不替代真实 JWT/gateway/Chromium 的 `tests/api/routes/test_agent_browser_http.py`。

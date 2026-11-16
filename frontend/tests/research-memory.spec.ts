@@ -1,5 +1,8 @@
 import { expect, type Page, test } from "@playwright/test"
-import { agentResearchMemoryContract } from "../src/lib/upstreamRoutes.gen"
+import {
+  agentPersonalMemoryContract,
+  agentResearchMemoryContract,
+} from "../src/lib/upstreamRoutes.gen"
 import {
   executionCapabilityFixture,
   personalAgentFixture as personal,
@@ -97,7 +100,7 @@ async function fixture(page: Page) {
     if (path === "memories")
       return route.fulfill({
         json: {
-          contract: "personal-memory-v1",
+          contract: agentPersonalMemoryContract,
           processing: { state: "disabled", extraction: null, embedding: null },
           index: { state: "disabled" },
           items: [],
@@ -152,7 +155,7 @@ async function fixture(page: Page) {
     if (path?.endsWith("/memories"))
       return route.fulfill({
         json: {
-          contract: "personal-memory-v1",
+          contract: agentPersonalMemoryContract,
           items: state.items
             .filter((m) => m.confirmation === "confirmed")
             .map((m) => ({

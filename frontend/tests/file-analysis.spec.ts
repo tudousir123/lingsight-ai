@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test"
+import {
+  agentExecutionContract,
+  agentFilesContract,
+} from "../src/lib/upstreamRoutes.gen"
 import { personalAgentFixture } from "./utils/personalAgentApi"
 import { stubProjectsApi } from "./utils/projectsApi"
 
@@ -30,15 +34,15 @@ test("workspace uploads small authorized content and sends only opaque server re
     if (path === "capabilities")
       return route.fulfill({
         json: {
-          files: "controlled-files-v1",
+          files: agentFilesContract,
           execution: {
-            contract: "durable-run-v1",
-            engine: "pi-durable",
-            version: "1.5.2",
-            requests: "persistent-v1",
-            recovery: "safe-v1",
-            operations: "ledger-v1",
-            cancellation: "verified-v1",
+            contract: agentExecutionContract.contract,
+            engine: agentExecutionContract.engine,
+            version: agentExecutionContract.version,
+            requests: agentExecutionContract.requests,
+            recovery: agentExecutionContract.recovery,
+            operations: agentExecutionContract.operations,
+            cancellation: agentExecutionContract.cancellation,
             enabled: true,
           },
         },
@@ -74,7 +78,9 @@ test("workspace uploads small authorized content and sends only opaque server re
     return route.fulfill({ json: [] })
   })
   await page.goto("/")
-  await page.getByLabel("授权分析文件").setInputFiles({
+  const fileInput = page.getByLabel("授权分析文件")
+  await expect(fileInput).toBeEnabled()
+  await fileInput.setInputFiles({
     name: "observations.csv",
     mimeType: "text/csv",
     buffer: Buffer.from("x\n1\n"),
@@ -154,13 +160,13 @@ test("legacy file capability blocks file-task continuation and recovery but pres
       return route.fulfill({
         json: {
           execution: {
-            contract: "durable-run-v1",
-            engine: "pi-durable",
-            version: "1.5.2",
-            requests: "persistent-v1",
-            recovery: "safe-v1",
-            operations: "ledger-v1",
-            cancellation: "verified-v1",
+            contract: agentExecutionContract.contract,
+            engine: agentExecutionContract.engine,
+            version: agentExecutionContract.version,
+            requests: agentExecutionContract.requests,
+            recovery: agentExecutionContract.recovery,
+            operations: agentExecutionContract.operations,
+            cancellation: agentExecutionContract.cancellation,
             enabled: true,
           },
         },

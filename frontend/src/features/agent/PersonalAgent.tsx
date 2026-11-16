@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import useAuth from "@/hooks/useAuth"
-import { agentRoutes } from "@/lib/upstreamRoutes.gen"
+import { agentEnvironmentContract, agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { agentJson, type PersonalAgent } from "./api"
 
 export function usePersonalAgent() {
@@ -19,7 +19,7 @@ export function usePersonalAgent() {
         !identity.id ||
         identity.owner_user_id !== user?.id ||
         !identity.environment?.id ||
-        identity.environment.contract !== "task-workspace-v1"
+        identity.environment.contract !== agentEnvironmentContract
       )
         throw new Error("个人 Agent 协议不兼容，请更新服务。")
       return identity

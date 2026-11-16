@@ -9,6 +9,19 @@ CompletionMode = Literal["auto", "qa", "research"]
 # Platform-supported upstream versions; also exported to TypeScript by
 # scripts/export_frontend_routes.py. These are compatibility gates, not the
 # independently deployed Agent's capability advertisement.
+AGENT_EXECUTION_CONTRACT = {
+    "contract": "durable-run-v1",
+    "engine": "pi-durable",
+    "version": "1.5.2",
+    "requests": "persistent-v1",
+    "recovery": "safe-v1",
+    "operations": "ledger-v1",
+    "cancellation": "verified-v1",
+}
+AGENT_PERSONAL_AGENT_CONTRACT = "persistent-v1"
+AGENT_ENVIRONMENT_CONTRACT = "task-workspace-v1"
+AGENT_FILES_CONTRACT = "controlled-files-v1"
+AGENT_PERSONAL_MEMORY_CONTRACT = "personal-memory-v1"
 AGENT_BROWSER_CONTRACT = "controlled-browser-v1"
 AGENT_BROWSER_PROFILE = "owner-storage-state-v1"
 AGENT_MEMORY_MANAGEMENT_CONTRACT = "memory-management-v1"

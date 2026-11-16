@@ -25,3 +25,15 @@ def test_hyphenated_identity_route_has_a_valid_typescript_builder() -> None:
 def test_browser_compatibility_contract_is_exported_for_typescript_consumers() -> None:
     rendered = render_module(load_services())
     assert "export const agentBrowserContract = {" in rendered
+
+
+def test_remaining_platform_support_contracts_are_exported() -> None:
+    rendered = render_module(load_services())
+    for name in (
+        "agentExecutionContract",
+        "agentPersonalAgentContract",
+        "agentEnvironmentContract",
+        "agentFilesContract",
+        "agentPersonalMemoryContract",
+    ):
+        assert f"export const {name} = " in rendered

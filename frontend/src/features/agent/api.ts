@@ -6,7 +6,11 @@
 // pins what the workbench UI consumes.
 
 import { authHeaders } from "@/lib/credentials"
-import { agentGatewayBase } from "@/lib/upstreamRoutes.gen"
+import {
+  type agentEnvironmentContract,
+  type agentExecutionContract,
+  agentGatewayBase,
+} from "@/lib/upstreamRoutes.gen"
 
 export type PersonalAgent = {
   id: string
@@ -15,7 +19,7 @@ export type PersonalAgent = {
   environment: {
     id: string
     status: "ready" | "unavailable"
-    contract: "task-workspace-v1"
+    contract: typeof agentEnvironmentContract
     reason?: string
   }
 }
@@ -39,8 +43,8 @@ export type Run = {
   } | null
   execution?: {
     id: string
-    engine: "pi-durable"
-    version: "1.5.2"
+    engine: typeof agentExecutionContract.engine
+    version: typeof agentExecutionContract.version
     conversation_id: number
     submission_id: number | null
   } | null

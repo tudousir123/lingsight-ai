@@ -23,7 +23,7 @@ import { PageHeader } from "@/components/Common/PageHeader"
 import { WorkspaceIntro } from "@/features/research/copilot/WorkspaceIntro"
 import { consumeBrief, pendingBriefPrompt } from "@/features/research/entry"
 import { flagshipVisionModel } from "@/features/research/vision-model"
-import { agentRoutes } from "@/lib/upstreamRoutes.gen"
+import { agentExecutionContract, agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { ArtifactCards, ArtifactViewer } from "./Artifacts"
 import {
   type Artifact,
@@ -828,7 +828,8 @@ export function AgentWorkspace({
                   owner={requestOwner}
                   operationsSupported={
                     !execution.error &&
-                    execution.data?.operations === "ledger-v1"
+                    execution.data?.operations ===
+                      agentExecutionContract.operations
                   }
                   browserSupported={
                     !execution.error && execution.data?.browser === true

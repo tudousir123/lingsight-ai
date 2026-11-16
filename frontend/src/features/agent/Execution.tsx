@@ -2,20 +2,15 @@ import { useQuery } from "@tanstack/react-query"
 import useAuth from "@/hooks/useAuth"
 import {
   agentBrowserContract,
+  agentExecutionContract,
+  agentFilesContract,
   agentMemoryManagementContract,
   agentResearchMemoryContract,
   agentRoutes,
 } from "@/lib/upstreamRoutes.gen"
 import { agentJson } from "./api"
 
-export type ExecutionCapability = {
-  contract: "durable-run-v1"
-  engine: "pi-durable"
-  version: "1.5.2"
-  requests: "persistent-v1"
-  recovery: "safe-v1"
-  operations: "ledger-v1"
-  cancellation: "verified-v1"
+export type ExecutionCapability = typeof agentExecutionContract & {
   enabled: boolean
   files?: boolean
   memoryManagement?: boolean
@@ -44,13 +39,13 @@ export function useExecutionCapability() {
       }>(agentRoutes.capabilities(), undefined, "GET", signal)
       const capability = response?.execution
       if (
-        capability?.contract !== "durable-run-v1" ||
-        capability.engine !== "pi-durable" ||
-        capability.version !== "1.5.2" ||
-        capability.requests !== "persistent-v1" ||
-        capability.recovery !== "safe-v1" ||
-        capability.operations !== "ledger-v1" ||
-        capability.cancellation !== "verified-v1" ||
+        capability?.contract !== agentExecutionContract.contract ||
+        capability.engine !== agentExecutionContract.engine ||
+        capability.version !== agentExecutionContract.version ||
+        capability.requests !== agentExecutionContract.requests ||
+        capability.recovery !== agentExecutionContract.recovery ||
+        capability.operations !== agentExecutionContract.operations ||
+        capability.cancellation !== agentExecutionContract.cancellation ||
         typeof capability.enabled !== "boolean"
       )
         throw new Error(
@@ -62,7 +57,7 @@ export function useExecutionCapability() {
           response.memory_management === agentMemoryManagementContract,
         researchMemory:
           response.research_memory === agentResearchMemoryContract,
-        files: response.files === "controlled-files-v1",
+        files: response.files === agentFilesContract,
         browser:
           response.browser?.contract === agentBrowserContract.contract &&
           response.browser.enabled === true &&
@@ -98,7 +93,7 @@ export function ExecutionStatus({
             : error
               ? "执行能力不可用"
               : capability?.enabled
-                ? "Pi Durable · 1.5.2"
+                ? `Pi Durable · ${agentExecutionContract.version}`
                 : "模型或数据处理授权未配置"}
         </span>
       </div>

@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test"
 import {
   agentMemoryManagementContract,
+  agentPersonalMemoryContract,
   agentResearchMemoryContract,
 } from "../src/lib/upstreamRoutes.gen"
 import {
@@ -106,7 +107,7 @@ async function fixture(page: Page) {
     if (path?.endsWith("/events")) return route.fulfill({ json: [] })
     if (path === `tasks/${taskId}/memories`)
       return route.fulfill({
-        json: { contract: "personal-memory-v1", items: [] },
+        json: { contract: agentPersonalMemoryContract, items: [] },
       })
     if (path?.endsWith("/history"))
       return route.fulfill({
@@ -141,7 +142,7 @@ async function fixture(page: Page) {
         json: {
           contract: research
             ? agentResearchMemoryContract
-            : "personal-memory-v1",
+            : agentPersonalMemoryContract,
           project_id: research ? projectId : undefined,
           processing: { state: "disabled", extraction: null, embedding: null },
           index: {

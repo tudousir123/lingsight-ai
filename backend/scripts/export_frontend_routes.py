@@ -1,4 +1,4 @@
-"""Export gateway routes and supported browser versions to TypeScript.
+"""Export gateway routes and platform-supported protocol versions to TypeScript.
 
 The operation tables in app/api/routes/agent.py and inference.py are the
 single declaration of each upstream service's operation surface: the backend
@@ -10,7 +10,7 @@ frontend/src/lib/upstreamRoutes.gen.ts; rerun after changing a table:
     cd backend && uv run python scripts/export_frontend_routes.py
 
 tests/scripts/test_export_frontend_routes.py fails when the checked-in module
-drifts from the declarations. Browser compatibility versions are declared in
+drifts from the declarations. Platform compatibility versions are declared in
 app/contracts.py and exported here too, so UI and gateway gates cannot drift.
 """
 
@@ -23,7 +23,12 @@ from app.api.gateway import LiteralSet, OperationTable
 from app.contracts import (
     AGENT_BROWSER_CONTRACT,
     AGENT_BROWSER_PROFILE,
+    AGENT_ENVIRONMENT_CONTRACT,
+    AGENT_EXECUTION_CONTRACT,
+    AGENT_FILES_CONTRACT,
     AGENT_MEMORY_MANAGEMENT_CONTRACT,
+    AGENT_PERSONAL_AGENT_CONTRACT,
+    AGENT_PERSONAL_MEMORY_CONTRACT,
     AGENT_RESEARCH_MEMORY_CONTRACT,
 )
 
@@ -144,6 +149,17 @@ def render_module(services: Sequence[ServiceRoutes]) -> str:
     ]
     lines.extend(
         [
+            "export const agentExecutionContract = {",
+            *(
+                f'  {key}: "{value}",'
+                for key, value in AGENT_EXECUTION_CONTRACT.items()
+            ),
+            "} as const",
+            f'export const agentPersonalAgentContract = "{AGENT_PERSONAL_AGENT_CONTRACT}" as const',
+            f'export const agentEnvironmentContract = "{AGENT_ENVIRONMENT_CONTRACT}" as const',
+            f'export const agentFilesContract = "{AGENT_FILES_CONTRACT}" as const',
+            f'export const agentPersonalMemoryContract = "{AGENT_PERSONAL_MEMORY_CONTRACT}" as const',
+            "",
             f'export const agentMemoryManagementContract = "{AGENT_MEMORY_MANAGEMENT_CONTRACT}" as const',
             f'export const agentResearchMemoryContract = "{AGENT_RESEARCH_MEMORY_CONTRACT}" as const',
             "",

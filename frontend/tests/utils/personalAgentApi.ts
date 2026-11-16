@@ -1,4 +1,8 @@
 import type { Page } from "@playwright/test"
+import {
+  agentEnvironmentContract,
+  agentExecutionContract,
+} from "../../src/lib/upstreamRoutes.gen"
 
 export const personalAgentFixture = {
   id: "aaaaaaaa-1111-4111-8111-111111111111",
@@ -7,7 +11,7 @@ export const personalAgentFixture = {
   environment: {
     id: "eeeeeeee-1111-4111-8111-111111111111",
     status: "ready",
-    contract: "task-workspace-v1",
+    contract: agentEnvironmentContract,
     isolation: "service-owned-task-directories",
     inputs: "read-only",
     outputs: "task-run-only",
@@ -30,13 +34,7 @@ export async function stubPersonalAgent(page: Page, owner = "user") {
 
 export const executionCapabilityFixture = {
   execution: {
-    contract: "durable-run-v1",
-    requests: "persistent-v1",
-    recovery: "safe-v1",
-    operations: "ledger-v1",
-    cancellation: "verified-v1",
-    engine: "pi-durable",
-    version: "1.5.2",
+    ...agentExecutionContract,
     enabled: true,
   },
 }

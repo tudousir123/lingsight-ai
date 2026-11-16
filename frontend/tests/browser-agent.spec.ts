@@ -1,5 +1,10 @@
 import { expect, type Page, test } from "@playwright/test"
-import { agentBrowserContract } from "../src/lib/upstreamRoutes.gen"
+import {
+  agentBrowserContract,
+  agentExecutionContract,
+  agentFilesContract,
+  agentPersonalMemoryContract,
+} from "../src/lib/upstreamRoutes.gen"
 import {
   executionCapabilityFixture,
   personalAgentFixture,
@@ -62,8 +67,8 @@ async function fixture(
       path === "capabilities"
         ? {
             ...executionCapabilityFixture,
-            files: "controlled-files-v1",
-            personal_memory: "personal-memory-v1",
+            files: agentFilesContract,
+            personal_memory: agentPersonalMemoryContract,
             browser: {
               ...agentBrowserContract,
               enabled: true,
@@ -209,7 +214,9 @@ for (const [field, value] of [
       false,
     )
     await expect(
-      page.getByText("Pi Durable · 1.5.2", { exact: true }),
+      page.getByText(`Pi Durable · ${agentExecutionContract.version}`, {
+        exact: true,
+      }),
     ).toBeVisible()
     await expect(
       page.getByText("受控浏览器 · 独立个人会话与单次授权", { exact: true }),

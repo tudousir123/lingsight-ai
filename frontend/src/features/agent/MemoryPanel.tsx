@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import useAuth from "@/hooks/useAuth"
-import { agentRoutes } from "@/lib/upstreamRoutes.gen"
+import {
+  agentPersonalMemoryContract,
+  agentRoutes,
+} from "@/lib/upstreamRoutes.gen"
 import { agentJson } from "./api"
 import {
   type MemoryIndex,
@@ -32,7 +35,7 @@ type Preference = {
 }
 type Recipient = { recipient: string; model: string }
 type MemoryView = {
-  contract: "personal-memory-v1"
+  contract: typeof agentPersonalMemoryContract
   processing: {
     state: "enabled" | "disabled"
     extraction: Recipient | null
@@ -42,7 +45,7 @@ type MemoryView = {
   items: Preference[]
 }
 export type Uses = {
-  contract: "personal-memory-v1"
+  contract: typeof agentPersonalMemoryContract
   items: {
     run_id: string
     kind?: "personal_preference" | "project_research"
@@ -85,7 +88,7 @@ export function useMemoryUses(taskId?: string) {
         signal,
       )
       if (
-        value.contract !== "personal-memory-v1" ||
+        value.contract !== agentPersonalMemoryContract ||
         !Array.isArray(value.items)
       )
         throw new Error("任务记忆使用依据暂不可用。")
@@ -108,7 +111,7 @@ export function MemoryPanel({ taskId }: { taskId?: string }) {
         signal,
       )
       if (
-        value.contract !== "personal-memory-v1" ||
+        value.contract !== agentPersonalMemoryContract ||
         !value.processing ||
         !value.index ||
         !Array.isArray(value.items) ||

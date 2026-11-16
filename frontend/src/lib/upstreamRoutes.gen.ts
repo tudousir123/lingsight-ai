@@ -3,6 +3,20 @@
 // Sources: backend/app/api/routes/*.py tables and backend/app/contracts.py versions;
 // backend/tests/scripts/test_export_frontend_routes.py fails on drift.
 
+export const agentExecutionContract = {
+  contract: "durable-run-v1",
+  engine: "pi-durable",
+  version: "1.5.2",
+  requests: "persistent-v1",
+  recovery: "safe-v1",
+  operations: "ledger-v1",
+  cancellation: "verified-v1",
+} as const
+export const agentPersonalAgentContract = "persistent-v1" as const
+export const agentEnvironmentContract = "task-workspace-v1" as const
+export const agentFilesContract = "controlled-files-v1" as const
+export const agentPersonalMemoryContract = "personal-memory-v1" as const
+
 export const agentMemoryManagementContract = "memory-management-v1" as const
 export const agentResearchMemoryContract = "project-research-memory-v1" as const
 

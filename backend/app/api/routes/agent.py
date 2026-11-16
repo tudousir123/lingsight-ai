@@ -26,7 +26,12 @@ from app.api.gateway import (
 from app.contracts import (
     AGENT_BROWSER_CONTRACT,
     AGENT_BROWSER_PROFILE,
+    AGENT_ENVIRONMENT_CONTRACT,
+    AGENT_EXECUTION_CONTRACT,
+    AGENT_FILES_CONTRACT,
     AGENT_MEMORY_MANAGEMENT_CONTRACT,
+    AGENT_PERSONAL_AGENT_CONTRACT,
+    AGENT_PERSONAL_MEMORY_CONTRACT,
     AGENT_RESEARCH_MEMORY_CONTRACT,
     CompletionMode,
     DataScope,
@@ -165,13 +170,15 @@ async def ensure_project_support(
                 or (
                     personal
                     and (
-                        capabilities.get("personal_agent") != "persistent-v1"
-                        or capabilities.get("environment") != "task-workspace-v1"
+                        capabilities.get("personal_agent")
+                        != AGENT_PERSONAL_AGENT_CONTRACT
+                        or capabilities.get("environment") != AGENT_ENVIRONMENT_CONTRACT
                     )
                 )
                 or (
                     memory
-                    and capabilities.get("personal_memory") != "personal-memory-v1"
+                    and capabilities.get("personal_memory")
+                    != AGENT_PERSONAL_MEMORY_CONTRACT
                 )
             ):
                 raise HTTPException(503, unavailable)
@@ -189,8 +196,9 @@ async def ensure_project_support(
                 raise HTTPException(503, unavailable)
             if operations and (
                 not isinstance(runtime, dict)
-                or runtime.get("operations") != "ledger-v1"
-                or runtime.get("cancellation") != "verified-v1"
+                or runtime.get("operations") != AGENT_EXECUTION_CONTRACT["operations"]
+                or runtime.get("cancellation")
+                != AGENT_EXECUTION_CONTRACT["cancellation"]
             ):
                 raise HTTPException(503, unavailable)
             if browser:
@@ -204,17 +212,18 @@ async def ensure_project_support(
                     or controlled.get("downloads") is not False
                 ):
                     raise HTTPException(503, unavailable)
-            if files and capabilities.get("files") != "controlled-files-v1":
+            if files and capabilities.get("files") != AGENT_FILES_CONTRACT:
                 raise HTTPException(503, unavailable)
             if execution and (
                 not isinstance(runtime, dict)
-                or runtime.get("contract") != "durable-run-v1"
-                or runtime.get("engine") != "pi-durable"
-                or runtime.get("version") != "1.5.2"
-                or runtime.get("requests") != "persistent-v1"
-                or runtime.get("recovery") != "safe-v1"
-                or runtime.get("operations") != "ledger-v1"
-                or runtime.get("cancellation") != "verified-v1"
+                or runtime.get("contract") != AGENT_EXECUTION_CONTRACT["contract"]
+                or runtime.get("engine") != AGENT_EXECUTION_CONTRACT["engine"]
+                or runtime.get("version") != AGENT_EXECUTION_CONTRACT["version"]
+                or runtime.get("requests") != AGENT_EXECUTION_CONTRACT["requests"]
+                or runtime.get("recovery") != AGENT_EXECUTION_CONTRACT["recovery"]
+                or runtime.get("operations") != AGENT_EXECUTION_CONTRACT["operations"]
+                or runtime.get("cancellation")
+                != AGENT_EXECUTION_CONTRACT["cancellation"]
                 or runtime.get("enabled") is not True
             ):
                 raise HTTPException(503, unavailable)

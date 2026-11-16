@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test"
+import { agentExecutionContract } from "../src/lib/upstreamRoutes.gen"
 import {
   personalAgentFixture,
   personalTaskBinding,
@@ -7,13 +8,13 @@ import { stubProjectsApi } from "./utils/projectsApi"
 
 const supported = {
   execution: {
-    contract: "durable-run-v1",
-    requests: "persistent-v1",
-    recovery: "safe-v1",
-    operations: "ledger-v1",
-    cancellation: "verified-v1",
-    engine: "pi-durable",
-    version: "1.5.2",
+    contract: agentExecutionContract.contract,
+    requests: agentExecutionContract.requests,
+    recovery: agentExecutionContract.recovery,
+    operations: agentExecutionContract.operations,
+    cancellation: agentExecutionContract.cancellation,
+    engine: agentExecutionContract.engine,
+    version: agentExecutionContract.version,
     enabled: true,
   },
 }
@@ -57,8 +58,8 @@ async function fixture(
         error: null,
         execution: {
           id: "execution-77",
-          engine: "pi-durable",
-          version: "1.5.2",
+          engine: agentExecutionContract.engine,
+          version: agentExecutionContract.version,
           conversation_id: 1,
           submission_id: 2,
         },
@@ -115,15 +116,37 @@ async function fixture(
   return { writes, task }
 }
 
+const invalidExecutionVersions = Object.keys(agentExecutionContract).flatMap(
+  (field) => {
+    const missing = { ...supported.execution } as Record<string, unknown>
+    delete missing[field]
+    return [
+      [`missing-${field}`, { execution: missing }],
+      [
+        `obsolete-${field}`,
+        { execution: { ...supported.execution, [field]: "obsolete-v0" } },
+      ],
+    ] as const
+  },
+)
+
 for (const [name, capability] of [
+  ...invalidExecutionVersions,
+  ...[null, 0, 1, {}, []].map(
+    (enabled) =>
+      [
+        `invalid-enabled-${JSON.stringify(enabled)}`,
+        { execution: { ...supported.execution, enabled } },
+      ] as const,
+  ),
   ["legacy", {}],
   [
     "legacy-requests",
     {
       execution: {
-        contract: "durable-run-v1",
-        engine: "pi-durable",
-        version: "1.5.2",
+        contract: agentExecutionContract.contract,
+        engine: agentExecutionContract.engine,
+        version: agentExecutionContract.version,
         enabled: true,
       },
     },

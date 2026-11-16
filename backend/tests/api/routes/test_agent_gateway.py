@@ -12,7 +12,12 @@ from app.api.routes.agent import router
 from app.contracts import (
     AGENT_BROWSER_CONTRACT,
     AGENT_BROWSER_PROFILE,
+    AGENT_ENVIRONMENT_CONTRACT,
+    AGENT_EXECUTION_CONTRACT,
+    AGENT_FILES_CONTRACT,
     AGENT_MEMORY_MANAGEMENT_CONTRACT,
+    AGENT_PERSONAL_AGENT_CONTRACT,
+    AGENT_PERSONAL_MEMORY_CONTRACT,
     AGENT_RESEARCH_MEMORY_CONTRACT,
 )
 from app.core.config import settings
@@ -33,17 +38,17 @@ class AgentGatewayTest(unittest.TestCase):
             200,
             json={
                 "execution": {
-                    "contract": "durable-run-v1",
-                    "requests": "persistent-v1",
-                    "recovery": "safe-v1",
-                    "operations": "ledger-v1",
-                    "cancellation": "verified-v1",
-                    "engine": "pi-durable",
-                    "version": "1.5.2",
+                    "contract": AGENT_EXECUTION_CONTRACT["contract"],
+                    "requests": AGENT_EXECUTION_CONTRACT["requests"],
+                    "recovery": AGENT_EXECUTION_CONTRACT["recovery"],
+                    "operations": AGENT_EXECUTION_CONTRACT["operations"],
+                    "cancellation": AGENT_EXECUTION_CONTRACT["cancellation"],
+                    "engine": AGENT_EXECUTION_CONTRACT["engine"],
+                    "version": AGENT_EXECUTION_CONTRACT["version"],
                     "enabled": True,
                 },
-                "personal_agent": "persistent-v1",
-                "environment": "task-workspace-v1",
+                "personal_agent": AGENT_PERSONAL_AGENT_CONTRACT,
+                "environment": AGENT_ENVIRONMENT_CONTRACT,
                 "project_scope": "immutable-v1",
                 "project_data_configured": True,
                 "user_scope": "platform-user-v1",
@@ -155,7 +160,9 @@ class AgentGatewayTest(unittest.TestCase):
     ) -> None:
         capabilities = self.capabilities.json()
         capabilities["execution"].update(
-            operations="ledger-v1", cancellation="verified-v1", enabled=False
+            operations=AGENT_EXECUTION_CONTRACT["operations"],
+            cancellation=AGENT_EXECUTION_CONTRACT["cancellation"],
+            enabled=False,
         )
         self.capabilities = httpx.Response(200, json=capabilities)
         for method, path, body in [
@@ -291,23 +298,26 @@ class AgentGatewayTest(unittest.TestCase):
             (f"/agent/runs/{TASK}/resume", {}),
             (f"/agent/runs/{TASK}/clarifications/{TASK}/answer", {"answer": "yes"}),
         ]
-        for execution in [
+        invalid = [
             None,
             {},
-            {"contract": "durable-run-v1", "enabled": True},
-            {
-                "contract": "durable-run-v1",
-                "engine": "pi-durable",
-                "version": "1.5.2",
-                "enabled": 1,
-            },
-            {
-                "contract": "durable-run-v1",
-                "engine": "pi-durable",
-                "version": "1.5.2",
-                "enabled": False,
-            },
-        ]:
+            *(
+                {
+                    **{k: v for k, v in AGENT_EXECUTION_CONTRACT.items() if k != field},
+                    "enabled": True,
+                }
+                for field in AGENT_EXECUTION_CONTRACT
+            ),
+            *(
+                {**AGENT_EXECUTION_CONTRACT, field: "obsolete-v0", "enabled": True}
+                for field in AGENT_EXECUTION_CONTRACT
+            ),
+            *(
+                {**AGENT_EXECUTION_CONTRACT, "enabled": value}
+                for value in (None, 0, 1, "true", {}, [], False)
+            ),
+        ]
+        for execution in invalid:
             self.capabilities = httpx.Response(
                 200, json={**supported, "execution": execution}
             )
@@ -325,6 +335,45 @@ class AgentGatewayTest(unittest.TestCase):
         )
         self.assertEqual(self.calls[-1].url.path, f"/v1/runs/{TASK}/cancel")
 
+    def test_platform_supported_feature_versions_fail_closed_independently(
+        self,
+    ) -> None:
+        supported = {
+            **self.capabilities.json(),
+            "files": AGENT_FILES_CONTRACT,
+            "personal_memory": AGENT_PERSONAL_MEMORY_CONTRACT,
+        }
+        checks = [
+            (
+                "personal_agent",
+                "POST",
+                "/agent/tasks",
+                {"goal": "Synthetic explanation"},
+            ),
+            ("environment", "POST", "/agent/tasks", {"goal": "Synthetic explanation"}),
+            (
+                "files",
+                "POST",
+                "/agent/inputs",
+                {"name": "synthetic.txt", "content": "synthetic"},
+            ),
+            ("personal_memory", "GET", "/agent/memories", None),
+        ]
+        for field, method, path, body in checks:
+            for invalid in (None, "obsolete-v0", True, 1):
+                with self.subTest(field=field, invalid=invalid):
+                    self.capabilities = httpx.Response(
+                        200, json={**supported, field: invalid}
+                    )
+                    self.calls.clear()
+                    response = self.client.request(
+                        method, path, **({"json": body} if body else {})
+                    )
+                    self.assertEqual(response.status_code, 503)
+                    self.assertEqual(
+                        [r.url.path for r in self.calls], ["/v1/capabilities"]
+                    )
+
     def test_personal_identity_uses_current_user_and_requires_new_capability(
         self,
     ) -> None:
@@ -332,8 +381,8 @@ class AgentGatewayTest(unittest.TestCase):
             200,
             json={
                 **self.capabilities.json(),
-                "personal_agent": "persistent-v1",
-                "environment": "task-workspace-v1",
+                "personal_agent": AGENT_PERSONAL_AGENT_CONTRACT,
+                "environment": AGENT_ENVIRONMENT_CONTRACT,
             },
         )
         identity = {
@@ -383,7 +432,7 @@ class AgentGatewayTest(unittest.TestCase):
         self,
     ) -> None:
         self.capabilities = httpx.Response(
-            200, json={**self.capabilities.json(), "files": "controlled-files-v1"}
+            200, json={**self.capabilities.json(), "files": AGENT_FILES_CONTRACT}
         )
         self.response = httpx.Response(201, json={"id": TASK, "name": "synthetic.csv"})
         uploaded = self.client.post(
@@ -430,10 +479,13 @@ class AgentGatewayTest(unittest.TestCase):
     ) -> None:
         self.capabilities = httpx.Response(
             200,
-            json={**self.capabilities.json(), "personal_memory": "personal-memory-v1"},
+            json={
+                **self.capabilities.json(),
+                "personal_memory": AGENT_PERSONAL_MEMORY_CONTRACT,
+            },
         )
         self.response = httpx.Response(
-            200, json={"contract": "personal-memory-v1", "items": []}
+            200, json={"contract": AGENT_PERSONAL_MEMORY_CONTRACT, "items": []}
         )
         for path in ["memories", f"tasks/{TASK}/memories"]:
             with self.subTest(path=path):
