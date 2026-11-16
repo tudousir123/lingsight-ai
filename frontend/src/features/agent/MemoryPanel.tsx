@@ -34,10 +34,12 @@ type MemoryView = {
   index: { state: string }
   items: Preference[]
 }
-type Uses = {
+export type Uses = {
   contract: "personal-memory-v1"
   items: {
     run_id: string
+    kind?: "personal_preference" | "project_research"
+    confirmation?: string
     memory_id: string
     content_version: number
     available: boolean
@@ -60,6 +62,29 @@ export function Sources({ sources }: { sources: Source[] }) {
       ))}
     </ul>
   )
+}
+export function useMemoryUses(taskId?: string) {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ["task-memory-uses", user?.id, taskId],
+    enabled: !!user?.id && !!taskId,
+    retry: false,
+    refetchInterval: 5000,
+    queryFn: async ({ signal }) => {
+      const value = await agentJson<Uses>(
+        agentRoutes.tasksByTaskIdMemories(taskId!),
+        undefined,
+        "GET",
+        signal,
+      )
+      if (
+        value.contract !== "personal-memory-v1" ||
+        !Array.isArray(value.items)
+      )
+        throw new Error("任务记忆使用依据暂不可用。")
+      return value
+    },
+  })
 }
 export function MemoryPanel({ taskId }: { taskId?: string }) {
   const { user } = useAuth()
@@ -93,29 +118,19 @@ export function MemoryPanel({ taskId }: { taskId?: string }) {
       return value
     },
   })
-  const uses = useQuery({
-    queryKey: ["task-memory-uses", user?.id, taskId],
-    enabled: !!user?.id && !!taskId,
-    retry: false,
-    refetchInterval: 5000,
-    queryFn: async ({ signal }) => {
-      const value = await agentJson<Uses>(
-        agentRoutes.tasksByTaskIdMemories(taskId!),
-        undefined,
-        "GET",
-        signal,
-      )
-      if (
-        value.contract !== "personal-memory-v1" ||
-        !Array.isArray(value.items)
-      )
-        throw new Error("任务记忆使用依据暂不可用。")
-      return value
-    },
-  })
+  const uses = useMemoryUses(taskId)
   // A failed refresh cannot advertise a formerly successful cached response.
   const view = memories.isError ? undefined : memories.data
-  const supplied = uses.isError ? undefined : uses.data
+  const supplied = uses.isError
+    ? undefined
+    : uses.data
+      ? {
+          ...uses.data,
+          items: uses.data.items.filter(
+            (use) => use.kind !== "project_research",
+          ),
+        }
+      : undefined
   const indexUnavailable =
     view && !["ready", "disabled", "not_built"].includes(view.index.state)
   return (

@@ -9,7 +9,11 @@ from fastapi.testclient import TestClient
 
 from app.api.deps import get_current_user
 from app.api.routes.agent import router
-from app.contracts import AGENT_BROWSER_CONTRACT, AGENT_BROWSER_PROFILE
+from app.contracts import (
+    AGENT_BROWSER_CONTRACT,
+    AGENT_BROWSER_PROFILE,
+    AGENT_RESEARCH_MEMORY_CONTRACT,
+)
 from app.core.config import settings
 from app.models import User
 
@@ -73,6 +77,41 @@ class AgentGatewayTest(unittest.TestCase):
             self.addCleanup(p.stop)
         self.client = TestClient(self.app)
         self.addCleanup(self.client.close)
+
+    def test_research_review_requires_compatible_protocol_but_not_enabled_generation(
+        self,
+    ) -> None:
+        capability = self.capabilities.json()
+        capability["execution"]["enabled"] = False
+        path = f"/agent/tasks/{TASK}/research-memories/{TASK}/decision"
+        for version in (None, "unsupported", AGENT_RESEARCH_MEMORY_CONTRACT):
+            with self.subTest(version=version):
+                self.capabilities = httpx.Response(
+                    200, json={**capability, "research_memory": version}
+                )
+                self.calls.clear()
+                response = self.client.post(
+                    path,
+                    json={
+                        "request_id": TASK,
+                        "expected_version": 1,
+                        "content_version": 1,
+                        "source_fingerprint": "a" * 64,
+                        "decision": "confirm",
+                    },
+                )
+                self.assertEqual(
+                    response.status_code,
+                    200 if version == AGENT_RESEARCH_MEMORY_CONTRACT else 503,
+                )
+                if version != AGENT_RESEARCH_MEMORY_CONTRACT:
+                    self.assertEqual(
+                        [r.url.path for r in self.calls], ["/v1/capabilities"]
+                    )
+                else:
+                    self.assertEqual(
+                        self.calls[-1].headers["x-lingsight-user-id"], str(self.user.id)
+                    )
 
     def test_operation_review_routes_preserve_identity_without_requiring_new_model_authorization(
         self,

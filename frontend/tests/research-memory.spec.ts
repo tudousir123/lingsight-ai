@@ -151,7 +151,21 @@ async function fixture(page: Page) {
       })
     if (path?.endsWith("/memories"))
       return route.fulfill({
-        json: { contract: "personal-memory-v1", items: [] },
+        json: {
+          contract: "personal-memory-v1",
+          items: state.items
+            .filter((m) => m.confirmation === "confirmed")
+            .map((m) => ({
+              run_id: "run-1",
+              memory_id: m.id,
+              kind: "project_research",
+              content: m.content,
+              content_version: m.content_version,
+              available: true,
+              confirmation: "confirmed",
+              sources: m.sources,
+            })),
+        },
       })
     if (path?.endsWith("/events")) return route.fulfill({ json: [] })
     if (path === "tasks") return route.fulfill({ json: [task] })
@@ -175,6 +189,7 @@ test("workspace explicitly reviews candidate content and source, retains confirm
   await panel.getByRole("button", { name: "拒绝此候选" }).click()
   await page.reload()
   await expect(panel).toContainText("已拒绝 · 不会自动提升")
+  await expect(panel).toContainText("已提供给本任务 · 项目科研记忆")
   await expect(panel.getByRole("button", { name: "确认此版本" })).toHaveCount(0)
 })
 

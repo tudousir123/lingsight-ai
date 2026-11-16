@@ -6,7 +6,7 @@ import {
   agentRoutes,
 } from "@/lib/upstreamRoutes.gen"
 import { AgentError, agentJson } from "./api"
-import { type Source, Sources } from "./MemoryPanel"
+import { type Source, Sources, useMemoryUses } from "./MemoryPanel"
 import { agentRequest, discardPendingRequest, pendingRequest } from "./requests"
 
 type ResearchMemory = {
@@ -148,6 +148,7 @@ export function ResearchMemoryPanel({
   supported: boolean
 }) {
   const { user } = useAuth()
+  const uses = useMemoryUses(taskId)
   const memories = useQuery({
     queryKey: ["research-memories", user?.id, projectId, taskId],
     enabled: !!user?.id && !!taskId && !!projectId && supported,
@@ -239,6 +240,26 @@ export function ResearchMemoryPanel({
           </ul>
         </>
       )}
+      <div className="agent-memory-uses">
+        <strong>已提供给本任务 · 项目科研记忆</strong>
+        <p>表示提供给引擎，不代表模型必然采用或结论通过科研复核。</p>
+        {uses.error && <p role="alert">{uses.error.message}</p>}
+        {!uses.isError &&
+          uses.data?.items
+            .filter((use) => use.kind === "project_research")
+            .map((use) => (
+              <div
+                key={`${use.run_id}:${use.memory_id}:${use.content_version}`}
+              >
+                <p>
+                  {use.available ? use.content : "原科研记忆确认版本已不可用"} ·
+                  内容版本 {use.content_version}
+                </p>
+                <code>{use.memory_id}</code>
+                <Sources sources={use.sources} />
+              </div>
+            ))}
+      </div>
     </section>
   )
 }
