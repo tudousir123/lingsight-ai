@@ -3,6 +3,8 @@
 // Sources: backend/app/api/routes/*.py tables and backend/app/contracts.py versions;
 // backend/tests/scripts/test_export_frontend_routes.py fails on drift.
 
+export const agentResearchMemoryContract = "project-research-memory-v1" as const
+
 export const agentBrowserContract = {
   contract: "controlled-browser-v1",
   profile: "owner-storage-state-v1",
@@ -31,6 +33,8 @@ export const agentRoutes = {
   tasksByTaskIdEvents: (taskId: string) => `tasks/${taskId}/events`,
   tasksByTaskIdMemories: (taskId: string) => `tasks/${taskId}/memories`,
   tasksByTaskIdMessages: (taskId: string) => `tasks/${taskId}/messages`,
+  tasksByTaskIdResearchMemories: (taskId: string) => `tasks/${taskId}/research-memories`,
+  tasksByTaskIdResearchMemoriesByMemoryIdDecision: (taskId: string, memoryId: string) => `tasks/${taskId}/research-memories/${memoryId}/decision`,
 } as const
 
 export type InferenceArtifactName = "candidate.jpg" | "overlay.mp4" | "tracking.json" | "keypoints.json" | "provenance.json"

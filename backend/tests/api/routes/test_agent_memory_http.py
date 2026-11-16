@@ -131,3 +131,109 @@ def test_personal_preference_real_gateway_source_recall_and_user_isolation(
         ).status_code
         == 422
     )
+
+
+@pytest.mark.usefixtures("agent_http")
+@pytest.mark.parametrize(
+    "agent_http", [("memory-contract-fixture.ts", True, True)], indirect=True
+)
+def test_research_candidate_real_gateway_review_and_project_reuse(
+    client: TestClient,
+) -> None:
+    import uuid
+
+    api = settings.API_V1_STR
+    owner, owner_id = signup(client)
+    other, _ = signup(client)
+    projects = []
+    for name in ("Research alpha", "Research beta"):
+        project = client.post(f"{api}/projects/", headers=owner, json={"name": name})
+        assert project.status_code == 200, project.text
+        projects.append(project.json()["id"])
+
+    def task(goal: str, project: str) -> dict:
+        out = client.post(
+            f"{api}/agent/tasks",
+            headers=owner,
+            json={
+                "goal": goal,
+                "project_id": project,
+                "completion_mode": "qa",
+                "request_id": str(uuid.uuid4()),
+            },
+        )
+        assert out.status_code == 202, out.text
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline:
+            out = client.get(
+                f"{api}/agent/tasks/{out.json().get('task', out.json())['id']}",
+                headers=owner,
+            )
+            assert out.status_code == 200, out.text
+            if out.json()["runs"][-1]["status"] == "succeeded":
+                return out.json()
+            assert out.json()["runs"][-1]["status"] not in {"failed", "cancelled"}, (
+                out.text
+            )
+            time.sleep(0.02)
+        raise AssertionError("Synthetic task deadline")
+
+    first = task(
+        "Propose: Alpha orientation needs independent calibration.", projects[0]
+    )
+    path = f"{api}/agent/tasks/{first['id']}/research-memories"
+    view = client.get(path, headers=owner)
+    assert view.status_code == 200, view.text
+    m = view.json()["items"][0]
+    assert m["owner_user_id"] == owner_id
+    assert m["confirmation"] == "pending"
+    assert m["project_id"] == projects[0]
+    assert (
+        client.get(path, headers={**other, "X-LingSight-User-Id": owner_id}).status_code
+        == 404
+    )
+    request = {
+        "request_id": str(uuid.uuid4()),
+        "expected_version": m["version"],
+        "content_version": m["content_version"],
+        "source_fingerprint": m["source_fingerprint"],
+        "decision": "confirm",
+    }
+    assert (
+        client.post(
+            f"{path}/{m['id']}/decision",
+            headers=owner,
+            json={**request, "confirmation": "confirmed"},
+        ).status_code
+        == 422
+    )
+    receipt = client.post(f"{path}/{m['id']}/decision", headers=owner, json=request)
+    assert receipt.status_code == 200, receipt.text
+    assert (
+        client.post(f"{path}/{m['id']}/decision", headers=owner, json=request).json()
+        == receipt.json()
+    )
+    stale = {**request, "request_id": str(uuid.uuid4()), "decision": "reject"}
+    assert (
+        client.post(f"{path}/{m['id']}/decision", headers=owner, json=stale).status_code
+        == 409
+    )
+    same = task("Explain orientation conceptually.", projects[0])
+    used = client.get(f"{api}/agent/tasks/{same['id']}/memories", headers=owner)
+    assert used.json()["items"][0]["memory_id"] == m["id"]
+    assert used.json()["items"][0]["confirmation"] == "confirmed"
+    assert m["source_fingerprint"] in same["runs"][-1]["answer"]["text"]
+    other_project = task("Explain orientation conceptually.", projects[1])
+    assert (
+        client.get(
+            f"{api}/agent/tasks/{other_project['id']}/research-memories", headers=owner
+        ).json()["items"]
+        == []
+    )
+    assert (
+        client.get(
+            f"{api}/agent/tasks/{other_project['id']}/memories", headers=owner
+        ).json()["items"]
+        == []
+    )
+    assert client.get(f"{api}/agent/memories", headers=owner).json()["items"] == []

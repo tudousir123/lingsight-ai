@@ -26,6 +26,7 @@ from app.api.gateway import (
 from app.contracts import (
     AGENT_BROWSER_CONTRACT,
     AGENT_BROWSER_PROFILE,
+    AGENT_RESEARCH_MEMORY_CONTRACT,
     CompletionMode,
     DataScope,
     ErrorCode,
@@ -46,6 +47,7 @@ OPERATIONS = OperationTable(
             "personal-agent",
             "memories",
             "tasks/{task_id}/memories",
+            "tasks/{task_id}/research-memories",
             "tasks",
             "tasks/{task_id}",
             "tasks/{task_id}/events",
@@ -59,6 +61,7 @@ OPERATIONS = OperationTable(
             "inputs",
             "tasks",
             "tasks/{task_id}/messages",
+            "tasks/{task_id}/research-memories/{memory_id}/decision",
             "runs/{run_id}/cancel",
             "runs/{run_id}/resume",
             "runs/{run_id}/browser-grants",
@@ -74,6 +77,7 @@ OPERATIONS = OperationTable(
         "artifact_id": UUID_PATTERN,
         "clarification_id": UUID_PATTERN,
         "operation_id": UUID_PATTERN,
+        "memory_id": UUID_PATTERN,
     },
 )
 
@@ -107,6 +111,7 @@ async def ensure_project_support(
     execution: bool = False,
     files: bool = False,
     memory: bool = False,
+    research_memory: bool = False,
     operations: bool = False,
     browser: bool = False,
 ) -> None:
@@ -114,6 +119,8 @@ async def ensure_project_support(
     unavailable = "科研 Agent 项目分析尚未就绪，请先更新服务并配置项目数据源"
     if memory:
         unavailable = "个人偏好记忆尚未就绪，请先更新科研 Agent 服务"
+    if research_memory:
+        unavailable = "项目科研记忆核对协议不兼容，请更新科研 Agent 服务"
     if personal:
         unavailable = "个人 Agent 持久工作环境尚未就绪，请先更新服务"
     if execution:
@@ -156,6 +163,12 @@ async def ensure_project_support(
                     memory
                     and capabilities.get("personal_memory") != "personal-memory-v1"
                 )
+            ):
+                raise HTTPException(503, unavailable)
+            if (
+                research_memory
+                and capabilities.get("research_memory")
+                != AGENT_RESEARCH_MEMORY_CONTRACT
             ):
                 raise HTTPException(503, unavailable)
             if operations and (
@@ -252,8 +265,11 @@ async def agent_gateway(
     ensure_workspace_user(current_user)
     OPERATIONS.check(request.method, path, UNKNOWN_OPERATION)
     operation_review = "/operations" in path
+    research_memory = "/research-memories" in path
     memory_read = request.method == "GET" and (
-        path == "memories" or path.endswith("/memories")
+        path == "memories"
+        or path.endswith("/memories")
+        or path.endswith("/research-memories")
     )
     if (
         path in {"personal-agent", "capabilities"}
@@ -368,10 +384,12 @@ async def agent_gateway(
         execution=request.method == "POST"
         and path != "inputs"
         and not path.endswith("/cancel")
-        and not operation_review,
+        and not operation_review
+        and not research_memory,
         operations=operation_review or browser_scope,
         browser=browser_scope,
-        memory=memory_read,
+        memory=memory_read and not research_memory,
+        research_memory=research_memory,
         personal=path == "personal-agent"
         or (path == "tasks" and request.method == "POST"),
     )

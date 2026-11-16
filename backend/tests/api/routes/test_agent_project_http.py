@@ -34,7 +34,11 @@ def agent_http(
         pytest.skip("Set AGENT_CONTRACT_REPOSITORY to the separate Agent checkout")
     fixture_name = getattr(request, "param", "contract-fixture.ts")
     if isinstance(fixture_name, tuple):
-        fixture_name, durable = fixture_name
+        if len(fixture_name) == 3:
+            monkeypatch.setenv(
+                "AGENT_CONTRACT_RESEARCH", "1" if fixture_name[2] else "0"
+            )
+        fixture_name, durable = fixture_name[:2]
         monkeypatch.setenv("AGENT_CONTRACT_DURABLE", "1" if durable else "0")
     if fixture_name not in {
         "contract-fixture.ts",

@@ -20,7 +20,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.api.gateway import LiteralSet, OperationTable
-from app.contracts import AGENT_BROWSER_CONTRACT, AGENT_BROWSER_PROFILE
+from app.contracts import (
+    AGENT_BROWSER_CONTRACT,
+    AGENT_BROWSER_PROFILE,
+    AGENT_RESEARCH_MEMORY_CONTRACT,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TARGET_PATH = REPO_ROOT / "frontend" / "src" / "lib" / "upstreamRoutes.gen.ts"
@@ -139,6 +143,8 @@ def render_module(services: Sequence[ServiceRoutes]) -> str:
     ]
     lines.extend(
         [
+            f'export const agentResearchMemoryContract = "{AGENT_RESEARCH_MEMORY_CONTRACT}" as const',
+            "",
             "export const agentBrowserContract = {",
             f'  contract: "{AGENT_BROWSER_CONTRACT}",',
             f'  profile: "{AGENT_BROWSER_PROFILE}",',
