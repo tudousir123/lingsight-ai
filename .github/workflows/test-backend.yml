@@ -10,8 +10,9 @@ permissions:
 
 jobs:
   test-backend:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Keep the media/runtime baseline stable across ubuntu-latest migrations.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,8 +32,14 @@ jobs:
       - name: Lint
         run: uv run bash scripts/lint.sh
         working-directory: backend
-      - name: Install media validation tools
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Ensure media validation tools
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
+          ffmpeg -version
+          ffprobe -version
       - name: Run tests
         run: bash scripts/test-local.sh
         working-directory: backend
