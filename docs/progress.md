@@ -1,3 +1,11 @@
+# 2026-11-16：个人 Agent 首版隔离整体验证（#75 / #85，待独立整合复核）
+
+本票在自有配对 worktree 运行原 React 构建、真实 JWT/MySQL/Project 与授权回调、生产 ModelRuntime、官方 Pi SDK/AI/Durable/chord 1.5.2、Mem0 2.2.1/Qdrant、真实受控 browser 与 network-none Python。同一 fresh Store 的无路由拦截工作区完成授权 CSV→网页读取→描述表/PNG/SVG/报告→实际 SIGKILL→原 Run/conversation/submission 恢复→来源和版本 ZIP→个人偏好新 Task 复用→科研确认、正文/仅来源更正重确认→删除及刷新/新 Task 不再使用。两帧示例的描述均值20度不构成动物级统计或真实科研结论。
+
+实跑：Agent 完整串行188项 **186 pass / 2 fail / 0 skip**，失败为旧能力快照未包含 #83/#84 字段；定向复现后只补齐期望，project-data **7/7**。最终故障交集 **38/38、0 skip**，明确启用并通过 #84 留下的四项 Docker gate；新增同 Store/备份测试 **2/2**。后端记忆/网关/exporter **37 pass +86 subtests**，工具网关另 **7/7**；前端类型、定向 Biome、私有 Vite build、UI夹具 **16/16**，最终真实工作区 **1/1**。没有把“修正后定向通过”说成完整188项又全量重跑。操作身份/真实effects计数、同栈状态、ZIP哈希、截图及失败尝试保留在父实现工作台 `notes/ticket-85/`；复现入口见 [证据索引](evidence/personal-agent-v1/README.md)。
+
+合成副本已实际演练停止/锁定、资源收敛、SQLite/WAL+Durable+产物一致快照、旧schema迁移不认领owner、旧队列隔离、配对版本拒绝、后来墓碑存在时阻断旧备份回滚、当前副本还原且不启动队列。产出可校验的合成backup tar/manifest/hash。真实冻结质量沿用 #82 已接收十二例（3真实GLM抽取召回、9前置拒绝）及当时源版本，不新增付费外呼；#83/#84 已改变分区/有效索引重建，真实质量不能冒称final HEAD重新测过，适用性判断交父会话。没有现役Store初始化/迁移、真实科研数据、部署、容器替换或旧队列恢复；#85/#75均未自行关闭。
+
 # 2026-11-12：项目先选视频来源与文件夹（#51）
 
 进入项目先选择来源和目录，按用户指定视频归入项目；项目保存来源相对目录，刷新后保留，可携带上下文进入推理。推理端集中管理来源与视频解析，保留 legacy ID，并支持预挂载 NAS 目录与必要挂载点校验。项目长 ID 使用完整文本 + 固定长索引键，迁移旧引用不截断。网盘授权/下载后续实现。本轮真实 NAS 连通与最终发布状态以 [验收证据](evidence/video-sources-20261112/README.md) 为准，#45 人工科研闭环继续开放。

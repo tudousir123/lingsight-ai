@@ -31,7 +31,9 @@ def configure_application() -> str | None:
     # a developer's dotenv nor SMTP/Sentry/Agent credentials enter this object.
     with patch.dict(os.environ, {}, clear=True):
         settings = Settings(
-            _env_file=None,
+            # BaseSettings accepts this runtime-only keyword; Pydantic's
+            # synthesized model signature omits it. Keep dotenv disabled.
+            _env_file=None,  # type: ignore[call-arg]
             SECRET_KEY="synthetic-backend-tests-secret-not-for-deployment",
             PROJECT_NAME="LingSight tests",
             DATABASE_URL=database_url

@@ -26,11 +26,29 @@ from tests.utils.user import create_random_user
 
 
 @pytest.fixture
-def agent_http(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> Iterator[str]:
+def agent_http(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient, request: pytest.FixtureRequest
+) -> Iterator[str]:
     repository = os.environ.get("AGENT_CONTRACT_REPOSITORY")
     if not repository or not shutil.which("node"):
         pytest.skip("Set AGENT_CONTRACT_REPOSITORY to the separate Agent checkout")
-    script = Path(repository) / "scripts" / "contract-fixture.ts"
+    fixture_name = getattr(request, "param", "contract-fixture.ts")
+    if isinstance(fixture_name, tuple):
+        if len(fixture_name) == 3:
+            monkeypatch.setenv(
+                "AGENT_CONTRACT_RESEARCH", "1" if fixture_name[2] else "0"
+            )
+        fixture_name, durable = fixture_name[:2]
+        monkeypatch.setenv("AGENT_CONTRACT_DURABLE", "1" if durable else "0")
+    if fixture_name not in {
+        "contract-fixture.ts",
+        "memory-contract-fixture.ts",
+        "operations-contract-fixture.ts",
+        "browser-contract-fixture.ts",
+        "file-contract-fixture.ts",
+    }:
+        pytest.fail("Unknown isolated Agent contract fixture")
+    script = Path(repository) / "scripts" / fixture_name
     if not script.is_file():
         pytest.fail("Agent checkout is missing its synthetic contract fixture")
     callback_token = "synthetic-platform-callback-token"
@@ -84,8 +102,9 @@ def agent_http(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> Iterator[
         with selectors.DefaultSelector() as ready:
             ready.register(process.stdout, selectors.EVENT_READ)
             assert ready.select(timeout=20), "Synthetic Agent did not start"
-        url = json.loads(process.stdout.readline())["url"]
-        token = "synthetic-contract-token-000000000"
+        information = json.loads(process.stdout.readline())
+        url = information["url"]
+        token = information.get("token", "synthetic-contract-token-000000000")
         with httpx.Client(trust_env=False) as probe:
             response = probe.get(
                 f"{url}/v1/capabilities", headers={"Authorization": f"Bearer {token}"}
@@ -310,3 +329,271 @@ def test_real_user_isolation_qa_and_live_scope_revocation(
         row["id"] != live_task["id"]
         for row in client.get(f"{api}/agent/tasks", headers=owner).json()
     )
+
+
+@pytest.mark.usefixtures("agent_http")
+def test_real_personal_identity_shared_by_two_project_tasks_but_not_other_user(
+    client: TestClient,
+) -> None:
+    """Real login/JWT -> gateway -> Agent SQLite -> real authorization callback."""
+    from tests.api.routes.test_platform_user_flow import signup
+
+    owner, owner_id = signup(client)
+    other, other_id = signup(client)
+    api = settings.API_V1_STR
+    identity_url = f"{api}/agent/personal-agent"
+    identity_response = client.get(identity_url, headers=owner)
+    assert identity_response.status_code == 200, identity_response.text
+    identity = identity_response.json()
+    assert identity["owner_user_id"] == owner_id
+    assert identity["environment"]["status"] == "ready"
+    forged = client.get(
+        identity_url, headers={**other, "X-LingSight-User-Id": owner_id}
+    )
+    assert forged.status_code == 200, forged.text
+    assert forged.json()["owner_user_id"] == other_id
+    assert forged.json()["id"] != identity["id"]
+    assert forged.json()["environment"]["id"] != identity["environment"]["id"]
+    project = client.post(
+        f"{api}/projects/", headers=owner, json={"name": "Synthetic identity contract"}
+    )
+    assert project.status_code == 200, project.text
+    project_id = project.json()["id"]
+    tasks = []
+    for question in ("Explain synthetic alpha", "Explain synthetic beta"):
+        response = client.post(
+            f"{api}/agent/tasks",
+            headers=owner,
+            json={
+                "goal": question,
+                "project_id": project_id,
+                "completion_mode": "qa",
+            },
+        )
+        assert response.status_code == 202, response.text
+        task = response.json()["task"]
+        assert task["personal_agent_id"] == identity["id"]
+        assert task["environment_id"] == identity["environment"]["id"]
+        assert task["goal"] == question
+        assert task["project_id"] == project_id
+        task_url = f"{api}/agent/tasks/{task['id']}"
+        deadline = time.monotonic() + 10
+        while True:
+            snapshot = client.get(task_url, headers=owner)
+            assert snapshot.status_code == 200, snapshot.text
+            run = snapshot.json()["runs"][0]
+            if run["status"] == "succeeded":
+                break
+            assert run["status"] not in {"failed", "cancelled"}, run
+            assert time.monotonic() < deadline, run
+            time.sleep(0.02)
+        assert run["instruction"] == question
+        assert run["answer"]["text"]
+        bundle = client.get(f"{task_url}/bundle", headers=owner)
+        assert bundle.status_code == 200, bundle.text
+        with zipfile.ZipFile(io.BytesIO(bundle.content)) as archive:
+            manifest = json.loads(archive.read("manifest.json"))
+            assert manifest["task_id"] == task["id"]
+            assert manifest["runs"][0]["id"] == run["id"]
+        assert client.get(task_url, headers=other).status_code == 404
+        assert client.get(f"{task_url}/bundle", headers=other).status_code == 404
+        tasks.append(snapshot.json())
+    assert tasks[0]["id"] != tasks[1]["id"]
+    assert tasks[0]["runs"][0]["id"] != tasks[1]["runs"][0]["id"]
+    assert client.get(identity_url, headers=owner).json() == identity
+    for task in tasks:
+        assert (
+            client.get(f"{api}/agent/tasks/{task['id']}", headers=owner).json() == task
+        )
+
+
+@pytest.fixture
+def durable_agent_http(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient, request: pytest.FixtureRequest
+) -> Iterator[str]:
+    monkeypatch.setenv("AGENT_CONTRACT_DURABLE", "1")
+    yield from agent_http.__wrapped__(monkeypatch, client, request)
+
+
+@pytest.mark.usefixtures("durable_agent_http")
+def test_real_durable_gateway_completion_and_sourced_output(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    """Real JWT/gateway/authorization + Agent SQLite/Harness; offline model only."""
+    api = settings.API_V1_STR
+    headers = superuser_token_headers
+    capability = client.get(f"{api}/agent/capabilities", headers=headers)
+    assert capability.status_code == 200, capability.text
+    assert capability.json()["execution"] == {
+        "contract": "durable-run-v1",
+        "requests": "persistent-v1",
+        "recovery": "safe-v1",
+        "operations": "ledger-v1",
+        "cancellation": "verified-v1",
+        "engine": "pi-durable",
+        "version": "1.5.2",
+        "enabled": True,
+    }
+    request_id = str(uuid.uuid4())
+    input_body = {
+        "goal": "Explain synthetic orientation",
+        "completion_mode": "qa",
+        "request_id": request_id,
+    }
+    created = client.post(
+        f"{api}/agent/tasks",
+        headers=headers,
+        json=input_body,
+    )
+    assert created.status_code == 202, created.text
+    task = created.json()["task"]
+    repeated = client.post(f"{api}/agent/tasks", headers=headers, json=input_body)
+    assert repeated.status_code == 202, repeated.text
+    assert repeated.json() == created.json()
+    conflict = client.post(
+        f"{api}/agent/tasks",
+        headers=headers,
+        json={**input_body, "goal": "Explain different synthetic intent"},
+    )
+    assert conflict.status_code == 409, conflict.text
+    assert repeated.json()["request_id"] == request_id
+    deadline = time.monotonic() + 15
+    while True:
+        detail = client.get(f"{api}/agent/tasks/{task['id']}", headers=headers)
+        assert detail.status_code == 200, detail.text
+        result = detail.json()
+        run = result["runs"][-1]
+        if run["status"] == "succeeded":
+            break
+        assert run["status"] not in {"failed", "cancelled"}, run
+        assert time.monotonic() < deadline, run
+        time.sleep(0.02)
+    assert run["execution"]["engine"] == "pi-durable"
+    assert run["execution"]["submission_id"] is not None
+    assert run["answer"]["source_refs"] == []
+    report = next(a for a in result["artifacts"] if a["kind"] == "report")
+    assert report["run_id"] == run["id"]
+    assert report["sha256"]
+    preview = client.get(f"{api}/agent/artifacts/{report['id']}", headers=headers)
+    assert preview.status_code == 200
+    assert "Source: synthetic user input" in preview.text
+    assert preview.headers["etag"] == f'"{report["sha256"]}"'
+    events = client.get(
+        f"{api}/agent/tasks/{task['id']}/events",
+        headers={**headers, "Accept": "application/json"},
+    )
+    assert events.status_code == 200
+    kinds = {e["type"] for e in events.json()}
+    assert {
+        "execution.started",
+        "step.completed",
+        "execution.finished",
+        "run.answered",
+        "run.succeeded",
+    } <= kinds
+    bundle = client.get(f"{api}/agent/tasks/{task['id']}/bundle", headers=headers)
+    assert bundle.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(bundle.content)) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        assert manifest["runs"][-1]["execution"] == run["execution"]
+
+
+@pytest.mark.parametrize("agent_http", ["file-contract-fixture.ts"], indirect=True)
+def test_real_file_analysis_gateway_harness_container_and_owned_downloads(
+    client: TestClient,
+    agent_http: str,
+    db: Session,
+) -> None:
+    import hashlib
+
+    from tests.api.routes.test_platform_user_flow import signup
+
+    owner, owner_id = signup(client)
+    other, _ = signup(client)
+    api = settings.API_V1_STR
+    csv = "frame_idx,heading_angle_deg\n1,15\n2,25\n"
+    uploaded = client.post(
+        f"{api}/agent/inputs",
+        headers=owner,
+        json={"name": "observations.csv", "content": csv},
+    )
+    assert uploaded.status_code == 201, uploaded.text
+    ref = uploaded.json()
+    assert ref["owner_user_id"] == owner_id
+    assert ref["sha256"] == hashlib.sha256(csv.encode()).hexdigest()
+    assert "path" not in ref
+    assert client.get(f"{api}/agent/inputs", headers=other).json() == []
+    intent = {
+        "goal": "Create a synthetic report, table and figures",
+        "input_ids": [ref["id"]],
+        "request_id": str(uuid.uuid4()),
+    }
+    assert (
+        client.post(f"{api}/agent/tasks", headers=other, json=intent).status_code == 404
+    )
+    first = client.post(f"{api}/agent/tasks", headers=owner, json=intent)
+    assert first.status_code == 202, first.text
+    accepted = first.json()
+    repeated = client.post(f"{api}/agent/tasks", headers=owner, json=intent)
+    assert repeated.json() == accepted
+    assert (
+        client.post(
+            f"{api}/agent/tasks", headers=owner, json={**intent, "input_ids": []}
+        ).status_code
+        == 409
+    )
+    task_id = accepted["task"]["id"]
+    path = f"{api}/agent/tasks/{task_id}"
+    deadline = time.monotonic() + 30
+    while True:
+        detail = client.get(path, headers=owner).json()
+        state = detail["runs"][-1]
+        if state["status"] == "succeeded":
+            break
+        assert state["status"] not in {"failed", "cancelled"}, state
+        assert time.monotonic() < deadline, state
+        time.sleep(0.05)
+    assert state["execution"]["engine"] == "pi-durable"
+    assert state["completion_contract"]["mode"] == "research"
+    table = next(a for a in detail["artifacts"] if a["kind"] == "table")
+    assert client.get(f"{api}/agent/artifacts/{table['id']}", headers=owner).text == csv
+    for artifact in detail["artifacts"]:
+        response = client.get(f"{api}/agent/artifacts/{artifact['id']}", headers=owner)
+        assert hashlib.sha256(response.content).hexdigest() == artifact["sha256"]
+        assert (
+            client.get(
+                f"{api}/agent/artifacts/{artifact['id']}", headers=other
+            ).status_code
+            == 404
+        )
+    assert client.get(path, headers=other).status_code == 404
+    assert client.get(f"{path}/bundle", headers=other).status_code == 404
+    bundle = client.get(f"{path}/bundle", headers=owner)
+    assert bundle.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(bundle.content)) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        assert manifest["runs"][0]["status"] == "succeeded"
+        assert any(name.endswith("synthetic.png") for name in archive.namelist())
+    # Revoke the actual platform account; the independent Agent's callback
+    # must deny the already-known task and every saved material download.
+    from app.models import User
+
+    account = db.get(User, uuid.UUID(owner_id))
+    assert account is not None
+    account.is_active = False
+    db.add(account)
+    db.commit()
+    try:
+        with httpx.Client(trust_env=False) as direct:
+            denied = direct.get(
+                f"{agent_http}/v1/artifacts/{table['id']}",
+                headers={
+                    "Authorization": f"Bearer {settings.AGENT_API_TOKEN}",
+                    "X-LingSight-User-Id": owner_id,
+                },
+            )
+            assert denied.status_code == 403, denied.text
+    finally:
+        account.is_active = True
+        db.add(account)
+        db.commit()

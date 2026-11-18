@@ -1,4 +1,11 @@
 import { expect, test } from "@playwright/test"
+import {
+  emptyWorkspaceMemoryResponse,
+  personalAgentFixture,
+  personalTaskBinding,
+  requestIdPattern,
+  researchExecutionCapabilityFixture,
+} from "./utils/personalAgentApi"
 import { stubProjectsApi } from "./utils/projectsApi"
 
 const projectId = "44444444-4444-4444-8444-444444444444"
@@ -32,6 +39,7 @@ test("project entry carries immutable scope and groups the created task", async 
   page,
 }) => {
   const created = {
+    ...personalTaskBinding,
     id: taskId,
     project_id: projectId,
     title: "项目分析",
@@ -47,6 +55,13 @@ test("project entry carries immutable scope and groups the created task", async 
   await page.route("**/api/v1/agent/**", async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
+    const memory = emptyWorkspaceMemoryResponse(path, projectId)
+    if (request.method() === "GET" && memory)
+      return route.fulfill({ json: memory })
+    if (path.endsWith("/capabilities"))
+      return route.fulfill({ json: researchExecutionCapabilityFixture })
+    if (path.endsWith("/personal-agent"))
+      return route.fulfill({ json: personalAgentFixture })
     if (request.method() === "POST") {
       requests.push({ path, body: request.postDataJSON() })
       exists = true
@@ -76,8 +91,15 @@ test("project entry carries immutable scope and groups the created task", async 
     .fill("检查朝向")
   await page.getByRole("button", { name: "发送研究问题", exact: true }).click()
   await expect(page).toHaveURL(`/tasks/${taskId}`)
-  expect(requests[0].body).toEqual({ goal: "检查朝向", project_id: projectId })
+  expect(requests[0].body).toEqual({
+    goal: "检查朝向",
+    project_id: projectId,
+    request_id: expect.stringMatching(requestIdPattern),
+  })
   await page.reload()
+  await expect(
+    page.getByRole("button", { name: "刷新科研记忆", exact: true }),
+  ).toBeEnabled()
   await expect(page.getByRole("status")).toContainText(
     "当前项目的已发布推理数据",
   )
@@ -86,7 +108,10 @@ test("project entry carries immutable scope and groups the created task", async 
     .fill("补充缺失情况")
   await page.getByRole("button", { name: "发送研究问题", exact: true }).click()
   await expect.poll(() => requests.length).toBe(2)
-  expect(requests[1].body).toEqual({ text: "补充缺失情况" })
+  expect(requests[1].body).toEqual({
+    text: "补充缺失情况",
+    request_id: expect.stringMatching(requestIdPattern),
+  })
   await page
     .getByRole("main")
     .getByRole("link", { name: "当前研究", exact: true })
@@ -105,6 +130,15 @@ test("unavailable project retains the question without creating an unscoped task
 }) => {
   let creates = 0
   await page.route("**/api/v1/agent/**", (route) => {
+    const memory = emptyWorkspaceMemoryResponse(
+      new URL(route.request().url()).pathname,
+    )
+    if (route.request().method() === "GET" && memory)
+      return route.fulfill({ json: memory })
+    if (new URL(route.request().url()).pathname.endsWith("/capabilities"))
+      return route.fulfill({ json: researchExecutionCapabilityFixture })
+    if (new URL(route.request().url()).pathname.endsWith("/personal-agent"))
+      return route.fulfill({ json: personalAgentFixture })
     if (route.request().method() === "POST") creates++
     return route.fulfill({ json: [] })
   })
@@ -132,6 +166,13 @@ test("unexpected upstream scope stops the new run without grouping or resending"
   await page.route("**/api/v1/agent/**", (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
+    const memory = emptyWorkspaceMemoryResponse(path, projectId)
+    if (request.method() === "GET" && memory)
+      return route.fulfill({ json: memory })
+    if (path.endsWith("/capabilities"))
+      return route.fulfill({ json: researchExecutionCapabilityFixture })
+    if (path.endsWith("/personal-agent"))
+      return route.fulfill({ json: personalAgentFixture })
     if (request.method() !== "POST") return route.fulfill({ json: [] })
     posts.push(path)
     return route.fulfill({
@@ -179,6 +220,7 @@ for (const sourceProject of ["66666666-6666-4666-8666-666666666666", null]) {
         : []),
     ])
     const task = {
+      ...personalTaskBinding,
       id: taskId,
       project_id: sourceProject,
       title: "旧项目对话",
@@ -189,6 +231,13 @@ for (const sourceProject of ["66666666-6666-4666-8666-666666666666", null]) {
     }
     await page.route("**/api/v1/agent/**", (route) => {
       const path = new URL(route.request().url()).pathname
+      const memory = emptyWorkspaceMemoryResponse(path, sourceProject)
+      if (route.request().method() === "GET" && memory)
+        return route.fulfill({ json: memory })
+      if (path.endsWith("/capabilities"))
+        return route.fulfill({ json: researchExecutionCapabilityFixture })
+      if (path.endsWith("/personal-agent"))
+        return route.fulfill({ json: personalAgentFixture })
       if (route.request().method() === "POST") {
         messages.push(route.request().postDataJSON())
         return route.fulfill({ status: 202, json: { status: "queued" } })
@@ -220,7 +269,12 @@ for (const sourceProject of ["66666666-6666-4666-8666-666666666666", null]) {
     await expect(
       page.getByRole("textbox", { name: "研究问题", exact: true }),
     ).toHaveValue("")
-    expect(messages).toEqual([{ text: "继续原范围分析" }])
+    expect(messages).toEqual([
+      {
+        text: "继续原范围分析",
+        request_id: expect.stringMatching(requestIdPattern),
+      },
+    ])
     await page
       .getByRole("main")
       .getByRole("link", { name: "当前研究", exact: true })

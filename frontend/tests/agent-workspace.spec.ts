@@ -1,10 +1,17 @@
 import { expect, type Page, test } from "@playwright/test"
+import {
+  emptyWorkspaceMemoryResponse,
+  executionCapabilityFixture,
+  personalAgentFixture,
+  personalTaskBinding,
+} from "./utils/personalAgentApi"
 import { stubProjectsApi } from "./utils/projectsApi"
 
 const id = "11111111-1111-4111-8111-111111111111",
   runId = "22222222-2222-4222-8222-222222222222",
   artifactId = "33333333-3333-4333-8333-333333333333"
 const task = {
+  ...personalTaskBinding,
   id,
   title: "水迷宫视频探索",
   goal: "核对视频数据",
@@ -50,6 +57,13 @@ async function mock(page: Page) {
   await page.route("**/api/v1/agent/**", async (r) => {
     const url = new URL(r.request().url())
     const path = url.pathname
+    const memory = emptyWorkspaceMemoryResponse(path)
+    if (r.request().method() === "GET" && memory)
+      return r.fulfill({ json: memory })
+    if (path.endsWith("/capabilities"))
+      return r.fulfill({ json: executionCapabilityFixture })
+    if (path.endsWith("/personal-agent"))
+      return r.fulfill({ json: personalAgentFixture })
     if (path.endsWith("/events"))
       return r.fulfill({
         json:

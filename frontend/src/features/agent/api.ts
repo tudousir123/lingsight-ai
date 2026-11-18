@@ -6,8 +6,23 @@
 // pins what the workbench UI consumes.
 
 import { authHeaders } from "@/lib/credentials"
-import { agentGatewayBase } from "@/lib/upstreamRoutes.gen"
+import {
+  type agentEnvironmentContract,
+  type agentExecutionContract,
+  agentGatewayBase,
+} from "@/lib/upstreamRoutes.gen"
 
+export type PersonalAgent = {
+  id: string
+  owner_user_id: string
+  created_at: string
+  environment: {
+    id: string
+    status: "ready" | "unavailable"
+    contract: typeof agentEnvironmentContract
+    reason?: string
+  }
+}
 export type RunStatus =
   | "queued"
   | "running"
@@ -16,12 +31,28 @@ export type RunStatus =
   | "failed"
   | "cancelled"
   | "interrupted"
+  | "result_unknown"
+  | "cancel_unconfirmed"
 export type Question = { id: string; question: string; answer: string | null }
 export type Run = {
+  recovery_blocked?: string | null
+  cancellation?: {
+    requested_at: string
+    confirmed_at: string | null
+    reason: string
+  } | null
+  execution?: {
+    id: string
+    engine: typeof agentExecutionContract.engine
+    version: typeof agentExecutionContract.version
+    conversation_id: number
+    submission_id: number | null
+  } | null
   id: string
   instruction: string
   status: RunStatus
   error: string | null
+  answer?: { text: string; limitations?: string[] } | null
   clarifications?: Question[]
 }
 export type Artifact = {
@@ -33,6 +64,8 @@ export type Artifact = {
   sha256: string
 }
 export type Task = {
+  personal_agent_id?: string | null
+  environment_id?: string | null
   id: string
   project_id?: string | null
   title: string
@@ -53,7 +86,9 @@ export const statusLabels: Record<RunStatus, string> = {
   waiting_for_input: "等待确认",
   succeeded: "已完成",
   failed: "失败",
-  cancelled: "已取消",
+  cancelled: "已确认停止",
+  result_unknown: "结果未知",
+  cancel_unconfirmed: "停止未确认",
   interrupted: "已中断",
 }
 

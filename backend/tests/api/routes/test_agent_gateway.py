@@ -9,6 +9,17 @@ from fastapi.testclient import TestClient
 
 from app.api.deps import get_current_user
 from app.api.routes.agent import router
+from app.contracts import (
+    AGENT_BROWSER_CONTRACT,
+    AGENT_BROWSER_PROFILE,
+    AGENT_ENVIRONMENT_CONTRACT,
+    AGENT_EXECUTION_CONTRACT,
+    AGENT_FILES_CONTRACT,
+    AGENT_MEMORY_MANAGEMENT_CONTRACT,
+    AGENT_PERSONAL_AGENT_CONTRACT,
+    AGENT_PERSONAL_MEMORY_CONTRACT,
+    AGENT_RESEARCH_MEMORY_CONTRACT,
+)
 from app.core.config import settings
 from app.models import User
 
@@ -26,6 +37,18 @@ class AgentGatewayTest(unittest.TestCase):
         self.capabilities = httpx.Response(
             200,
             json={
+                "execution": {
+                    "contract": AGENT_EXECUTION_CONTRACT["contract"],
+                    "requests": AGENT_EXECUTION_CONTRACT["requests"],
+                    "recovery": AGENT_EXECUTION_CONTRACT["recovery"],
+                    "operations": AGENT_EXECUTION_CONTRACT["operations"],
+                    "cancellation": AGENT_EXECUTION_CONTRACT["cancellation"],
+                    "engine": AGENT_EXECUTION_CONTRACT["engine"],
+                    "version": AGENT_EXECUTION_CONTRACT["version"],
+                    "enabled": True,
+                },
+                "personal_agent": AGENT_PERSONAL_AGENT_CONTRACT,
+                "environment": AGENT_ENVIRONMENT_CONTRACT,
                 "project_scope": "immutable-v1",
                 "project_data_configured": True,
                 "user_scope": "platform-user-v1",
@@ -60,6 +83,445 @@ class AgentGatewayTest(unittest.TestCase):
             self.addCleanup(p.stop)
         self.client = TestClient(self.app)
         self.addCleanup(self.client.close)
+
+    def test_memory_management_protocol_fails_closed_without_requiring_generation(
+        self,
+    ) -> None:
+        capability = self.capabilities.json()
+        capability["execution"]["enabled"] = False
+        capability["research_memory"] = AGENT_RESEARCH_MEMORY_CONTRACT
+        routes = [
+            ("GET", f"memories/{TASK}/history"),
+            ("POST", f"memories/{TASK}/mutation"),
+            ("POST", "memories/rebuild"),
+            ("GET", f"tasks/{TASK}/research-memories/{TASK}/history"),
+            ("POST", f"tasks/{TASK}/research-memories/{TASK}/mutation"),
+            ("POST", f"tasks/{TASK}/research-memories/rebuild"),
+        ]
+        for version in (None, "unsupported", AGENT_MEMORY_MANAGEMENT_CONTRACT):
+            for method, path in routes:
+                with self.subTest(version=version, path=path):
+                    self.capabilities = httpx.Response(
+                        200, json={**capability, "memory_management": version}
+                    )
+                    self.calls.clear()
+                    response = self.client.request(
+                        method,
+                        "/agent/" + path,
+                        **({"json": {"request_id": TASK}} if method == "POST" else {}),
+                    )
+                    self.assertEqual(
+                        response.status_code,
+                        200 if version == AGENT_MEMORY_MANAGEMENT_CONTRACT else 503,
+                        response.text,
+                    )
+                    self.assertEqual(
+                        len(self.calls),
+                        2 if version == AGENT_MEMORY_MANAGEMENT_CONTRACT else 1,
+                    )
+
+    def test_research_review_requires_compatible_protocol_but_not_enabled_generation(
+        self,
+    ) -> None:
+        capability = self.capabilities.json()
+        capability["execution"]["enabled"] = False
+        path = f"/agent/tasks/{TASK}/research-memories/{TASK}/decision"
+        for version in (None, "unsupported", AGENT_RESEARCH_MEMORY_CONTRACT):
+            with self.subTest(version=version):
+                self.capabilities = httpx.Response(
+                    200, json={**capability, "research_memory": version}
+                )
+                self.calls.clear()
+                response = self.client.post(
+                    path,
+                    json={
+                        "request_id": TASK,
+                        "expected_version": 1,
+                        "content_version": 1,
+                        "source_fingerprint": "a" * 64,
+                        "decision": "confirm",
+                    },
+                )
+                self.assertEqual(
+                    response.status_code,
+                    200 if version == AGENT_RESEARCH_MEMORY_CONTRACT else 503,
+                )
+                if version != AGENT_RESEARCH_MEMORY_CONTRACT:
+                    self.assertEqual(
+                        [r.url.path for r in self.calls], ["/v1/capabilities"]
+                    )
+                else:
+                    self.assertEqual(
+                        self.calls[-1].headers["x-lingsight-user-id"], str(self.user.id)
+                    )
+
+    def test_operation_review_routes_preserve_identity_without_requiring_new_model_authorization(
+        self,
+    ) -> None:
+        capabilities = self.capabilities.json()
+        capabilities["execution"].update(
+            operations=AGENT_EXECUTION_CONTRACT["operations"],
+            cancellation=AGENT_EXECUTION_CONTRACT["cancellation"],
+            enabled=False,
+        )
+        self.capabilities = httpx.Response(200, json=capabilities)
+        for method, path, body in [
+            ("GET", f"runs/{TASK}/operations", None),
+            (
+                "POST",
+                f"runs/{TASK}/operations/{TASK}/verify",
+                {"request_id": TASK, "expected_version": 2},
+            ),
+            (
+                "POST",
+                f"runs/{TASK}/operations/{TASK}/resolve",
+                {
+                    "request_id": TASK,
+                    "expected_version": 2,
+                    "decision": "confirm_effect",
+                    "evidence": "Synthetic receipt checked",
+                },
+            ),
+        ]:
+            with self.subTest(path=path):
+                self.calls.clear()
+                response = self.client.request(
+                    method,
+                    f"/agent/{path}",
+                    json=body,
+                    headers={"X-LingSight-User-Id": TASK},
+                )
+                self.assertEqual(response.status_code, 200, response.text)
+                self.assertEqual(self.calls[-1].url.path, f"/v1/{path}")
+                self.assertEqual(
+                    self.calls[-1].headers["x-lingsight-user-id"], str(self.user.id)
+                )
+        capabilities["execution"].pop("operations")
+        self.capabilities = httpx.Response(200, json=capabilities)
+        self.calls.clear()
+        response = self.client.post(
+            f"/agent/runs/{TASK}/operations/{TASK}/verify",
+            json={"request_id": TASK, "expected_version": 2},
+        )
+        self.assertEqual(response.status_code, 503, response.text)
+        self.assertEqual([r.url.path for r in self.calls], ["/v1/capabilities"])
+
+    def test_browser_capability_rejects_incompatible_versions_before_forwarding(
+        self,
+    ) -> None:
+        supported = {
+            "contract": AGENT_BROWSER_CONTRACT,
+            "enabled": True,
+            "profile": AGENT_BROWSER_PROFILE,
+            "javascript": False,
+            "downloads": False,
+        }
+        payload = self.capabilities.json()
+        path = f"/agent/runs/{TASK}/browser-grants"
+        for browser in [
+            supported,
+            None,
+            {},
+            *[
+                {**supported, key: value}
+                for key, value in [
+                    ("contract", "unsupported-browser-contract"),
+                    ("profile", "unsupported-owner-profile"),
+                    ("enabled", False),
+                    ("enabled", 1),
+                    ("javascript", True),
+                    ("javascript", 0),
+                    ("downloads", True),
+                    ("downloads", 0),
+                ]
+            ],
+        ]:
+            with self.subTest(browser=browser):
+                self.capabilities = httpx.Response(
+                    200, json={**payload, "browser": browser}
+                )
+                self.calls.clear()
+                response = self.client.get(path)
+                if browser is supported:
+                    self.assertEqual(response.status_code, 200, response.text)
+                    self.assertEqual(
+                        self.calls[-1].url.path, f"/v1/runs/{TASK}/browser-grants"
+                    )
+                else:
+                    self.assertEqual(response.status_code, 503, response.text)
+                    self.assertEqual(
+                        response.json()["detail"], "受控浏览器未配置或授权协议不兼容"
+                    )
+                    self.assertEqual(
+                        [r.url.path for r in self.calls], ["/v1/capabilities"]
+                    )
+
+    def test_stable_request_identity_is_forwarded_and_malformed_identity_rejected(
+        self,
+    ) -> None:
+        import json
+
+        for path, body in [
+            ("/agent/tasks", {"goal": "Synthetic explanation"}),
+            (f"/agent/tasks/{TASK}/messages", {"text": "Synthetic follow-up"}),
+            (f"/agent/runs/{TASK}/resume", {}),
+            (
+                f"/agent/runs/{TASK}/clarifications/{TASK}/answer",
+                {"answer": "Direction only"},
+            ),
+        ]:
+            with self.subTest(path=path):
+                self.calls.clear()
+                response = self.client.post(path, json={**body, "request_id": TASK})
+                self.assertEqual(response.status_code, 200, response.text)
+                self.assertEqual(json.loads(self.calls[-1].content)["request_id"], TASK)
+        for path, body in [
+            ("/agent/tasks", {"goal": "Synthetic explanation"}),
+            (f"/agent/tasks/{TASK}/messages", {"text": "Synthetic follow-up"}),
+        ]:
+            for value in ["not-a-uuid", None, 42]:
+                with self.subTest(path=path, value=value):
+                    self.calls.clear()
+                    self.assertEqual(
+                        self.client.post(
+                            path, json={**body, "request_id": value}
+                        ).status_code,
+                        422,
+                    )
+                    self.assertEqual(self.calls, [])
+
+    def test_execution_capability_fails_closed_before_any_execution_write(self) -> None:
+        supported = self.capabilities.json()
+        paths = [
+            ("/agent/tasks", {"goal": "Synthetic explanation"}),
+            (f"/agent/tasks/{TASK}/messages", {"text": "continue"}),
+            (f"/agent/runs/{TASK}/resume", {}),
+            (f"/agent/runs/{TASK}/clarifications/{TASK}/answer", {"answer": "yes"}),
+        ]
+        invalid = [
+            None,
+            {},
+            *(
+                {
+                    **{k: v for k, v in AGENT_EXECUTION_CONTRACT.items() if k != field},
+                    "enabled": True,
+                }
+                for field in AGENT_EXECUTION_CONTRACT
+            ),
+            *(
+                {**AGENT_EXECUTION_CONTRACT, field: "obsolete-v0", "enabled": True}
+                for field in AGENT_EXECUTION_CONTRACT
+            ),
+            *(
+                {**AGENT_EXECUTION_CONTRACT, "enabled": value}
+                for value in (None, 0, 1, "true", {}, [], False)
+            ),
+        ]
+        for execution in invalid:
+            self.capabilities = httpx.Response(
+                200, json={**supported, "execution": execution}
+            )
+            for path, body in paths:
+                with self.subTest(execution=execution, path=path):
+                    self.calls.clear()
+                    result = self.client.post(path, json=body)
+                    self.assertEqual(result.status_code, 503)
+                    self.assertEqual(
+                        [r.url.path for r in self.calls], ["/v1/capabilities"]
+                    )
+        self.calls.clear()
+        self.assertEqual(
+            self.client.post(f"/agent/runs/{TASK}/cancel", json={}).status_code, 200
+        )
+        self.assertEqual(self.calls[-1].url.path, f"/v1/runs/{TASK}/cancel")
+
+    def test_platform_supported_feature_versions_fail_closed_independently(
+        self,
+    ) -> None:
+        supported = {
+            **self.capabilities.json(),
+            "files": AGENT_FILES_CONTRACT,
+            "personal_memory": AGENT_PERSONAL_MEMORY_CONTRACT,
+        }
+        checks = [
+            (
+                "personal_agent",
+                "POST",
+                "/agent/tasks",
+                {"goal": "Synthetic explanation"},
+            ),
+            ("environment", "POST", "/agent/tasks", {"goal": "Synthetic explanation"}),
+            (
+                "files",
+                "POST",
+                "/agent/inputs",
+                {"name": "synthetic.txt", "content": "synthetic"},
+            ),
+            ("personal_memory", "GET", "/agent/memories", None),
+        ]
+        for field, method, path, body in checks:
+            for invalid in (None, "obsolete-v0", True, 1):
+                with self.subTest(field=field, invalid=invalid):
+                    self.capabilities = httpx.Response(
+                        200, json={**supported, field: invalid}
+                    )
+                    self.calls.clear()
+                    response = self.client.request(
+                        method, path, **({"json": body} if body else {})
+                    )
+                    self.assertEqual(response.status_code, 503)
+                    self.assertEqual(
+                        [r.url.path for r in self.calls], ["/v1/capabilities"]
+                    )
+
+    def test_personal_identity_uses_current_user_and_requires_new_capability(
+        self,
+    ) -> None:
+        self.capabilities = httpx.Response(
+            200,
+            json={
+                **self.capabilities.json(),
+                "personal_agent": AGENT_PERSONAL_AGENT_CONTRACT,
+                "environment": AGENT_ENVIRONMENT_CONTRACT,
+            },
+        )
+        identity = {
+            "id": TASK,
+            "owner_user_id": str(self.user.id),
+            "environment": {"id": TASK, "status": "ready"},
+        }
+        self.response = httpx.Response(200, json=identity)
+        result = self.client.get(
+            "/agent/personal-agent", headers={"X-LingSight-User-Id": TASK}
+        )
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.json(), identity)
+        self.assertEqual(self.calls[-1].url.path, "/v1/personal-agent")
+        self.assertEqual(
+            self.calls[-1].headers["x-lingsight-user-id"], str(self.user.id)
+        )
+        self.calls.clear()
+        self.capabilities = httpx.Response(200, json={"user_scope": "platform-user-v1"})
+        self.assertEqual(self.client.get("/agent/personal-agent").status_code, 503)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(self.calls[0].url.path, "/v1/capabilities")
+
+    def test_new_work_requires_personal_capability_and_identity_has_no_selector(
+        self,
+    ) -> None:
+        self.capabilities = httpx.Response(
+            200,
+            json={
+                k: v
+                for k, v in self.capabilities.json().items()
+                if k != "personal_agent"
+            },
+        )
+        result = self.client.post(
+            "/agent/tasks", json={"goal": "Explain synthetic task"}
+        )
+        self.assertEqual(result.status_code, 503)
+        self.assertEqual(len(self.calls), 1)
+        self.calls.clear()
+        self.assertEqual(
+            self.client.get(f"/agent/personal-agent?user_id={TASK}").status_code, 422
+        )
+        self.assertFalse(self.calls)
+
+    def test_owned_file_refs_are_forwarded_without_host_paths_and_old_service_fails_closed(
+        self,
+    ) -> None:
+        self.capabilities = httpx.Response(
+            200, json={**self.capabilities.json(), "files": AGENT_FILES_CONTRACT}
+        )
+        self.response = httpx.Response(201, json={"id": TASK, "name": "synthetic.csv"})
+        uploaded = self.client.post(
+            "/agent/inputs",
+            json={"name": "synthetic.csv", "content": "x\n1\n"},
+            headers={"X-LingSight-User-Id": TASK},
+        )
+        self.assertEqual(uploaded.status_code, 201)
+        self.assertEqual(self.calls[-1].url.path, "/v1/inputs")
+        self.assertEqual(
+            self.calls[-1].headers["x-lingsight-user-id"], str(self.user.id)
+        )
+        self.calls.clear()
+        self.response = httpx.Response(202, json={"task": {"id": TASK}})
+        result = self.client.post(
+            "/agent/tasks",
+            json={"goal": "Create synthetic report", "input_ids": [TASK]},
+        )
+        self.assertEqual(result.status_code, 202)
+        self.assertIn(TASK.encode(), self.calls[-1].content)
+        self.calls.clear()
+        for body in [
+            {"goal": "x", "input_ids": ["/etc/passwd"]},
+            {"goal": "x", "input_ids": [TASK], "path": "/etc/passwd"},
+        ]:
+            self.assertEqual(
+                self.client.post("/agent/tasks", json=body).status_code, 422
+            )
+        self.assertFalse(self.calls)
+        self.capabilities = httpx.Response(
+            200,
+            json={k: v for k, v in self.capabilities.json().items() if k != "files"},
+        )
+        for path, body in [
+            ("/agent/inputs", {"name": "synthetic.csv", "content": "x"}),
+            ("/agent/tasks", {"goal": "x", "input_ids": [TASK]}),
+        ]:
+            self.calls.clear()
+            self.assertEqual(self.client.post(path, json=body).status_code, 503)
+            self.assertEqual([r.url.path for r in self.calls], ["/v1/capabilities"])
+
+    def test_personal_memory_reads_use_current_user_and_fail_closed_without_capability(
+        self,
+    ) -> None:
+        self.capabilities = httpx.Response(
+            200,
+            json={
+                **self.capabilities.json(),
+                "personal_memory": AGENT_PERSONAL_MEMORY_CONTRACT,
+            },
+        )
+        self.response = httpx.Response(
+            200, json={"contract": AGENT_PERSONAL_MEMORY_CONTRACT, "items": []}
+        )
+        for path in ["memories", f"tasks/{TASK}/memories"]:
+            with self.subTest(path=path):
+                result = self.client.get(
+                    f"/agent/{path}", headers={"X-LingSight-User-Id": TASK}
+                )
+                self.assertEqual(result.status_code, 200)
+                self.assertEqual(self.calls[-1].url.path, f"/v1/{path}")
+                self.assertEqual(
+                    self.calls[-1].headers["x-lingsight-user-id"], str(self.user.id)
+                )
+                self.calls.clear()
+                self.assertEqual(
+                    self.client.get(f"/agent/{path}?owner_user_id={TASK}").status_code,
+                    422,
+                )
+                self.assertFalse(self.calls)
+                self.assertEqual(
+                    self.client.request(
+                        "GET", f"/agent/{path}", json={"project_id": TASK}
+                    ).status_code,
+                    422,
+                )
+                self.assertFalse(self.calls)
+        self.capabilities = httpx.Response(
+            200,
+            json={
+                k: v
+                for k, v in self.capabilities.json().items()
+                if k != "personal_memory"
+            },
+        )
+        for path in ["memories", f"tasks/{TASK}/memories"]:
+            self.calls.clear()
+            self.assertEqual(self.client.get(f"/agent/{path}").status_code, 503)
+            self.assertEqual([r.url.path for r in self.calls], ["/v1/capabilities"])
 
     def test_login_required(self) -> None:
         self.app.dependency_overrides.clear()

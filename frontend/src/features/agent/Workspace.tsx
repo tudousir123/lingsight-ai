@@ -23,7 +23,7 @@ import { PageHeader } from "@/components/Common/PageHeader"
 import { WorkspaceIntro } from "@/features/research/copilot/WorkspaceIntro"
 import { consumeBrief, pendingBriefPrompt } from "@/features/research/entry"
 import { flagshipVisionModel } from "@/features/research/vision-model"
-import { agentRoutes } from "@/lib/upstreamRoutes.gen"
+import { agentExecutionContract, agentRoutes } from "@/lib/upstreamRoutes.gen"
 import { ArtifactCards, ArtifactViewer } from "./Artifacts"
 import {
   type Artifact,
@@ -39,7 +39,13 @@ import {
   taskKey,
   tasksKey,
 } from "./api"
+import { BrowserPanel } from "./Browser"
+import { ExecutionStatus, useExecutionCapability } from "./Execution"
 import { useTaskEvents } from "./events"
+import { type FileInputRef, FileInputs } from "./FileInputs"
+import { MemoryPanel } from "./MemoryPanel"
+import { OperationReview } from "./Operations"
+import { PersonalAgentStatus, usePersonalAgent } from "./PersonalAgent"
 import { ProjectConversationHome } from "./ProjectConversationHome"
 import {
   membersOfKind,
@@ -47,6 +53,8 @@ import {
   useWorkspaceProjects,
 } from "./projects"
 import { useTasks } from "./queries"
+import { ResearchMemoryPanel } from "./ResearchMemory"
+import { agentRequest, pendingRequest } from "./requests"
 import { VideoAttachment, VideoAttachmentList } from "./VideoAttachment"
 import {
   createVideoWorkflow,
@@ -69,7 +77,21 @@ const toolLabels: Record<string, string> = {
   read_artifact: "读取研究材料",
   save_artifact: "保存研究成果",
 }
-function Conversation({ task, events }: { task: Task; events: TaskEvent[] }) {
+function Conversation({
+  task,
+  events,
+  owner,
+  operationsSupported,
+  browserSupported,
+  onReview,
+}: {
+  task: Task
+  events: TaskEvent[]
+  owner: string
+  operationsSupported: boolean
+  browserSupported: boolean
+  onReview: () => void
+}) {
   return (
     <div className="agent-conversation">
       {task.runs.map((run) => {
@@ -99,6 +121,31 @@ function Conversation({ task, events }: { task: Task; events: TaskEvent[] }) {
               <strong>LingSight 灵视科研</strong>
               <span>{statusLabels[run.status]}</span>
             </div>
+            {run.execution && (
+              <p className="agent-execution-reference">
+                执行 {run.execution.id} · Pi Durable {run.execution.version} ·
+                会话 {run.execution.conversation_id}
+              </p>
+            )}
+            {entries.some((e) => e.type === "execution.recovered") && (
+              <p role="status">
+                已从持久检查点恢复，继续同一执行；不安全的工具不会自动重放。
+              </p>
+            )}
+            <OperationReview
+              run={run}
+              owner={owner}
+              supported={operationsSupported}
+              onDone={onReview}
+            />
+            <BrowserPanel
+              run={run}
+              owner={owner}
+              supported={browserSupported}
+            />
+            {run.recovery_blocked && (
+              <p role="status">{run.recovery_blocked}</p>
+            )}
             {steps.length > 0 && (
               <details className="agent-steps">
                 <summary>
@@ -131,16 +178,23 @@ function Conversation({ task, events }: { task: Task; events: TaskEvent[] }) {
                 ))}
               </details>
             )}
-            {blocks.map((block) => (
-              <div
-                key={block.key}
-                className={
-                  block.kind === "user" ? "agent-user-message" : "agent-answer"
-                }
-              >
-                {block.text}
-              </div>
-            ))}
+            {blocks
+              .filter((block) => !run.answer || block.kind === "user")
+              .map((block) => (
+                <div
+                  key={block.key}
+                  className={
+                    block.kind === "user"
+                      ? "agent-user-message"
+                      : "agent-answer"
+                  }
+                >
+                  {block.text}
+                </div>
+              ))}
+            {run.status === "succeeded" && run.answer && (
+              <div className="agent-answer">{run.answer.text}</div>
+            )}
             {blocks.length === 0 && isActive(run.status) && (
               <p className="agent-wait">
                 <LoaderCircle size={14} className="animate-spin" />
@@ -166,12 +220,28 @@ function Clarification({
   question,
   run,
   onDone,
+  disabled = false,
+  owner,
 }: {
+  owner: string
+  disabled?: boolean
   question: Question
   run: Run
   onDone: () => void
 }) {
+  const path = agentRoutes.runsByRunIdClarificationsByClarificationIdAnswer(
+    run.id,
+    question.id,
+  )
   const [answer, setAnswer] = useState("")
+  useEffect(() => {
+    try {
+      const saved = pendingRequest(owner, path)
+      if (typeof saved?.body.answer === "string") setAnswer(saved.body.answer)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "未确认请求不可用。")
+    }
+  }, [owner, path])
   const [pending, setPending] = useState(false)
   const [error, setError] = useState("")
   return (
@@ -179,17 +249,11 @@ function Clarification({
       className="agent-question"
       onSubmit={async (e) => {
         e.preventDefault()
-        if (!answer.trim() || pending) return
+        if (!answer.trim() || pending || disabled) return
         setPending(true)
         setError("")
         try {
-          await agentJson(
-            agentRoutes.runsByRunIdClarificationsByClarificationIdAnswer(
-              run.id,
-              question.id,
-            ),
-            { answer },
-          )
+          await agentRequest(owner, path, { answer })
           onDone()
         } catch (e) {
           setError(e instanceof Error ? e.message : "提交失败。")
@@ -205,8 +269,9 @@ function Clarification({
         value={answer}
         onChange={(e) => setAnswer(e.target.value)}
         required
+        disabled={disabled}
       />
-      <button type="submit" disabled={!answer.trim() || pending}>
+      <button type="submit" disabled={!answer.trim() || pending || disabled}>
         {pending ? "正在提交…" : "确认并继续"}
       </button>
       {error && <p role="alert">{error}</p>}
@@ -222,6 +287,8 @@ export function AgentWorkspace({
   projectId?: string
   projectContextId?: string
 }) {
+  const personal = usePersonalAgent()
+  const execution = useExecutionCapability()
   const tasks = useTasks()
   const projects = useWorkspaceProjects()
   const addMember = useAddProjectMember()
@@ -232,6 +299,8 @@ export function AgentWorkspace({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState("")
   const [artifact, setArtifact] = useState<Artifact | null>(null)
+  const [fileInputs, setFileInputs] = useState<FileInputRef[]>([])
+  const [filesBusy, setFilesBusy] = useState(false)
   const [videos, setVideos] = useState<WorkflowVideo[]>([])
   const [attachmentOpen, setAttachmentOpen] = useState(false)
   const [attachmentSource, setAttachmentSource] =
@@ -255,7 +324,10 @@ export function AgentWorkspace({
     retry: false,
   })
   const missing = isTaskNotFound(task.error)
-  const stream = useTaskEvents(task.data && !missing ? taskId : "")
+  const stream = useTaskEvents(
+    task.data && !missing ? taskId : "",
+    personal.data?.owner_user_id ?? "",
+  )
   const run = task.data?.runs[task.data.runs.length - 1]
   const scopeId = projectId ?? task.data?.project_id
   const isProjectHome = !!projectId && !taskId
@@ -274,17 +346,97 @@ export function AgentWorkspace({
     setError("")
     setArtifact(null)
     setVideos([])
+    setFileInputs([])
     setAttachmentOpen(false)
     setAttachmentSource("local")
   }, [taskId, projectId])
+  const requestOwner = personal.data?.owner_user_id ?? ""
+  const inputPath = taskId
+    ? agentRoutes.tasksByTaskIdMessages(taskId)
+    : agentRoutes.tasks()
+  useEffect(() => {
+    if (!requestOwner) return
+    let alive = true
+    const controller = new AbortController()
+    try {
+      const saved = pendingRequest(requestOwner, inputPath)
+      const text = saved?.body.text ?? saved?.body.goal
+      if (!taskId && Array.isArray(saved?.body.input_ids)) {
+        const ids = saved.body.input_ids
+        setFilesBusy(true)
+        void agentJson<FileInputRef[]>(
+          agentRoutes.inputs(),
+          undefined,
+          "GET",
+          controller.signal,
+        )
+          .then((refs) => {
+            if (!alive) return
+            const selected = ids.map((id) => refs.find((ref) => ref.id === id))
+            if (selected.some((ref) => !ref))
+              throw new Error(
+                "上次请求的材料引用不可用，已保留原请求。请先核查任务，不要另建替代任务。",
+              )
+            setFileInputs(selected as FileInputRef[])
+          })
+          .catch((error) => {
+            if (alive)
+              setError(
+                error instanceof Error ? error.message : "无法恢复材料引用。",
+              )
+          })
+          .finally(() => {
+            if (alive) setFilesBusy(false)
+          })
+      }
+      if (typeof text === "string") {
+        setDraft(text)
+        setError(
+          "上次请求接收状态未确认。重试将复用同一请求标识，不会重复注入。",
+        )
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "未确认请求不可用。")
+    }
+    return () => {
+      alive = false
+      controller.abort()
+    }
+  }, [requestOwner, inputPath, taskId])
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: tasksKey })
     void queryClient.invalidateQueries({ queryKey: taskKey(taskId) })
   }
-  const blocked = run?.status === "waiting_for_input"
+  const personalReady =
+    !personal.isPending &&
+    !personal.error &&
+    personal.data?.environment.status === "ready"
+  const taskBound =
+    !taskId ||
+    (!!task.data &&
+      task.data.personal_agent_id === personal.data?.id &&
+      task.data.environment_id === personal.data?.environment.id)
+  const taskHasFiles =
+    task.data?.artifacts?.some((item) => item.kind === "input") === true
+  const taskFilesReady = !taskHasFiles || execution.data?.files === true
+  const executionReady =
+    taskFilesReady &&
+    personalReady &&
+    taskBound &&
+    !execution.isPending &&
+    !execution.error &&
+    execution.data?.enabled === true
+  const blocked =
+    !!run &&
+    ["waiting_for_input", "result_unknown", "cancel_unconfirmed"].includes(
+      run.status,
+    )
   const canSend =
     (!!draft.trim() || (canAttach && videos.length > 0)) &&
     !pending &&
+    !filesBusy &&
+    (!fileInputs.length || execution.data?.files === true) &&
+    executionReady &&
     !blocked &&
     !tasks.error &&
     !task.error &&
@@ -308,13 +460,16 @@ export function AgentWorkspace({
           search: { project: projectId },
         })
         setVideos([])
-      } else if (taskId)
-        await agentJson(agentRoutes.tasksByTaskIdMessages(taskId), { text })
+      } else if (taskId) await agentRequest(requestOwner, inputPath, { text })
       else {
-        const created = await agentJson<{ task: Task; run?: Run }>(
-          agentRoutes.tasks(),
+        const created = await agentRequest<{ task: Task; run?: Run }>(
+          requestOwner,
+          inputPath,
           {
             goal: text,
+            ...(fileInputs.length
+              ? { input_ids: fileInputs.map((ref) => ref.id) }
+              : {}),
             ...(projectId ? { project_id: projectId } : {}),
           },
         )
@@ -356,6 +511,7 @@ export function AgentWorkspace({
       }
       consumeBrief()
       setDraft("")
+      setFileInputs([])
       refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : "提交失败，已保留你的问题。")
@@ -364,7 +520,7 @@ export function AgentWorkspace({
     }
   }
   const action = async (op: "cancel" | "resume") => {
-    if (!run || pending) return
+    if (!run || pending || (op === "resume" && !executionReady)) return
     setPending(true)
     setError("")
     try {
@@ -372,7 +528,8 @@ export function AgentWorkspace({
         op === "cancel"
           ? agentRoutes.runsByRunIdCancel(run.id)
           : agentRoutes.runsByRunIdResume(run.id)
-      await agentJson(path, {})
+      if (op === "resume") await agentRequest(requestOwner, path, {})
+      else await agentJson(path, {})
       refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : "操作未完成，请重试。")
@@ -385,6 +542,10 @@ export function AgentWorkspace({
     input.current?.focus({ preventScroll: true })
   }
   const startVideoAnalysis = (source: WorkflowVideo["source"]) => {
+    if (fileInputs.length) {
+      setError("请先移除分析文件，再切换视频流程；两种输入不会混用。")
+      return
+    }
     if (!canAttach) {
       void navigate({ to: source === "drive" ? "/inference" : "/annotations" })
       return
@@ -428,6 +589,21 @@ export function AgentWorkspace({
             </span>
           )}
         </div>
+        {!taskId && (
+          <FileInputs
+            value={fileInputs}
+            onChange={setFileInputs}
+            onBusy={setFilesBusy}
+            key={`${projectId ?? ""}:${personal.data?.id ?? ""}`}
+            disabled={
+              pending ||
+              filesBusy ||
+              !executionReady ||
+              execution.data?.files !== true ||
+              videos.length > 0
+            }
+          />
+        )}
         {videos.length > 0 && (
           <VideoAttachmentList
             videos={videos}
@@ -444,7 +620,9 @@ export function AgentWorkspace({
           aria-label="研究问题"
           placeholder={
             blocked
-              ? "请先回答上方科研口径问题后继续"
+              ? run?.status === "waiting_for_input"
+                ? "请先回答上方科研口径问题后继续"
+                : "请先核验上方未知结果或停止状态"
               : taskId
                 ? "继续追问，或补充分析要求…"
                 : canAttach
@@ -466,7 +644,7 @@ export function AgentWorkspace({
           }}
         />
         <div className="agent-composer-toolbar">
-          {canAttach && (
+          {canAttach && fileInputs.length === 0 && (
             <VideoAttachment
               open={attachmentOpen}
               onOpenChange={setAttachmentOpen}
@@ -487,17 +665,20 @@ export function AgentWorkspace({
             灵视科研助手
           </span>
           <div className="agent-send-actions">
-            {run && (isActive(run.status) || run.status === "interrupted") && (
-              <button
-                type="button"
-                disabled={pending}
-                className="agent-stop"
-                onClick={() => void action("cancel")}
-              >
-                <Square size={11} />
-                停止
-              </button>
-            )}
+            {run &&
+              (isActive(run.status) ||
+                run.status === "interrupted" ||
+                run.status === "result_unknown") && (
+                <button
+                  type="button"
+                  disabled={pending}
+                  className="agent-stop"
+                  onClick={() => void action("cancel")}
+                >
+                  <Square size={11} />
+                  停止
+                </button>
+              )}
             <button
               type="submit"
               className="agent-send"
@@ -528,6 +709,36 @@ export function AgentWorkspace({
       <div className="agent-workspace">
         <div className="agent-scroll-area">
           <div className="agent-content">
+            <PersonalAgentStatus
+              identity={personal.data}
+              loading={personal.isPending}
+              error={personal.error}
+              onRetry={() => void personal.refetch()}
+            />
+            <ExecutionStatus
+              loading={execution.isPending}
+              capability={execution.data}
+              error={execution.error}
+              onRetry={() => void execution.refetch()}
+            />
+            <MemoryPanel taskId={taskId} />
+            {task.data?.project_id && (
+              <ResearchMemoryPanel
+                taskId={taskId}
+                projectId={task.data.project_id}
+                supported={!!execution.data?.researchMemory}
+              />
+            )}
+            {taskHasFiles && !taskFilesReady && !execution.isPending && (
+              <p className="agent-error" role="alert">
+                此任务包含受控文件；当前服务不支持文件协议，已禁用继续分析与恢复。历史材料仍可读取。
+              </p>
+            )}
+            {!!task.data && personal.data && !taskBound && (
+              <p className="agent-error" role="alert">
+                此任务未绑定当前个人环境，已禁用继续执行。历史材料不会自动迁移。
+              </p>
+            )}
             {taskId && returnProjectId && (
               <div className="workspace-scope">
                 <Link
@@ -584,15 +795,17 @@ export function AgentWorkspace({
                         {statusLabels[run.status]}
                       </span>
                     )}
-                    {run && ["failed", "interrupted"].includes(run.status) && (
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => void action("resume")}
-                      >
-                        从已保存的材料恢复
-                      </button>
-                    )}
+                    {run &&
+                      !run.recovery_blocked &&
+                      ["failed", "interrupted"].includes(run.status) && (
+                        <button
+                          type="button"
+                          disabled={pending || !executionReady}
+                          onClick={() => void action("resume")}
+                        >
+                          从已保存的材料恢复
+                        </button>
+                      )}
                     {!!task.data.artifacts?.length && (
                       <button
                         type="button"
@@ -609,15 +822,30 @@ export function AgentWorkspace({
                     )}
                   </div>
                 </div>
-                <Conversation task={task.data} events={stream.events} />
+                <Conversation
+                  task={task.data}
+                  events={stream.events}
+                  owner={requestOwner}
+                  operationsSupported={
+                    !execution.error &&
+                    execution.data?.operations ===
+                      agentExecutionContract.operations
+                  }
+                  browserSupported={
+                    !execution.error && execution.data?.browser === true
+                  }
+                  onReview={refresh}
+                />
                 {run?.status === "waiting_for_input" &&
                   run.clarifications
                     ?.filter((q) => !q.answer)
                     .map((q) => (
                       <Clarification
+                        owner={requestOwner}
                         key={q.id}
                         question={q}
                         run={run}
+                        disabled={!executionReady}
                         onDone={refresh}
                       />
                     ))}
@@ -629,8 +857,12 @@ export function AgentWorkspace({
                         {task.data.artifacts.length} 个文件 · 已保留版本
                       </small>
                     </h2>
+                    <p>
+                      每份材料保留所属执行与内容版本。未完成、失败或取消执行的材料仅供核查，不是已完成科研交付物。
+                    </p>
                     <ArtifactCards
                       artifacts={task.data.artifacts}
+                      runs={task.data.runs}
                       onSelect={setArtifact}
                     />
                   </section>
@@ -657,6 +889,10 @@ export function AgentWorkspace({
             key={artifact.id}
             artifact={artifact}
             taskId={taskId}
+            runStatus={
+              task.data?.runs.find((item) => item.id === artifact.run_id)
+                ?.status
+            }
             onClose={() => setArtifact(null)}
           />
         )}

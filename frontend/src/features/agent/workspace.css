@@ -660,3 +660,148 @@
     grid-template-columns: 1fr;
   }
 }
+
+.agent-personal-status {
+  margin: 0 auto 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  max-width: 56rem;
+  overflow-wrap: anywhere;
+}
+.agent-personal-status > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.agent-personal-status strong {
+  color: var(--foreground);
+}
+.agent-personal-status dl {
+  margin: 0.4rem 0;
+}
+.agent-personal-status dl > div {
+  display: flex;
+  gap: 0.6rem;
+}
+.agent-personal-status dt {
+  flex-shrink: 0;
+}
+.agent-personal-status dd {
+  margin: 0;
+  font-family: monospace;
+}
+.agent-personal-status p {
+  margin: 0.3rem 0;
+}
+.agent-personal-status button {
+  text-decoration: underline;
+}
+
+.agent-artifact-version {
+  display: block;
+  overflow-wrap: anywhere;
+  font-family: monospace;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+.agent-execution-reference {
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.agent-operation-review {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--background);
+}
+.agent-operation {
+  padding: 0.75rem 0;
+  font-size: 0.85rem;
+}
+.agent-operation p {
+  margin: 0.5rem 0;
+  overflow-wrap: anywhere;
+}
+.agent-operation-id {
+  font-family: monospace;
+}
+.agent-operation label {
+  display: block;
+  margin: 0.75rem 0;
+}
+.agent-operation textarea {
+  display: block;
+  width: 100%;
+  min-height: 5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.agent-operation select {
+  margin-left: 0.5rem;
+}
+.agent-operation button {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.65rem;
+}
+.agent-operation button:disabled {
+  opacity: 0.5;
+}
+
+.agent-file-inputs {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.agent-file-inputs label {
+  display: grid;
+  gap: 6px;
+}
+.agent-file-inputs p {
+  color: var(--muted-foreground);
+  margin: 5px 0;
+}
+.agent-file-inputs strong {
+  overflow-wrap: anywhere;
+}
+.agent-file-inputs input {
+  max-width: 100%;
+}
+.agent-file-inputs button {
+  text-decoration: underline;
+  margin: 4px 0;
+}
+.agent-browser {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.agent-browser summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.agent-browser input:not([type="checkbox"]),
+.agent-browser select {
+  display: block;
+  width: 100%;
+  margin: 0.4rem 0 0;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+}
+.agent-browser input[type="checkbox"] {
+  margin-right: 0.5rem;
+}
+.agent-browser fieldset {
+  margin-top: 1rem;
+  min-width: 0;
+}

@@ -1,4 +1,4 @@
-"""Render the gateway adapters' operation tables into frontend route templates.
+"""Export gateway routes and platform-supported protocol versions to TypeScript.
 
 The operation tables in app/api/routes/agent.py and inference.py are the
 single declaration of each upstream service's operation surface: the backend
@@ -10,7 +10,8 @@ frontend/src/lib/upstreamRoutes.gen.ts; rerun after changing a table:
     cd backend && uv run python scripts/export_frontend_routes.py
 
 tests/scripts/test_export_frontend_routes.py fails when the checked-in module
-drifts from the declarations.
+drifts from the declarations. Platform compatibility versions are declared in
+app/contracts.py and exported here too, so UI and gateway gates cannot drift.
 """
 
 import re
@@ -19,6 +20,17 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.api.gateway import LiteralSet, OperationTable
+from app.contracts import (
+    AGENT_BROWSER_CONTRACT,
+    AGENT_BROWSER_PROFILE,
+    AGENT_ENVIRONMENT_CONTRACT,
+    AGENT_EXECUTION_CONTRACT,
+    AGENT_FILES_CONTRACT,
+    AGENT_MEMORY_MANAGEMENT_CONTRACT,
+    AGENT_PERSONAL_AGENT_CONTRACT,
+    AGENT_PERSONAL_MEMORY_CONTRACT,
+    AGENT_RESEARCH_MEMORY_CONTRACT,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TARGET_PATH = REPO_ROOT / "frontend" / "src" / "lib" / "upstreamRoutes.gen.ts"
@@ -55,7 +67,9 @@ def load_services() -> tuple[ServiceRoutes, ...]:
 
 
 def _pascal(name: str) -> str:
-    return "".join(part[:1].upper() + part[1:] for part in name.split("_") if part)
+    return "".join(
+        part[:1].upper() + part[1:] for part in re.split(r"[_-]", name) if part
+    )
 
 
 def _camel(name: str) -> str:
@@ -129,10 +143,33 @@ def render_module(services: Sequence[ServiceRoutes]) -> str:
     lines = [
         "// AUTO-GENERATED FILE — DO NOT EDIT.",
         "// Regenerate with: cd backend && uv run python scripts/export_frontend_routes.py",
-        "// Source of truth: the operation tables in backend/app/api/routes/*.py;",
+        "// Sources: backend/app/api/routes/*.py tables and backend/app/contracts.py versions;",
         "// backend/tests/scripts/test_export_frontend_routes.py fails on drift.",
         "",
     ]
+    lines.extend(
+        [
+            "export const agentExecutionContract = {",
+            *(
+                f'  {key}: "{value}",'
+                for key, value in AGENT_EXECUTION_CONTRACT.items()
+            ),
+            "} as const",
+            f'export const agentPersonalAgentContract = "{AGENT_PERSONAL_AGENT_CONTRACT}" as const',
+            f'export const agentEnvironmentContract = "{AGENT_ENVIRONMENT_CONTRACT}" as const',
+            f'export const agentFilesContract = "{AGENT_FILES_CONTRACT}" as const',
+            f'export const agentPersonalMemoryContract = "{AGENT_PERSONAL_MEMORY_CONTRACT}" as const',
+            "",
+            f'export const agentMemoryManagementContract = "{AGENT_MEMORY_MANAGEMENT_CONTRACT}" as const',
+            f'export const agentResearchMemoryContract = "{AGENT_RESEARCH_MEMORY_CONTRACT}" as const',
+            "",
+            "export const agentBrowserContract = {",
+            f'  contract: "{AGENT_BROWSER_CONTRACT}",',
+            f'  profile: "{AGENT_BROWSER_PROFILE}",',
+            "} as const",
+            "",
+        ]
+    )
     for service in services:
         lines.append(
             f'export const {_camel(service.name)}GatewayBase = "{service.base_path}"'
